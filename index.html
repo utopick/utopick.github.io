@@ -90,7 +90,7 @@
       // The test builds: add a card when a feature branch is published with ./test-build.sh (it writes test/<app>-<branch>/).
       const TESTS = [
         { app: "SING.Pocket", name: "Air detector", repo: "sing-pocket", branch: "air-detector", dir: "sing-air-detector", note: "A new AIR view: how much of your tone is clean or breathy (a waveform coloured by it, live and for the whole take), and a side view of the tongue, soft palate and larynx for five mouth shapes. Needs a microphone." },
-        { app: "TRACK.Pocket", name: "Sync devices", repo: "track-pocket", branch: "lan-sync", dir: "track-lan-sync", note: "Files ▸ SYNC: devices on the same Wi-Fi share one song, its samples and PLAY / STOP. Open it on two devices (or two windows) to try it." },
+        { app: "TRACK.Pocket", name: "Sync devices", repo: "track-pocket", branch: "lan-sync", dir: "track-lan-sync", note: "Files ▸ SYNC: devices on the same Wi-Fi share one song, its samples and PLAY / STOP. They pair by sound: HOST on one, JOIN on the other, close together with the volume up and the microphone allowed (or pair with the codes). Needs two devices." },
       ];
       const tb = document.getElementById("tb"), box = document.getElementById("tests");
       document.getElementById("tl").innerHTML = TESTS.map((t) => `<div class="tc"><div><b>${t.app} · ${t.name}</b><p>${t.note}</p></div><a class="btn main" style="--c:var(--dim)" href="test/${t.dir}/">TRY IT</a><a class="tag" href="https://github.com/utopick/${t.repo}/tree/${t.branch}" title="The branch on GitHub">${t.branch}</a></div>`).join("");

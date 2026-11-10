@@ -3995,10 +3995,18 @@
           <div class="lbl" style="margin-bottom: 6px">Sync devices on the same Wi-Fi</div>
           <div class="hint" id="syStat" style="margin: 0 0 8px"></div>
           <div class="bar" style="padding: 0; flex-wrap: wrap">
-            <button id="syHost" title="Start a sync, or add one more device to it">HOST</button>
-            <button id="syJoin" title="Join the sync of another device (it replaces this song)">JOIN</button>
+            <button id="syHost" title="Start a sync: this device plays a sound that the other one listens to">HOST</button>
+            <button id="syJoin" title="Join the sync of another device by listening to it (it replaces this song)">JOIN</button>
             <button id="sySilent" title="Mute this device: another one makes the sound">SILENT</button>
             <button id="syLeave" title="Leave the sync">LEAVE</button>
+          </div>
+          <div class="bar" style="padding: 0; margin-top: 6px">
+            <button id="syHostC" title="Start a sync with a code you copy to the other device">HOST BY CODE</button>
+            <button id="syJoinC" title="Join with a code you paste">JOIN BY CODE</button>
+          </div>
+          <div id="syChk" hidden>
+            <div class="lbl" id="syChkT" style="margin: 10px 0 4px"></div>
+            <div class="bar" style="padding: 0"><button id="syYes">THEY MATCH</button><button id="syNo">NO</button></div>
           </div>
           <div id="syBox" hidden>
             <div class="lbl" id="syL1" style="margin: 10px 0 4px"></div>
@@ -4009,7 +4017,9 @@
             <div class="bar" style="padding: 0"><button id="syGo">CONNECT</button></div>
           </div>
           <p class="hint" style="margin: 8px 0 0">
-            One device is the <b>host</b> and the others <b>join</b>: the song, the samples and PLAY / STOP are shared, and every
+            Hold the two devices close with the volume up: <b>HOST</b> plays a short chirping sound and <b>JOIN</b> listens to it
+            and answers the same way (it needs the microphone; keep the room quiet). No sound? Use the codes. One device is
+            the <b>host</b> and the others <b>join</b>: the song, the samples and PLAY / STOP are shared, and every
             device can edit. Only one should make the sound: tap <b>SILENT</b> on the others. A MIDI knob on one device moves
             the mixer of all.
           </p>
@@ -10089,6 +10099,7 @@ a.length>D&&(D=a.length,p=0|1.25*D+7200,r=new Int8Array(p));a=u.lame_encode_buff
           SYNC.rtt += 2; // an old best sample ages out
           return;
         }
+        if (SYNC.host && !SYNC.peers.includes(peer)) return; // not confirmed yet
         if (m.t === "tp") return SYNC.host && syGo(!!m.want);
         if (SYNC.host && !joined) SYNC.peers.forEach((x) => x !== peer && syRaw(x.dc, raw)); // the hub passes it on
         try {
@@ -10110,17 +10121,35 @@ a.length>D&&(D=a.length,p=0|1.25*D+7200,r=new Int8Array(p));a=u.lame_encode_buff
       }
       // ---- the connection
       function syWire(peer) {
-        peer.dc.onopen = () => {
+        peer.dc.onopen = async () => {
+          syQuiet();
+          const num = await syVerify(peer.pc);
           if (SYNC.host) {
-            SYNC.peers.push(peer);
-            syTx(peer.dc, { t: "snap", d: serialize() });
+            // both screens show the same 4 digits: someone who listened in and answered first would not match
+            $("#syChkT").textContent = `Check: the other device must show ${num}. Do they match?`;
+            $("#syChk").hidden = false;
+            $("#syBox").hidden = true;
+            await new Promise((ok) => {
+              $("#syYes").onclick = () => ok(true);
+              $("#syNo").onclick = () => ok(false);
+            }).then((yes) => {
+              $("#syChk").hidden = true;
+              if (!yes) return peer.pc.close();
+              SYNC.peers.push(peer);
+              syTx(peer.dc, { t: "snap", d: serialize() });
+            });
+            if (!SYNC.peers.includes(peer)) return syFace();
           } else {
+            $("#syChkT").textContent = `Check: the host's screen must show ${num}. If it does not, tap LEAVE.`;
+            $("#syChk").hidden = false;
+            $("#syYes").hidden = $("#syNo").hidden = true;
             SYNC.hub = peer;
             for (let i = 0; i < 6; i++) setTimeout(() => syRaw(peer.dc, JSON.stringify({ t: "p", c: Date.now() })), i * 300);
             const iv = setInterval(() => (peer.dc.readyState === "open" ? syRaw(peer.dc, JSON.stringify({ t: "p", c: Date.now() })) : clearInterval(iv)), 8000);
             syMark();
           }
           $("#syBox").hidden = true;
+          if (SYNC.host) $("#syYes").hidden = $("#syNo").hidden = false;
           toast("Synced");
           syFace();
         };
@@ -10132,7 +10161,15 @@ a.length>D&&(D=a.length,p=0|1.25*D+7200,r=new Int8Array(p));a=u.lame_encode_buff
         peer.dc.onmessage = (e) => typeof e.data === "string" && syGot(peer, e.data);
       }
       const syPc = () => new RTCPeerConnection({ iceServers: [] }); // the same network: no STUN server
+      async function syVerify(pc) {
+        const fp = (d) => ((d.sdp.match(/a=fingerprint:\S+ ([0-9A-Fa-f:]+)/) || [])[1] || "").toUpperCase();
+        const h = new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode([fp(pc.localDescription), fp(pc.remoteDescription)].sort().join("|"))));
+        return String((((h[0] << 16) | (h[1] << 8) | h[2]) >>> 0) % 10000).padStart(4, "0");
+      }
       function syLeave(quiet) {
+        SYNC.talk = null; // ends a pairing by sound that is still playing or listening
+        syQuiet();
+        $("#syChk").hidden = true;
         SYNC.peers.forEach((x) => x.pc.close());
         if (SYNC.hub) SYNC.hub.pc.close();
         if (SYNC.pend) SYNC.pend.pc.close();
@@ -10145,13 +10182,16 @@ a.length>D&&(D=a.length,p=0|1.25*D+7200,r=new Int8Array(p));a=u.lame_encode_buff
       function syFace() {
         const n = syN(),
           role = SYNC.host ? "host" : SYNC.hub ? "guest" : "";
+        if (n || !SYNC.talk) // while pairing by sound the status line says what the sound is doing
         $("#syStat").textContent = n
           ? `Synced: ${role === "host" ? n + " other device" + (n > 1 ? "s" : "") + " joined" : "you joined a host"}. ${SYNC.silent ? "This device is silent." : "This device makes sound."}`
           : SYNC.host ? "Waiting for a device to join." : "Not synced. On one device tap HOST; on the others tap JOIN.";
         $("#syHost").classList.toggle("dis", !!SYNC.hub);
+        $("#syHostC").classList.toggle("dis", !!SYNC.hub);
+        $("#syJoinC").classList.toggle("dis", !!SYNC.host || !!SYNC.hub);
         $("#syJoin").classList.toggle("dis", !!SYNC.host || !!SYNC.hub);
         $("#sySilent").classList.toggle("on", SYNC.silent);
-        $("#syLeave").classList.toggle("dis", !SYNC.host && !SYNC.hub);
+        $("#syLeave").classList.toggle("dis", !SYNC.host && !SYNC.hub && !SYNC.talk);
         const b = $("#syBadge");
         b.hidden = !n;
         b.classList.toggle("mute", SYNC.silent);
@@ -10168,7 +10208,7 @@ a.length>D&&(D=a.length,p=0|1.25*D+7200,r=new Int8Array(p));a=u.lame_encode_buff
         $("#syIn").value = "";
         $("#syIn").placeholder = ph;
       }
-      $("#syHost").onclick = async () => {
+      $("#syHostC").onclick = async () => {
         if (SYNC.hub) return;
         ensureCtx(); // iOS only lets a page make sound after a tap
         try {
@@ -10187,7 +10227,7 @@ a.length>D&&(D=a.length,p=0|1.25*D+7200,r=new Int8Array(p));a=u.lame_encode_buff
           toast("Could not start the sync: " + (e.message || e));
         }
       };
-      $("#syJoin").onclick = () => {
+      $("#syJoinC").onclick = () => {
         if (SYNC.host || SYNC.hub) return;
         ensureCtx();
         syMode = "join";
@@ -10225,6 +10265,341 @@ a.length>D&&(D=a.length,p=0|1.25*D+7200,r=new Int8Array(p));a=u.lame_encode_buff
         toast(SYNC.silent ? "This device is silent" : "This device makes sound");
       };
       $("#syLeave").onclick = () => syLeave();
+
+      // ======================================================================
+      // SYNC by sound: the pairing data is played as chirps and heard by the microphone of the other device
+      // ======================================================================
+      // The connection data is cut down to about 85 bytes (the fingerprint, the ICE credentials and the addresses; the rest of the
+      // SDP is rebuilt on the other side), sent as 16-tone FSK (4 bits a symbol, 60 ms, 1.4 to 4.4 kHz) after a preamble, with a
+      // CRC. The sender repeats it; the receiver adds up what it heard in every repetition until the CRC fits.
+      const SYM = { MS: 60, F0: 1400, DF: 200, PRE: [0, 15, 0, 15, 0, 15], stream: null, stop: null };
+      function symCrc(a) {
+        let c = 0xffff;
+        for (const b of a) {
+          c ^= b << 8;
+          for (let i = 0; i < 8; i++) c = c & 0x8000 ? ((c << 1) ^ 0x1021) & 0xffff : (c << 1) & 0xffff;
+        }
+        return c;
+      }
+      // one pass: preamble, [length x3, bytes, crc], then a second of silence
+      function symSynth(bytes, sr) {
+        const T = Math.round((sr * SYM.MS) / 1000),
+          L = bytes.length,
+          crc = symCrc([L, ...bytes]),
+          nib = [...SYM.PRE];
+        [L, L, L, ...bytes, crc >> 8, crc & 255].forEach((b) => nib.push(b >> 4, b & 15));
+        const out = new Float32Array(nib.length * T + sr),
+          ramp = Math.round(sr * 0.004);
+        nib.forEach((k, i) => {
+          const w = (2 * Math.PI * (SYM.F0 + SYM.DF * k)) / sr;
+          for (let n = 0; n < T; n++) out[i * T + n] = 0.5 * Math.sin(w * n) * Math.min(1, n / ramp, (T - n) / ramp);
+        });
+        return out;
+      }
+      // feed it the microphone in pieces: push(Float32Array); onMsg(bytes) when a message passes its CRC
+      function symDec(sr, onMsg, onProg) {
+        const T = Math.round((sr * SYM.MS) / 1000),
+          K = 16,
+          PRE = SYM.PRE,
+          step = Math.round(T / 8),
+          co = Array.from({ length: K }, (_, k) => 2 * Math.cos((2 * Math.PI * (SYM.F0 + SYM.DF * k)) / sr));
+        let buf = new Float32Array(sr * 16),
+          len = 0,
+          pos = 0,
+          fs = -1,
+          cur = [],
+          comb = null,
+          total = 0;
+        const en = (st) => {
+          const e = new Float32Array(K);
+          for (let k = 0; k < K; k++) {
+            let s1 = 0,
+              s2 = 0;
+            const c = co[k];
+            for (let n = 0; n < T; n++) {
+              const s0 = buf[st + n] + c * s1 - s2;
+              s2 = s1;
+              s1 = s0;
+            }
+            e[k] = s1 * s1 + s2 * s2 - c * s1 * s2;
+          }
+          return e;
+        };
+        const top = (e) => {
+          let k = 0,
+            sum = 1e-12;
+          for (let i = 0; i < K; i++) ((sum += e[i]), e[i] > e[k] && (k = i));
+          return [k, e[k] / (sum - e[k] + 1e-12), sum];
+        };
+        const argmax = (v) => v.reduce((m, x, i) => (x > v[m] ? i : m), 0);
+        const bytesOf = (acc, n0, n) => Array.from({ length: n }, (_, j) => (argmax(acc[n0 + 2 * j]) << 4) | argmax(acc[n0 + 2 * j + 1]));
+        function decode(acc, L) {
+          const b = bytesOf(acc, 6, L + 2);
+          return symCrc([L, ...b.slice(0, L)]) === ((b[L] << 8) | b[L + 1]) ? b.slice(0, L) : null;
+        }
+        function run() {
+          for (;;) {
+            if (fs < 0) {
+              if (pos + PRE.length * T + T > len) return;
+              const [k, r, sum] = top(en(pos));
+              let ok = k === PRE[0] && r > 3 && sum > 1e-4;
+              for (let i = 1; ok && i < PRE.length; i++) {
+                const [kk, rr] = top(en(pos + i * T));
+                ok = kk === PRE[i] && rr > 3;
+              }
+              if (!ok) {
+                pos += step;
+                continue;
+              }
+              // the first windows that fit are a little off the symbols: find the best alignment around here
+              let best = pos,
+                bs = -1;
+              for (let d = -T / 2; d <= T / 2; d += T / 16) {
+                const q = Math.round(pos + d);
+                if (q < 0 || q + PRE.length * T + T > len) continue;
+                let sc = 0;
+                PRE.forEach((t, i) => {
+                  const e = en(q + i * T);
+                  sc += e[t] / top(e)[2];
+                });
+                if (sc > bs) ((bs = sc), (best = q));
+              }
+              fs = best;
+              cur = [];
+              total = 0;
+            }
+            for (;;) {
+              const st = fs + (PRE.length + cur.length) * T;
+              if (st + T > len) return;
+              const e = en(st),
+                sum = e.reduce((a, b) => a + b, 1e-12);
+              cur.push(e.map((x) => x / sum));
+              onProg && onProg(cur.length, total);
+              if (cur.length === 6) {
+                const [a, b, c] = bytesOf(cur, 0, 3),
+                  L = a === b || a === c ? a : b === c ? b : -1;
+                total = L > 0 && L <= 200 ? 6 + 2 * (L + 2) : -1;
+                if (total < 0) ((pos = st + T), (fs = -1));
+                if (total < 0) break;
+                cur.L = L;
+              }
+              if (total > 0 && cur.length === total) {
+                const L = cur.L;
+                comb = comb && comb.L === L ? comb : Object.assign(cur.map((v) => v.map(() => 0)), { L });
+                cur.forEach((v, i) => v.forEach((x, k) => (comb[i][k] += x)));
+                const got = decode(comb, L) || decode(cur, L);
+                pos = st + T;
+                fs = -1;
+                if (got) return onMsg(Uint8Array.from(got));
+                break;
+              }
+            }
+          }
+        }
+        return {
+          push(x) {
+            if (len + x.length > buf.length) {
+              const keep = Math.max(0, fs >= 0 ? Math.min(fs, pos) : pos);
+              buf.copyWithin(0, keep, len);
+              len -= keep;
+              pos -= keep;
+              if (fs >= 0) fs -= keep;
+              if (len + x.length > buf.length) {
+                const nb = new Float32Array((len + x.length) * 2);
+                nb.set(buf.subarray(0, len));
+                buf = nb;
+              }
+            }
+            buf.set(x, len);
+            len += x.length;
+            run();
+          },
+        };
+      }
+      // ---- the connection data, cut down to what the other side cannot guess
+      function syCompact(desc) {
+        const g = (re) => (desc.sdp.match(re) || [])[1],
+          ufrag = g(/a=ice-ufrag:(\S+)/),
+          pwd = g(/a=ice-pwd:(\S+)/),
+          fp = g(/a=fingerprint:sha-256 ([0-9A-Fa-f:]+)/);
+        if (!ufrag || !pwd || !fp) throw new Error("this browser's connection data is not supported: use the codes");
+        const out = [desc.type === "answer" ? 1 : 0],
+          put = (t) => (out.push(t.length), [...t].forEach((c) => out.push(c.charCodeAt(0) & 255))),
+          cs = [];
+        put(ufrag);
+        put(pwd);
+        fp.split(":").forEach((h) => out.push(parseInt(h, 16)));
+        for (const m of desc.sdp.matchAll(/a=candidate:\S+ 1 udp \d+ (\S+) (\d+) typ host/g)) {
+          const a = m[1],
+            port = +m[2],
+            u = a.match(/^([0-9a-f]{8})-([0-9a-f]{4})-([0-9a-f]{4})-([0-9a-f]{4})-([0-9a-f]{12})\.local$/i);
+          if (/^\d+\.\d+\.\d+\.\d+$/.test(a)) cs.push([0, ...a.split(".").map(Number), port >> 8, port & 255]);
+          else if (u) cs.push([1, ...u.slice(1).join("").match(/../g).map((h) => parseInt(h, 16)), port >> 8, port & 255]);
+        }
+        if (!cs.length) throw new Error("no network address found: use the codes");
+        out.push(Math.min(3, cs.length));
+        cs.slice(0, 3).forEach((c) => out.push(...c));
+        return Uint8Array.from(out);
+      }
+      function syExpand(u) {
+        let i = 0;
+        const type = u[i++] & 1 ? "answer" : "offer",
+          get = () => {
+            const n = u[i++];
+            if (!(n > 0 && n <= 64) || i + n > u.length) throw new Error("damaged");
+            let t = "";
+            for (let j = 0; j < n; j++) t += String.fromCharCode(u[i++]);
+            if (!/^[A-Za-z0-9+/]+$/.test(t)) throw new Error("damaged");
+            return t;
+          },
+          ufrag = get(),
+          pwd = get(),
+          fp = Array.from(u.slice(i, i + 32), (b) => b.toString(16).padStart(2, "0").toUpperCase()).join(":");
+        i += 32;
+        const n = u[i++],
+          hex = (a) => Array.from(a, (b) => b.toString(16).padStart(2, "0")).join(""),
+          cand = [];
+        if (!(n >= 1 && n <= 3)) throw new Error("damaged");
+        for (let c = 0; c < n; c++) {
+          const kind = u[i++];
+          let addr;
+          if (kind === 0) addr = Array.from(u.slice(i, (i += 4))).join(".");
+          else {
+            const h = hex(u.slice(i, (i += 16)));
+            addr = `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}.local`;
+          }
+          const port = (u[i] << 8) | u[i + 1];
+          i += 2;
+          if (i > u.length || !port) throw new Error("damaged");
+          cand.push(`a=candidate:${c + 1} 1 udp ${2122260223 - c} ${addr} ${port} typ host generation 0`);
+        }
+        const sdp = ["v=0", "o=- 4611731400430051336 2 IN IP4 127.0.0.1", "s=-", "t=0 0", "a=group:BUNDLE 0", "a=msid-semantic: WMS", "m=application 9 UDP/DTLS/SCTP webrtc-datachannel", "c=IN IP4 0.0.0.0",
+          "a=ice-ufrag:" + ufrag, "a=ice-pwd:" + pwd, "a=fingerprint:sha-256 " + fp, "a=setup:" + (type === "offer" ? "actpass" : "active"), "a=mid:0", "a=sctp-port:5000", "a=max-message-size:262144", ...cand, "a=end-of-candidates", ""].join("\r\n");
+        return { type, sdp };
+      }
+      // ---- the speaker and the microphone
+      function syQuiet() {
+        if (SYM.stop) SYM.stop();
+        SYM.stop = null;
+        if (SYM.stream) SYM.stream.getTracks().forEach((t) => t.stop());
+        SYM.stream = null;
+      }
+      async function syMic() {
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) throw new Error("this browser has no microphone access: use the codes");
+        SYM.stream = SYM.stream || (await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } })); // filters would eat the tones
+        await ctx.resume();
+        return SYM.stream;
+      }
+      // listens until a message of the wanted kind (0 offer, 1 answer) arrives; resolves null when stopped
+      function syHear(want, ms, say) {
+        return new Promise((res) => {
+          const src = ctx.createMediaStreamSource(SYM.stream),
+            proc = ctx.createScriptProcessor(4096, 1, 1),
+            mute = ctx.createGain(),
+            end = (v) => {
+              clearTimeout(t);
+              proc.onaudioprocess = null;
+              [src, proc, mute].forEach((n) => n.disconnect());
+              SYM.stop = null;
+              res(v);
+            },
+            dec = symDec(ctx.sampleRate, (b) => (b[0] & 1) === want && end(b), (n, tot) => say(tot > 0 ? `Receiving… ${Math.round((n / tot) * 100)}%` : "Hearing something…")),
+            t = ms ? setTimeout(() => end(null), ms) : 0;
+          mute.gain.value = 0;
+          proc.onaudioprocess = (e) => dec.push(new Float32Array(e.inputBuffer.getChannelData(0)));
+          src.connect(proc);
+          proc.connect(mute);
+          mute.connect(ctx.destination);
+          SYM.stop = () => end(null);
+        });
+      }
+      function syPlay(bytes, loop) {
+        const data = symSynth(bytes, ctx.sampleRate),
+          buf = ctx.createBuffer(1, data.length, ctx.sampleRate),
+          src = ctx.createBufferSource();
+        buf.copyToChannel(data, 0);
+        src.buffer = buf;
+        src.loop = loop;
+        src.connect(ctx.destination); // straight to the speaker: not the mixer, so SILENT and MASTER do not change it
+        const done = new Promise((ok) => (src.onended = ok));
+        src.start();
+        SYM.stop = () => {
+          try {
+            src.stop();
+          } catch {}
+        };
+        return done;
+      }
+      const syStat = (t) => ($("#syStat").textContent = t);
+      const syDone = (ms) => new Promise((ok) => setTimeout(ok, ms));
+      async function syHostS() {
+        if (SYNC.hub) return;
+        try {
+          ensureCtx();
+          await syMic();
+          const pc = syPc(),
+            peer = { pc, dc: pc.createDataChannel("t") };
+          SYNC.host = true;
+          if (SYNC.pend) SYNC.pend.pc.close();
+          SYNC.pend = peer;
+          syWire(peer);
+          await pc.setLocalDescription(await pc.createOffer());
+          await syGathered(pc);
+          const msg = syCompact(pc.localDescription),
+            t0 = Date.now(),
+            me = (SYNC.talk = {});
+          toast("Volume up, and hold the devices close", 2600);
+          syFace();
+          // play a pass, then listen for the answer, again and again for 3 minutes
+          while (SYNC.talk === me && Date.now() - t0 < 180000) {
+            syStat("Playing the code… keep the other device close, listening.");
+            await syPlay(msg, false);
+            if (SYNC.talk !== me) return;
+            syStat("Listening for the answer…");
+            const ans = await syHear(1, 15000, syStat);
+            if (SYNC.talk !== me) return;
+            if (ans) {
+              syQuiet();
+              syStat("Heard the answer. Connecting…");
+              return await pc.setRemoteDescription(syExpand(ans));
+            }
+          }
+          if (SYNC.talk === me) (syQuiet(), syLeave(true), toast("Nobody answered: try again or use the codes", 2600));
+        } catch (e) {
+          syQuiet();
+          toast("Could not pair by sound: " + (e.message || e), 3200);
+          syLeave(true);
+        }
+      }
+      async function syJoinS() {
+        if (SYNC.host || SYNC.hub) return;
+        try {
+          ensureCtx();
+          await syMic();
+          const me = (SYNC.talk = {});
+          syFace();
+          syStat("Listening for the host…");
+          const got = await syHear(0, 180000, syStat);
+          if (SYNC.talk !== me) return;
+          if (!got) return (syQuiet(), toast("Heard nothing: try again or use the codes", 2600));
+          syQuiet(); // the microphone is off while this device plays
+          syStat("Heard the host. Sending the answer…");
+          const pc = syPc(),
+            peer = { pc };
+          pc.ondatachannel = (e) => ((peer.dc = e.channel), syWire(peer));
+          SYNC.pend = peer;
+          await pc.setRemoteDescription(syExpand(got));
+          await pc.setLocalDescription(await pc.createAnswer());
+          await syGathered(pc);
+          const msg = syCompact(pc.localDescription);
+          syPlay(msg, true); // repeats until the connection opens (syWire stops it)
+        } catch (e) {
+          syQuiet();
+          toast("Could not pair by sound: " + (e.message || e), 3200);
+        }
+      }
+      $("#syHost").onclick = syHostS;
+      $("#syJoin").onclick = syJoinS;
       // PLAY / STOP: a guest asks the host, the host sets the time for all
       const togglePlayLocal = togglePlay;
       togglePlay = function () {
@@ -13461,7 +13836,8 @@ a.length>D&&(D=a.length,p=0|1.25*D+7200,r=new Int8Array(p));a=u.lame_encode_buff
             b: {
               en: [
                 "**SYNC** (Files screen) joins several devices on the **same Wi-Fi** into one session, with no server and no account: every device has the same song, the same samples and the same PLAY / STOP. Use it to have the mixer open on one device, the live patterns on another and the piano on a third, or to play together with a friend.",
-                "- **HOST** on one device makes a code. Send it to the other device (a message, AirDrop, anything) and tap **JOIN** there: paste the code, and send back the answer it makes. Paste the answer on the host and tap **CONNECT**. Repeat for each device you add.",
+                "- **Pair by sound:** put the two devices close, volume up, in a quiet room. Tap **HOST** on one: it plays a chirping sound (about 11 seconds) and listens for the answer. Tap **JOIN** on the other: it listens, and when it has heard the host it plays its answer the same way. Both need the microphone. Then both screens show the **same 4 digits**: if they match, tap **THEY MATCH** on the host (this stops anyone who overheard from joining). Repeat for each device you add.",
+                "- **Pair by code** (no sound needed, or a noisy room): **HOST BY CODE** makes a code. Send it to the other device (a message, AirDrop, anything) and tap **JOIN BY CODE** there: paste the code and send back the answer it makes. Paste the answer on the host and tap **CONNECT**.",
                 "- A device that joins gets the host's song and samples; its own song is kept in the song list as *Before sync*. After that every device can edit: the last change wins. A change on one appears on the others in a moment, and so do the samples.",
                 "- **PLAY** and **STOP** on any device start and stop all of them together. Each device plays from what its own view shows (live patterns, song or pattern).",
                 "- **SILENT** mutes this device, because only one should make the sound (the one you record on or listen from). A MIDI knob on one device moves the mixer of all.",
@@ -13469,7 +13845,8 @@ a.length>D&&(D=a.length,p=0|1.25*D+7200,r=new Int8Array(p));a=u.lame_encode_buff
               ],
               es: [
                 "**SYNC** (pantalla Files) une varios dispositivos en la **misma Wi-Fi** en una sola sesión, sin servidor ni cuenta: todos tienen la misma canción, las mismas muestras y el mismo PLAY / STOP. Sirve para tener el mezclador abierto en uno, los patrones en vivo en otro y el piano en un tercero, o para tocar con un amigo.",
-                "- **HOST** en un dispositivo crea un código. Envíalo al otro dispositivo (un mensaje, AirDrop, lo que sea) y toca **JOIN** allí: pega el código y envía de vuelta la respuesta que genera. Pega la respuesta en el host y toca **CONNECT**. Repite con cada dispositivo que añadas.",
+                "- **Emparejar por sonido:** pon los dos dispositivos cerca, con el volumen alto, en una sala tranquila. Toca **HOST** en uno: reproduce un sonido de pitidos (unos 11 segundos) y escucha la respuesta. Toca **JOIN** en el otro: escucha, y cuando ha oído al host reproduce su respuesta igual. Los dos necesitan el micrófono. Luego las dos pantallas muestran los **mismos 4 dígitos**: si coinciden, toca **THEY MATCH** en el host (así nadie que haya oído el sonido puede entrar). Repite con cada dispositivo que añadas.",
+                "- **Emparejar con código** (sin sonido, o en una sala ruidosa): **HOST BY CODE** crea un código. Envíalo al otro dispositivo (un mensaje, AirDrop, lo que sea) y toca **JOIN BY CODE** allí: pega el código y envía de vuelta la respuesta que genera. Pega la respuesta en el host y toca **CONNECT**.",
                 "- El que se une recibe la canción y las muestras del host; la suya queda en la lista de canciones como *Before sync*. Después todos pueden editar: gana el último cambio. Un cambio en uno aparece en los demás al momento, igual que las muestras.",
                 "- **PLAY** y **STOP** en cualquiera arrancan y paran a todos a la vez. Cada dispositivo toca lo que muestra su vista (patrones en vivo, canción o patrón).",
                 "- **SILENT** silencia este dispositivo, porque solo uno debe sonar (el que grabas o escuchas). Un potenciómetro MIDI en uno mueve el mezclador de todos.",
@@ -13483,7 +13860,7 @@ a.length>D&&(D=a.length,p=0|1.25*D+7200,r=new Int8Array(p));a=u.lame_encode_buff
             b: {
               en: [
                 "## Version 1.3.0",
-                "- **Sync:** devices on the same Wi-Fi can share one session (Files ▸ **SYNC**, paired by copying two codes, no server): the same song and samples, shared PLAY / STOP, edits on any device appear on the others, a **SILENT** switch so one device makes the sound, and a MIDI knob on one moves the mixer of all.",
+                "- **Sync:** devices on the same Wi-Fi can share one session (Files ▸ **SYNC**, paired by sound or by copying two codes, no server): the same song and samples, shared PLAY / STOP, edits on any device appear on the others, a **SILENT** switch so one device makes the sound, and a MIDI knob on one moves the mixer of all.",
                 "## Version 1.2.0",
                 "- **Install it:** the app is now a web app (PWA). Add it to the Home Screen (iPhone: Safari ▸ Share; Android and desktop: Chrome ▸ Install app) and it opens like an app and works offline. The Android APK is retired.",
                 "- **Variator:** new styles **Lo-Fi**, **Synthwave** and **Dungeon Synth**; the dice also shuffles the VARS knobs; the **♫** button rotates the lower part between patterns, a piano and drum pads (what you play there is not written into the song).",
@@ -13494,7 +13871,7 @@ a.length>D&&(D=a.length,p=0|1.25*D+7200,r=new Int8Array(p));a=u.lame_encode_buff
               ],
               es: [
                 "## Versión 1.3.0",
-                "- **Sincronizar:** los dispositivos de la misma Wi-Fi pueden compartir una sesión (Files ▸ **SYNC**, emparejados copiando dos códigos, sin servidor): la misma canción y muestras, PLAY / STOP compartidos, las ediciones de uno aparecen en los demás, un interruptor **SILENT** para que suene solo uno, y un potenciómetro MIDI en uno mueve el mezclador de todos.",
+                "- **Sincronizar:** los dispositivos de la misma Wi-Fi pueden compartir una sesión (Files ▸ **SYNC**, emparejados por sonido o copiando dos códigos, sin servidor): la misma canción y muestras, PLAY / STOP compartidos, las ediciones de uno aparecen en los demás, un interruptor **SILENT** para que suene solo uno, y un potenciómetro MIDI en uno mueve el mezclador de todos.",
                 "## Versión 1.2.0",
                 "- **Instálala:** la app ahora es una web app (PWA). Añádela a la pantalla de inicio (iPhone: Safari ▸ Compartir; Android y escritorio: Chrome ▸ Instalar app) y se abre como una app y funciona sin conexión. El APK de Android se retira.",
                 "- **Variator:** estilos nuevos **Lo-Fi**, **Synthwave** y **Dungeon Synth**; el dado también mezcla los potes de VARS; el botón **♫** rota la parte de abajo entre patrones, un piano y pads de batería (lo que toques ahí no se escribe en la canción).",
@@ -14613,5 +14990,5 @@ a.length>D&&(D=a.length,p=0|1.25*D+7200,r=new Int8Array(p));a=u.lame_encode_buff
         if (!localStorage.getItem("track-test.welcome")) welcomeShow();
       } catch {}
     </script>
-  <div style="position:fixed;left:4px;bottom:2px;z-index:99;font:700 9px monospace;opacity:.7;pointer-events:none;color:#ff5e7a">TEST BUILD · lan-sync · 7f5c672</div></body>
+  <div style="position:fixed;left:4px;bottom:2px;z-index:99;font:700 9px monospace;opacity:.7;pointer-events:none;color:#ff5e7a">TEST BUILD · lan-sync · 0274d67</div></body>
 </html>
