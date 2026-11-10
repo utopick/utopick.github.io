@@ -4003,6 +4003,12 @@
           <div class="bar" style="padding: 0; margin-top: 6px">
             <button id="syHostC" title="Start a sync with a code you copy to the other device">HOST BY CODE</button>
             <button id="syJoinC" title="Join with a code you paste">JOIN BY CODE</button>
+            <button id="syQr" title="A QR code that opens this app on another device: scan it with its camera">APP QR</button>
+          </div>
+          <div id="syQrBox" hidden>
+            <div id="syQrImg" style="background: #fff; border-radius: 8px; padding: 4px; width: min(280px, 100%); margin: 10px auto 4px"></div>
+            <div class="hint" id="syQrUrl" style="text-align: center; margin: 0 0 6px"></div>
+            <div class="bar" style="padding: 0"><button id="syQrSave" title="A vector picture to print on cards or stickers">SAVE SVG</button><button id="syQrShare" title="Send the link">SHARE LINK</button></div>
           </div>
           <div id="syChk" hidden>
             <div class="lbl" id="syChkT" style="margin: 10px 0 4px"></div>
@@ -9934,6 +9940,103 @@ a.length>D&&(D=a.length,p=0|1.25*D+7200,r=new Int8Array(p));a=u.lame_encode_buff
       // pagehide also covers reloads, which Safari does not always announce with visibilitychange
       addEventListener("pagehide", saveNow);
 
+      // ---- QR code (byte mode, error correction M, versions 1 to 9: up to 178 bytes). Small and without libraries: it is only for web addresses.
+      function qrMake(text) {
+        const data = new TextEncoder().encode(text),
+          // version: [codewords, EC codewords per block, [[blocks, data codewords]...]]
+          T = [0, [26, 10, [[1, 16]]], [44, 16, [[1, 28]]], [70, 26, [[1, 44]]], [100, 18, [[2, 32]]], [134, 24, [[2, 43]]], [172, 16, [[4, 27]]], [196, 18, [[4, 31]]], [242, 22, [[2, 38], [2, 39]]], [292, 22, [[3, 36], [2, 37]]]],
+          AL = [0, [], [6, 18], [6, 22], [6, 26], [6, 30], [6, 34], [6, 22, 38], [6, 24, 42], [6, 26, 46]],
+          cap = (k) => T[k][2].reduce((a, [n, d]) => a + n * d, 0);
+        let v = 1;
+        while (v <= 9 && cap(v) < data.length + 2) v++;
+        if (v > 9) throw new Error("QR: text too long");
+        const [, ecn, groups] = T[v],
+          N = 17 + 4 * v,
+          bits = [],
+          put = (val, n) => { for (let i = n - 1; i >= 0; i--) bits.push((val >> i) & 1); };
+        put(4, 4);
+        put(data.length, 8);
+        data.forEach((b) => put(b, 8));
+        put(0, Math.min(4, cap(v) * 8 - bits.length));
+        while (bits.length % 8) bits.push(0);
+        for (let p = 0; bits.length < cap(v) * 8; p ^= 1) put(p ? 0x11 : 0xec, 8);
+        const cw = [];
+        for (let i = 0; i < bits.length; i += 8) cw.push(parseInt(bits.slice(i, i + 8).join(""), 2));
+        // Reed-Solomon over GF(256)
+        const ex = [], lg = [];
+        for (let i = 0, x = 1; i < 255; i++) { ex[i] = x; lg[x] = i; x <<= 1; if (x & 256) x ^= 0x11d; }
+        const mul = (a, b) => (a && b ? ex[(lg[a] + lg[b]) % 255] : 0);
+        let gen = [1];
+        for (let i = 0; i < ecn; i++) { const n = Array(gen.length + 1).fill(0); gen.forEach((c, j) => { n[j] ^= c; n[j + 1] ^= mul(c, ex[i]); }); gen = n; }
+        const rs = (d) => { const r = Array(ecn).fill(0); for (const b of d) { const f = b ^ r.shift(); r.push(0); if (f) gen.slice(1).forEach((g, j) => (r[j] ^= mul(g, f))); } return r; };
+        const blocks = [];
+        let at = 0;
+        groups.forEach(([n, d]) => { for (let i = 0; i < n; i++) { blocks.push(cw.slice(at, at + d)); at += d; } });
+        const ecs = blocks.map(rs), out = [];
+        for (let i = 0; i < Math.max(...blocks.map((b) => b.length)); i++) blocks.forEach((b) => i < b.length && out.push(b[i]));
+        for (let i = 0; i < ecn; i++) ecs.forEach((e) => out.push(e[i]));
+        const stream = [];
+        out.forEach((b) => put2(stream, b));
+        function put2(a, b) { for (let i = 7; i >= 0; i--) a.push((b >> i) & 1); }
+        // the matrix: M the modules, F the ones that are not data
+        const M = Array.from({ length: N }, () => Array(N).fill(false)), F = Array.from({ length: N }, () => Array(N).fill(false));
+        const set = (r, c, val) => { M[r][c] = val; F[r][c] = true; };
+        const finder = (r0, c0) => { for (let dr = -1; dr <= 7; dr++) for (let dc = -1; dc <= 7; dc++) { const r = r0 + dr, c = c0 + dc; if (r < 0 || c < 0 || r >= N || c >= N) continue; set(r, c, dr >= 0 && dr <= 6 && dc >= 0 && dc <= 6 && (dr === 0 || dr === 6 || dc === 0 || dc === 6 || (dr >= 2 && dr <= 4 && dc >= 2 && dc <= 4))); } };
+        finder(0, 0); finder(0, N - 7); finder(N - 7, 0);
+        for (let i = 8; i < N - 8; i++) { set(6, i, i % 2 === 0); set(i, 6, i % 2 === 0); }
+        const A = AL[v];
+        A.forEach((r) => A.forEach((c) => { if ((r === 6 && c === 6) || (r === 6 && c === A[A.length - 1]) || (r === A[A.length - 1] && c === 6)) return; for (let dr = -2; dr <= 2; dr++) for (let dc = -2; dc <= 2; dc++) set(r + dr, c + dc, Math.max(Math.abs(dr), Math.abs(dc)) !== 1); }));
+        for (let i = 0; i < 9; i++) { F[8][i] = true; F[i][8] = true; }
+        for (let i = 0; i < 8; i++) { F[8][N - 1 - i] = true; F[N - 1 - i][8] = true; }
+        set(N - 8, 8, true);
+        if (v >= 7) for (let i = 0; i < 6; i++) for (let j = 0; j < 3; j++) { F[i][N - 11 + j] = true; F[N - 11 + j][i] = true; }
+        let bi = 0, up = true;
+        for (let c = N - 1; c > 0; c -= 2) {
+          if (c === 6) c--;
+          for (let t = 0; t < N; t++) { const r = up ? N - 1 - t : t; for (const cc of [c, c - 1]) if (!F[r][cc]) M[r][cc] = bi < stream.length ? stream[bi++] === 1 : false; }
+          up = !up;
+        }
+        const MASK = [(r, c) => (r + c) % 2 === 0, (r) => r % 2 === 0, (r, c) => c % 3 === 0, (r, c) => (r + c) % 3 === 0, (r, c) => (Math.floor(r / 2) + Math.floor(c / 3)) % 2 === 0, (r, c) => ((r * c) % 2) + ((r * c) % 3) === 0, (r, c) => (((r * c) % 2) + ((r * c) % 3)) % 2 === 0, (r, c) => (((r + c) % 2) + ((r * c) % 3)) % 2 === 0];
+        const withMask = (k) => {
+          const Q = M.map((row) => row.slice()), s = (r, c, val) => (Q[r][c] = val);
+          for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) if (!F[r][c] && MASK[k](r, c)) Q[r][c] = !Q[r][c];
+          let f = (0 << 3) | k, rem = f << 10; // error correction level M is 00
+          for (let i = 14; i >= 10; i--) if ((rem >> i) & 1) rem ^= 0x537 << (i - 10);
+          f = ((f << 10) | rem) ^ 0x5412;
+          const b = (i) => ((f >> i) & 1) === 1;
+          for (let i = 0; i <= 5; i++) s(i, 8, b(i));
+          s(7, 8, b(6)); s(8, 8, b(7)); s(8, 7, b(8));
+          for (let i = 9; i < 15; i++) s(8, 14 - i, b(i));
+          for (let i = 0; i < 8; i++) s(8, N - 1 - i, b(i));
+          for (let i = 8; i < 15; i++) s(N - 15 + i, 8, b(i));
+          if (v >= 7) {
+            let r2 = v;
+            for (let i = 0; i < 12; i++) r2 = (r2 << 1) ^ ((r2 >>> 11) * 0x1f25);
+            const vb = (v << 12) | r2;
+            for (let i = 0; i < 18; i++) { const bit = ((vb >> i) & 1) === 1, a = N - 11 + (i % 3), c = Math.floor(i / 3); s(c, a, bit); s(a, c, bit); }
+          }
+          return Q;
+        };
+        // the mask with the lowest penalty: runs of 5 or more, 2x2 blocks and an unbalanced count
+        const penalty = (Q) => {
+          let p = 0;
+          for (let r = 0; r < N; r++) for (const line of [Q[r], Q.map((x) => x[r])]) { let run = 1; for (let i = 1; i < N; i++) { if (line[i] === line[i - 1]) { run++; if (run === 5) p += 3; else if (run > 5) p++; } else run = 1; } }
+          for (let r = 0; r < N - 1; r++) for (let c = 0; c < N - 1; c++) if (Q[r][c] === Q[r][c + 1] && Q[r][c] === Q[r + 1][c] && Q[r][c] === Q[r + 1][c + 1]) p += 3;
+          const dark = Q.flat().filter(Boolean).length;
+          return p + Math.floor(Math.abs((dark * 20) / (N * N) - 10)) * 10;
+        };
+        let best = null, bp = Infinity;
+        for (let k = 0; k < 8; k++) { const Q = withMask(k), p = penalty(Q); if (p < bp) ((bp = p), (best = Q)); }
+        return best;
+      }
+      // the QR as an SVG (black on white with the 4-module quiet zone, so it scans whatever the theme)
+      function qrSvg(text) {
+        const Q = qrMake(text), N = Q.length;
+        let d = "";
+        Q.forEach((row, r) => row.forEach((on, c) => on && (d += `M${c + 4} ${r + 4}h1v1h-1z`)));
+        return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${N + 8} ${N + 8}" shape-rendering="crispEdges"><rect width="${N + 8}" height="${N + 8}" fill="#fff"/><path d="${d}" fill="#000"/></svg>`;
+      }
+
       // ======================================================================
       // SYNC: devices on the same Wi-Fi share one song, with no server (WebRTC, paired by copying two codes)
       // ======================================================================
@@ -10265,6 +10368,19 @@ a.length>D&&(D=a.length,p=0|1.25*D+7200,r=new Int8Array(p));a=u.lame_encode_buff
         toast(SYNC.silent ? "This device is silent" : "This device makes sound");
       };
       $("#syLeave").onclick = () => syLeave();
+      // a QR code that opens this app: a device that has not got it points its camera at the screen
+      const syAppUrl = () => new URL(".", location.href).href;
+      $("#syQr").onclick = () => {
+        const box = $("#syQrBox");
+        box.hidden = !box.hidden;
+        if (box.hidden) return;
+        const u = syAppUrl();
+        $("#syQrImg").innerHTML = qrSvg(u);
+        $("#syQrUrl").textContent = u;
+        if (!/^https?:/.test(u)) toast("Open the app from its web address to share it");
+      };
+      $("#syQrSave").onclick = () => download(new Blob([qrSvg(syAppUrl())], { type: "image/svg+xml" }), "track-pocket-qr.svg");
+      $("#syQrShare").onclick = () => (navigator.share ? navigator.share({ url: syAppUrl() }).catch(() => {}) : navigator.clipboard.writeText(syAppUrl()).then(() => toast("Link copied")));
 
       // ======================================================================
       // SYNC by sound: the pairing data is played as chirps and heard by the microphone of the other device
@@ -13841,6 +13957,7 @@ a.length>D&&(D=a.length,p=0|1.25*D+7200,r=new Int8Array(p));a=u.lame_encode_buff
                 "- A device that joins gets the host's song and samples; its own song is kept in the song list as *Before sync*. After that every device can edit: the last change wins. A change on one appears on the others in a moment, and so do the samples.",
                 "- **PLAY** and **STOP** on any device start and stop all of them together. Each device plays from what its own view shows (live patterns, song or pattern).",
                 "- **SILENT** mutes this device, because only one should make the sound (the one you record on or listen from). A MIDI knob on one device moves the mixer of all.",
+                "- **APP QR** shows a QR code that opens this app: a new device points its camera at it and gets the app. **SAVE SVG** gives a sharp picture to print on cards or stickers.",
                 "- **LEAVE** leaves the session. If the host leaves, the session ends. The devices need enough free space for the samples; if a device has none it says so and skips them. It does not work on guest Wi-Fi networks that keep devices apart, or when one device is on mobile data.",
               ],
               es: [
@@ -13850,6 +13967,7 @@ a.length>D&&(D=a.length,p=0|1.25*D+7200,r=new Int8Array(p));a=u.lame_encode_buff
                 "- El que se une recibe la canción y las muestras del host; la suya queda en la lista de canciones como *Before sync*. Después todos pueden editar: gana el último cambio. Un cambio en uno aparece en los demás al momento, igual que las muestras.",
                 "- **PLAY** y **STOP** en cualquiera arrancan y paran a todos a la vez. Cada dispositivo toca lo que muestra su vista (patrones en vivo, canción o patrón).",
                 "- **SILENT** silencia este dispositivo, porque solo uno debe sonar (el que grabas o escuchas). Un potenciómetro MIDI en uno mueve el mezclador de todos.",
+                "- **APP QR** muestra un código QR que abre esta app: un dispositivo nuevo apunta su cámara y recibe la app. **SAVE SVG** da una imagen nítida para imprimir en tarjetas o pegatinas.",
                 "- **LEAVE** sale de la sesión. Si sale el host, la sesión termina. Los dispositivos necesitan espacio libre para las muestras; si uno no tiene, lo dice y las omite. No funciona en redes Wi-Fi de invitados que aíslan los dispositivos, ni si uno está con datos móviles.",
               ],
             },
@@ -14990,5 +15108,5 @@ a.length>D&&(D=a.length,p=0|1.25*D+7200,r=new Int8Array(p));a=u.lame_encode_buff
         if (!localStorage.getItem("track-test.welcome")) welcomeShow();
       } catch {}
     </script>
-  <div style="position:fixed;left:4px;bottom:2px;z-index:99;font:700 9px monospace;opacity:.7;pointer-events:none;color:#ff5e7a">TEST BUILD · lan-sync · 0274d67</div></body>
+  <div style="position:fixed;left:4px;bottom:2px;z-index:99;font:700 9px monospace;opacity:.7;pointer-events:none;color:#ff5e7a">TEST BUILD · lan-sync · 3afaad3</div></body>
 </html>
