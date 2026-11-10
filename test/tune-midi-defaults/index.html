@@ -2685,7 +2685,7 @@
       });
       let customTunings = [];
       try {
-        customTunings = JSON.parse(localStorage.getItem("customTunings") || "[]");
+        customTunings = JSON.parse(localStorage.getItem("tune-test.customTunings") || "[]");
         const o = JSON.parse(localStorage.getItem("tune-test.state") || "{}");
         for (const k of ["view", "inst", "tun", "auto", "a4"]) if (k in o) S[k] = o[k];
         if (o.scl) Object.assign(S.scl, o.scl);
@@ -7862,7 +7862,7 @@
       };
       function persistCustom() {
         try {
-          localStorage.setItem("customTunings", JSON.stringify(customTunings));
+          localStorage.setItem("tune-test.customTunings", JSON.stringify(customTunings));
         } catch {}
         renderSaved();
       }
