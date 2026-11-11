@@ -56,6 +56,7 @@ ol{margin:6px 0;padding-left:20px;color:var(--dim)}li{margin:4px 0}
 <section class="panel"><h2>1 · Input and output</h2>
 <div class="buttons"><button id="permissions">ALLOW MIC · REFRESH</button></div>
 <label class="field"><span>Microphone / input device</span><select id="inputDevice"><option value="">System default</option></select></label>
+<label class="field"><span>Input channel (a 2-input interface like the Scarlett Solo: 1 = mic, 2 = instrument)</span><select id="inChannel"><option value="mix">Mix of all channels</option><option value="0">1 · left</option><option value="1">2 · right</option></select></label>
 <label class="field"><span>Output device (when the browser allows it)</span><select id="outputDevice"><option value="">System default</option></select></label>
 <div class="hint" id="sinkSupport">Checking output selection support…</div>
 <h3>Capture</h3>
@@ -222,16 +223,16 @@ function settingsRequest(){
  return c;
 }
 function updateStatus(text,on=false){$('status').textContent=text;$('statusDot').classList.toggle('on',on);}
-function setButtons(active){$('start').disabled=active;$('stop').disabled=!active;$('record').disabled=!active;$('loopback').disabled=!active||!session?.probe;for(const id of ['inputDevice','outputDevice','path','echo','noise','agc','mono','captureLatency','latencyHint'])$(id).disabled=active;}
+function setButtons(active){$('start').disabled=active;$('stop').disabled=!active;$('record').disabled=!active;$('loopback').disabled=!active||!session?.probe;for(const id of ['inputDevice','inChannel','outputDevice','path','echo','noise','agc','mono','captureLatency','latencyHint'])$(id).disabled=active;}
 function statsFor(ctx){const s=ctx?.playbackStats;if(!s)return null;const out={};for(const k of ['underrunCount','underrunDuration','averageLatency','minimumLatency','maximumLatency']){try{if(typeof s[k]==='number')out[k]=s[k];}catch{}}return Object.keys(out).length?out:null;}
 function snapshot(){
  if(!session){$('diagnostics').textContent='No active audio session.';return null;}
- const {ctx,stream,source,processor,path,inputLabel,outputLabel,hint}=session;
+ const {ctx,stream,source,processor,path,inputLabel,outputLabel,hint,inChannel}=session;
  const track=stream.getAudioTracks()[0];const settings=track.getSettings();
  const base=Number.isFinite(ctx.baseLatency)?ctx.baseLatency*1000:null;
  const output=Number.isFinite(ctx.outputLatency)?ctx.outputLatency*1000:null;
  const capture=Number.isFinite(settings.latency)?settings.latency*1000:null;
- const s={at:new Date().toISOString(),path,devices:{input:inputLabel,output:outputLabel,requestedInputId:$('inputDevice').value||null,requestedOutputId:$('outputDevice').value||null,reportedTrackDeviceId:settings.deviceId||null},audio:{state:ctx.state,contextSampleRate:ctx.sampleRate,latencyHint:hint,baseLatencyMs:base,outputLatencyMs:output,estimatedOutputPathMs:base!==null&&output!==null?base+output:null,captureSettingLatencyMs:capture,trackSettings:settings,playbackStats:statsFor(ctx),quantum:session.quantum,workletMaxDSPus:session.maxUs??null},captureConstraints:settingsRequest(),wasmActive:session.wasmReady===true,client:{userAgent:navigator.userAgent,platform:navigator.platform,visibility:document.visibilityState}};
+ const s={at:new Date().toISOString(),path,devices:{input:inputLabel,output:outputLabel,requestedInputId:$('inputDevice').value||null,requestedOutputId:$('outputDevice').value||null,reportedTrackDeviceId:settings.deviceId||null},audio:{inputChannel:inChannel,trackChannels:settings.channelCount??null,state:ctx.state,contextSampleRate:ctx.sampleRate,latencyHint:hint,baseLatencyMs:base,outputLatencyMs:output,estimatedOutputPathMs:base!==null&&output!==null?base+output:null,captureSettingLatencyMs:capture,trackSettings:settings,playbackStats:statsFor(ctx),quantum:session.quantum,workletMaxDSPus:session.maxUs??null},captureConstraints:settingsRequest(),wasmActive:session.wasmReady===true,client:{userAgent:navigator.userAgent,platform:navigator.platform,visibility:document.visibilityState}};
  $('base').textContent=ms(base);$('output').textContent=ms(output);$('sum').textContent=ms(s.audio.estimatedOutputPathMs);$('sample').textContent=ctx.sampleRate+' Hz';$('capture').textContent=ms(capture);$('quantum').textContent=Number.isFinite(session.quantum)?`${(session.quantum/ctx.sampleRate*1000).toFixed(2)} ms`:'—';$('rms').textContent=session.lastRms==null?'—':`${fmt(db(session.lastRms),1)} dBFS`;$('state').textContent=ctx.state+(s.audio.playbackStats?.underrunCount!=null?` / ${s.audio.playbackStats.underrunCount}`:'');
  $('diagnostics').textContent=JSON.stringify(s,null,2);return s;
 }
@@ -244,7 +245,11 @@ async function start(){
   const hint=$('latencyHint').value;
   ctx=new AudioContext({latencyHint:hint==='0.005'?0.005:hint});
   if($('outputDevice').value){if(typeof ctx.setSinkId==='function')await ctx.setSinkId($('outputDevice').value);else throw new Error('This browser cannot select an audio output. Choose system default or use system sound settings.');}
-  const source=ctx.createMediaStreamSource(stream),path=$('path').value;
+  const raw=ctx.createMediaStreamSource(stream),path=$('path').value,inChannel=$('inChannel').value;
+  // one mono input for every path and the probe: the chosen channel, or the speaker downmix of all of them
+  const source=ctx.createGain();source.channelCount=1;source.channelCountMode='explicit';source.channelInterpretation='speakers';
+  if(inChannel==='mix')raw.connect(source);
+  else{const split=ctx.createChannelSplitter(Math.max(2,stream.getAudioTracks()[0].getSettings().channelCount||2));raw.connect(split);split.connect(source,Number(inChannel));}
   const inputOption=$('inputDevice').selectedOptions[0];const outputOption=$('outputDevice').selectedOptions[0];
   const inputLabel=stream.getAudioTracks()[0].label||inputOption?.text||'System default';
   const outputLabel=outputOption?.text||'System default';
@@ -276,7 +281,7 @@ async function start(){
   }
   master.connect(ctx.destination);
   await ctx.resume();
-  session={stream,ctx,source,processor,probe,master,path,inputLabel,outputLabel,hint,wasmReady:false,lastRms:null,quantum:null,maxUs:null};
+  session={stream,ctx,source,raw,inChannel,processor,probe,master,path,inputLabel,outputLabel,hint,wasmReady:false,lastRms:null,quantum:null,maxUs:null};
   if(path==='worklet-wasm'){
    // The module is real compiled WebAssembly. Transfer buffer once before monitoring is enabled.
    const bytes=bytesWasm();processor.port.postMessage({type:'wasm',bytes:bytes.buffer},[bytes.buffer]);
@@ -290,7 +295,7 @@ async function start(){
   log('Monitoring graph running, muted. Use headphones and raise volume intentionally.');
  }catch(e){if(url)URL.revokeObjectURL(url);stream?.getTracks().forEach(t=>t.stop());if(ctx)await ctx.close().catch(()=>{});throw e;}
 }
-async function stop(){if(!session)return;const s=session;session=null;clearInterval(metricsTimer);metricsTimer=null;try{s.master.gain.value=0;s.source.disconnect();s.processor?.disconnect();s.probe?.disconnect();s.master.disconnect();s.stream.getTracks().forEach(t=>t.stop());await s.ctx.close();}catch{}setButtons(false);$('gain').value=0;$('gainValue').textContent='0%';updateStatus('Stopped · ready for next hardware or path test');log('Graph stopped.');}
+async function stop(){if(!session)return;const s=session;session=null;clearInterval(metricsTimer);metricsTimer=null;try{s.master.gain.value=0;s.raw.disconnect();s.source.disconnect();s.processor?.disconnect();s.probe?.disconnect();s.master.disconnect();s.stream.getTracks().forEach(t=>t.stop());await s.ctx.close();}catch{}setButtons(false);$('gain').value=0;$('gainValue').textContent='0%';updateStatus('Stopped · ready for next hardware or path test');log('Graph stopped.');}
 $('start').onclick=()=>start().catch(e=>log('Start failed: '+e.message,true));$('stop').onclick=stop;
 $('gain').oninput=()=>{currentGain=Number($('gain').value)/100;$('gainValue').textContent=Math.round(currentGain*100)+'%';if(session){session.master.gain.setTargetAtTime(currentGain,session.ctx.currentTime,0.005);}};
 $('refresh').onclick=()=>snapshot();$('copy').onclick=async()=>{try{await navigator.clipboard.writeText($('diagnostics').textContent);log('Snapshot copied.');}catch(e){log('Clipboard unavailable: '+e.message,true);}};
@@ -323,7 +328,7 @@ function drawSignal(){const {c,w,h}=prepCanvas('signalChart');const data=chartRm
 }
 function redraw(){drawTable();drawLatency();drawSignal();}
 window.addEventListener('resize',redraw);
-function runBase(final){return {id:crypto.randomUUID?.()||String(Date.now())+'-'+Math.random(),at:new Date().toISOString(),path:session.path,inputLabel:session.inputLabel,outputLabel:session.outputLabel,requestedInputDeviceId:$('inputDevice').value||null,requestedOutputDeviceId:$('outputDevice').value||null,sampleRate:final.audio.contextSampleRate,baseLatencyMs:final.audio.baseLatencyMs,outputLatencyMs:final.audio.outputLatencyMs,estimatedOutputPathMs:final.audio.estimatedOutputPathMs,captureSettingLatencyMs:final.audio.captureSettingLatencyMs,roundTripMs:null,physicalLatencyMs:null,trackSettings:final.audio.trackSettings,captureConstraints:final.captureConstraints,latencyHint:session.hint,userAgent:navigator.userAgent};}
+function runBase(final){return {id:crypto.randomUUID?.()||String(Date.now())+'-'+Math.random(),at:new Date().toISOString(),path:session.path,inputChannel:session.inChannel,inputLabel:session.inputLabel,outputLabel:session.outputLabel,requestedInputDeviceId:$('inputDevice').value||null,requestedOutputDeviceId:$('outputDevice').value||null,sampleRate:final.audio.contextSampleRate,baseLatencyMs:final.audio.baseLatencyMs,outputLatencyMs:final.audio.outputLatencyMs,estimatedOutputPathMs:final.audio.estimatedOutputPathMs,captureSettingLatencyMs:final.audio.captureSettingLatencyMs,roundTripMs:null,physicalLatencyMs:null,trackSettings:final.audio.trackSettings,captureConstraints:final.captureConstraints,latencyHint:session.hint,userAgent:navigator.userAgent};}
 // For each click: noise floor from the 100 ms before it, then the first input sample above 35% of the
 // click's returned peak. Returns ms per click, or null where nothing clearly came back.
 function analyzeLoopback(buf,clicks,gap,sr){
