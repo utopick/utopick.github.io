@@ -10567,14 +10567,17 @@ a.length>D&&(D=a.length,p=0|1.25*D+7200,r=new Int8Array(p));a=u.lame_encode_buff
         put(ufrag);
         put(pwd);
         fp.split(":").forEach((h) => out.push(parseInt(h, 16)));
-        for (const m of desc.sdp.matchAll(/a=candidate:\S+ 1 udp \d+ (\S+) (\d+) typ host/g)) {
+        for (const m of desc.sdp.matchAll(/a=candidate:\S+ 1 udp \d+ (\S+) (\d+) typ host/gi)) {
           const a = m[1],
             port = +m[2],
             u = a.match(/^([0-9a-f]{8})-([0-9a-f]{4})-([0-9a-f]{4})-([0-9a-f]{4})-([0-9a-f]{12})\.local$/i);
           if (/^\d+\.\d+\.\d+\.\d+$/.test(a)) cs.push([0, ...a.split(".").map(Number), port >> 8, port & 255]);
           else if (u) cs.push([1, ...u.slice(1).join("").match(/../g).map((h) => parseInt(h, 16)), port >> 8, port & 255]);
         }
-        if (!cs.length) throw new Error("no network address found: use the codes");
+        if (!cs.length) {
+          syNote("candidates seen: " + ((desc.sdp.match(/a=candidate:.*/g) || []).join(" | ") || "none"));
+          throw new Error("no network address found: use the codes");
+        }
         // a device can have several networks (Wi-Fi, a VPN, virtual machines): the home ranges go first, link-local and loopback are left out
         const rank = (c) => (c[0] === 1 ? 1 : c[1] === 192 && c[2] === 168 ? 0 : c[1] === 10 ? 1 : c[1] === 172 && c[2] >= 16 && c[2] <= 31 ? 2 : c[1] === 169 || c[1] === 127 ? 9 : 3);
         const best = cs.filter((c) => rank(c) < 9).sort((a, b) => rank(a) - rank(b)).slice(0, maxAddr);
@@ -10998,16 +11001,20 @@ a.length>D&&(D=a.length,p=0|1.25*D+7200,r=new Int8Array(p));a=u.lame_encode_buff
           await syGathered(pc);
           const n = (Math.random() * 65536) | 0,
             secret = crypto.getRandomValues(new Uint8Array(6));
-          let url = null;
+          let url = null,
+            why = null;
           for (const k of [2, 1]) {
             try {
               const u = syAppUrl() + "#j=" + syB64(syQrPayload(n, secret, syCompact(pc.localDescription, k)));
               qrMake(u); // throws when it does not fit
               url = u;
               break;
-            } catch {}
+            } catch (e) {
+              why = e; // the real reason: a size problem and a browser without usable addresses look the same otherwise
+              syNote("QR with " + k + " address(es) failed: " + (e.message || e));
+            }
           }
-          if (!url) throw new Error("the connection data does not fit a QR: use the sound or the codes");
+          if (!url) throw why;
           const me = (SYNC.talk = { qr: true });
           $("#syHQImg").innerHTML = qrSvg(url);
           syNote("host: QR shown, " + url.length + " characters");
@@ -15491,5 +15498,5 @@ a.length>D&&(D=a.length,p=0|1.25*D+7200,r=new Int8Array(p));a=u.lame_encode_buff
         if (!localStorage.getItem("track-test.welcome")) welcomeShow();
       } catch {}
     </script>
-  <div style="position:fixed;left:4px;bottom:2px;z-index:99;font:700 9px monospace;opacity:.7;pointer-events:none;color:#ff5e7a">TEST BUILD · lan-sync · 6aa048a</div></body>
+  <div style="position:fixed;left:4px;bottom:2px;z-index:99;font:700 9px monospace;opacity:.7;pointer-events:none;color:#ff5e7a">TEST BUILD · lan-sync · 66d67eb</div></body>
 </html>
