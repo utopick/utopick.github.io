@@ -810,7 +810,7 @@
         opacity: 0;
         transition: 0.25s;
         pointer-events: none;
-        z-index: 9;
+        z-index: 99; /* above the dialogs */
       }
       #toast.show {
         opacity: 1;
@@ -2669,6 +2669,56 @@
       #welcome[hidden] {
         display: none;
       }
+      /* SYNC by QR: a full-height dialog (it reuses .hp and .hh), the code or the camera view as big as the screen allows */
+      #syHQ {
+        position: fixed;
+        inset: 0;
+        z-index: 80;
+        background: rgba(0, 0, 0, 0.62);
+        display: flex;
+        justify-content: center;
+      }
+      #syHQ[hidden] {
+        display: none;
+      }
+      #syHQBody {
+        flex: 1;
+        min-height: 0;
+        overflow: auto;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        padding: 10px 12px;
+        text-align: center;
+      }
+      #syHQBody .hint {
+        margin: 0;
+      }
+      #syHQImg,
+      #syCam {
+        flex: none;
+        width: min(100%, calc(100dvh - 300px));
+        min-width: 200px;
+        aspect-ratio: 1;
+        border-radius: 8px;
+      }
+      #syHQImg {
+        background: #fff;
+        padding: 4px;
+      }
+      #syCam {
+        overflow: hidden;
+        background: #000;
+      }
+      #syCamV {
+        display: block;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        transform: scale(1.667); /* shows the middle 60% of the picture: the part that is read (SY_CROP) */
+      }
       .hp {
         width: 100%;
         max-width: 600px;
@@ -4009,15 +4059,6 @@
             <button id="syQr" title="A QR code that opens this app on another device: scan it with its camera">APP QR</button>
             <button id="syRep" title="Copy what happened while pairing, to send to whoever helps you">COPY REPORT</button>
           </div>
-          <div id="syHQ" hidden>
-            <div id="syHQImg" style="background: #fff; border-radius: 8px; padding: 4px; width: min(300px, 100%); margin: 10px auto 4px"></div>
-            <div id="syCam" hidden style="width: min(300px, 100%); margin: 10px auto 4px"><video id="syCamV" playsinline muted style="display: block; width: 100%; border-radius: 8px"></video></div>
-            <div class="hint" id="syHQTxt" style="text-align: center; margin: 0 0 6px"></div>
-            <div class="bar" id="syScanBar" hidden style="padding: 0">
-              <button id="syScanA" title="Read the other device's answer code with this device's camera (our own reader)">SCAN</button>
-              <button id="syScanB" title="Read the other device's answer code with this device's camera (the jsQR reader, to compare)">SCAN jsQR</button>
-            </div>
-          </div>
           <div id="syQJ" hidden style="border: 1px solid var(--acc); border-radius: 8px; padding: 10px; margin: 10px 0">
             <div class="hint" style="margin: 0 0 8px"><b>A device invites you to its sync.</b> This device's song is kept in FILE as “Before sync”, then replaced by the host's. Only join a device you trust that is next to you.</div>
             <div class="bar" style="padding: 0"><button id="syQJyes" class="on" title="Join the sync (the other device must be next to you, volume up)">JOIN</button><button id="syQJno" title="Ignore the invitation">NO</button></div>
@@ -4057,6 +4098,23 @@
       </section>
       <div id="wm" aria-hidden="true"></div>
     </main>
+    <!-- SYNC by QR: the code to show or the camera that reads the answer (out of the file panel, so it covers the whole screen) -->
+    <div id="syHQ" hidden>
+      <div class="hp" role="dialog" aria-modal="true">
+        <div class="hh"><b>SYNC BY QR</b><button id="syHQStop" title="Stop pairing and close this" aria-label="Stop">✕</button></div>
+        <div id="syHQBody">
+          <div id="syHQImg"></div>
+          <div id="syCam" hidden><video id="syCamV" playsinline muted></video></div>
+          <div class="hint" id="syHQTxt"></div>
+          <div class="hint" id="syHQStat"></div>
+          <div class="bar" id="syScanBar" hidden style="padding: 0">
+            <button id="syScanA" title="Read the other device's answer code with this device's camera (our own reader)">SCAN</button>
+            <button id="syScanB" title="Read the other device's answer code with this device's camera (the jsQR reader, to compare)">SCAN jsQR</button>
+            <button id="syCamNext" hidden title="Use the next camera of this device (when this one cannot focus on the code)">CAMERA</button>
+          </div>
+        </div>
+      </div>
+    </div>
     <div id="help" hidden>
       <div class="hp" role="dialog" aria-modal="true">
         <div class="hh">
@@ -21071,7 +21129,7 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
         syLog.push(((performance.now() / 1000) | 0) + "s " + t);
         if (syLog.length > 120) syLog.shift();
       };
-      const syStat = (t) => ($("#syStat").textContent = t);
+      const syStat = (t) => ($("#syStat").textContent = $("#syHQStat").textContent = t);
       // the connection: its states go to the log and the status line, and a silent failure is said out loud after 25 s
       function syWatch(pc, who, late) {
         const t0 = Date.now();
@@ -21478,45 +21536,62 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
           return false;
         }
       }
-      // the host reads the guest's answer code with its own camera, inside the page. Two readers to compare: ours (qrRead) and jsQR
+      // the host reads the guest's answer code with its own camera, inside the page. Two readers to compare: ours (qrRead) and jsQR.
+      // Only the middle 60% of the picture is shown and read: the code fills the view from 25 to 30 cm away, where a phone camera
+      // can still focus (most cannot closer than about 15 cm, and a page cannot switch them to their macro lens).
+      const SY_CROP = 0.6;
       function syCamOff() {
-        if (SYM.cam) SYM.cam.getTracks().forEach((x) => x.stop());
+        if (SYM.cam) (SYM.cam.getTracks().forEach((x) => x.stop()), ($("#syHQTxt").textContent = SYM.txt));
         SYM.cam = null;
-        $("#syCam").hidden = true;
+        $("#syCam").hidden = $("#syCamNext").hidden = true;
         $("#syHQImg").hidden = false;
         $("#syScanA").classList.remove("on");
         $("#syScanB").classList.remove("on");
       }
-      async function syCamScan(lib) {
-        const was = SYM.cam && SYM.lib === lib;
+      async function syCamScan(lib, id) {
+        const was = SYM.cam && SYM.lib === lib && !id;
         syCamOff();
         if (was || !SYNC.qa) return; // a second tap closes the camera
         try {
           if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) throw new Error("this browser has no camera access");
-          const cam = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: "environment" }, width: { ideal: 1280 }, height: { ideal: 720 } } }); // the back camera, when there is one
+          const cam = await navigator.mediaDevices.getUserMedia({ video: { ...(id ? { deviceId: { exact: id } } : { facingMode: { ideal: "environment" } }), width: { ideal: 1920 }, height: { ideal: 1080 } } }); // the back camera, when there is one
           if (!SYNC.qa || SYM.cam) return cam.getTracks().forEach((x) => x.stop());
           SYM.cam = cam;
           SYM.lib = lib;
           const v = $("#syCamV"),
+            tr = cam.getVideoTracks()[0],
             name = lib ? "jsQR" : "Own reader",
             cv = document.createElement("canvas"),
             g = cv.getContext("2d", { willReadFrequently: true });
+          // keep focusing, where the browser lets a page ask (Chrome on Android; Safari always does)
+          if (tr.getCapabilities && (tr.getCapabilities().focusMode || []).includes("continuous")) tr.applyConstraints({ advanced: [{ focusMode: "continuous" }] }).catch(() => {});
           v.srcObject = cam;
           await v.play();
+          SYM.txt = $("#syHQTxt").textContent;
+          $("#syHQTxt").textContent = "Hold this device 25 to 30 cm from the other screen, so the code fills the square. Closer than that the camera cannot focus. Blurred all the same? Try CAMERA.";
           $("#syCam").hidden = false;
           $("#syHQImg").hidden = true; // the guest has scanned it by now, and the camera view needs the room
           $(lib ? "#syScanB" : "#syScanA").classList.add("on");
-          toast("Camera on: point it at the code on the other device");
+          const all = (await navigator.mediaDevices.enumerateDevices()).filter((d) => d.kind === "videoinput" && d.deviceId);
+          $("#syCamNext").hidden = all.length < 2;
+          $("#syCamNext").onclick = () => {
+            const nx = all[(all.findIndex((d) => d.deviceId === tr.getSettings().deviceId) + 1) % all.length];
+            toast("Camera: " + (nx.label || "the next one"));
+            syCamScan(lib, nx.deviceId);
+          };
+          syNote(`host: camera ${tr.label}, ${tr.getSettings().width}x${tr.getSettings().height}`);
+          if (!id) toast("Camera on: point it at the code on the other device");
           let n = 0,
             ms = 0;
           const tick = async () => {
             if (SYM.cam !== cam) return;
             let wait = 80;
             if (v.videoWidth) {
-              const k = Math.min(1, 960 / Math.max(v.videoWidth, v.videoHeight)); // enough for the biggest code, and quick
-              if (cv.width !== Math.round(v.videoWidth * k)) ((cv.width = Math.round(v.videoWidth * k)), (cv.height = Math.round(v.videoHeight * k)));
-              g.drawImage(v, 0, 0, cv.width, cv.height);
-              const d = g.getImageData(0, 0, cv.width, cv.height),
+              const c = Math.round(Math.min(v.videoWidth, v.videoHeight) * SY_CROP),
+                out = Math.min(c, 960); // enough for the biggest code, and quick
+              if (cv.width !== out) cv.width = cv.height = out;
+              g.drawImage(v, (v.videoWidth - c) / 2, (v.videoHeight - c) / 2, c, c, 0, 0, out, out);
+              const d = g.getImageData(0, 0, out, out),
                 t0 = performance.now();
               let t = null;
               try {
@@ -21545,6 +21620,7 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
       }
       $("#syScanA").onclick = () => syCamScan(false);
       $("#syScanB").onclick = () => syCamScan(true);
+      $("#syHQStop").onclick = () => syStop();
       const syBc = "BroadcastChannel" in window ? new BroadcastChannel("track-sync") : null;
       if (syBc)
         syBc.onmessage = async (e) => {
@@ -26028,5 +26104,5 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
         if (!localStorage.getItem("track-test.welcome")) welcomeShow();
       } catch {}
     </script>
-  <div style="position:fixed;left:4px;bottom:2px;z-index:99;font:700 9px monospace;opacity:.7;pointer-events:none;color:#ff5e7a">TEST BUILD · lan-sync · f334092</div></body>
+  <div style="position:fixed;left:4px;bottom:2px;z-index:99;font:700 9px monospace;opacity:.7;pointer-events:none;color:#ff5e7a">TEST BUILD · lan-sync · c0bed31</div></body>
 </html>
