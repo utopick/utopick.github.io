@@ -4053,7 +4053,7 @@
           <div class="bar" style="padding: 0; flex-wrap: wrap">
             <button id="syHost" title="Start a sync, or add one more device to it: this device shows a QR code for the other one">HOST</button>
             <button id="syJoin" title="Join the sync of another device: this device's camera reads the code the host shows (the host's song replaces this one)">JOIN</button>
-            <button id="sySilent" title="Mute this device: another one makes the sound">SILENT</button>
+            <button id="sySound" title="This device makes the sound and all the others go silent">SOUND HERE</button>
             <button id="syLeave" title="Leave the sync">LEAVE</button>
           </div>
           <div class="bar" style="padding: 0; margin-top: 6px">
@@ -4070,7 +4070,7 @@
             One device is the <b>host</b> and the others <b>join</b>. Tap <b>HOST</b> on one: it shows a code. Tap <b>JOIN</b> on the other
             and point its camera at that code; it then shows a code of its own, which the host reads with <b>SCAN</b>. Both show the same
             number: confirm it on the host. Tap <b>HOST</b> again for each device you add. The song, the samples and PLAY / STOP are
-            shared, and every device can edit. Only one should make the sound: tap <b>SILENT</b> on the others. A MIDI knob on one
+            shared, and every device can edit. One device makes the sound (the host at first): tap <b>SOUND HERE</b> on the one you want. A MIDI knob on one
             device moves the mixer of all.
           </p>
         </div>
@@ -17022,7 +17022,7 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
           dr = inst === DRUM_I,
           v = (vol ?? S.vol) / 15,
           ex = dr ? [] : CHORDS[S.chord][1];
-        if (!quiet && !SYNC.apply && syN()) syOut({ t: "n", id: SYNC.me + ":" + id, m, ch, v: vol ?? S.vol, ex, arp: dr ? 0 : S.arp }); // the other devices play it (SILENT ones do not)
+        if (!quiet && !SYNC.apply && syN()) syOut({ t: "n", id: SYNC.me + ":" + id, m, ch, v: vol ?? S.vol, ex, arp: dr ? 0 : S.arp }); // the device that makes the sound plays it
         liveVoice(id, m, ch, v, ex, dr ? 0 : S.arp, quiet);
         if (write && !varAway) {
           if (S.playing && S.rec) recNote(id, m, ch, vol, dr, tapT);
@@ -20472,7 +20472,10 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
         while (dc.readyState === "open" && dc.bufferedAmount > 1 << 20) await new Promise((r) => setTimeout(r, 30));
         if (dc.readyState === "open") dc.send(str);
       }
-      async function syTx(dc, msg) {
+      // one message after the other on each connection: a long one goes in pieces, and a short one sent after it must not arrive first
+      // (the order of a song arrived before its patterns and was cut down to what the old patterns allowed)
+      const syTx = (dc, msg) => (dc.syQ = (dc.syQ || Promise.resolve()).then(() => syTxNow(dc, msg)).catch(() => {}));
+      async function syTxNow(dc, msg) {
         const str = JSON.stringify(msg),
           N = 15000;
         if (str.length <= N) return syRaw(dc, str);
@@ -20491,7 +20494,9 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
       }
       // ---- what changed in this song
       function syCur() {
-        const o = {};
+        // the Variator goes first: a device must know that the sync entered it before the Variator's song replaces its own
+        const { seed, style, vari, ins, vol, mute, solo, bpm, k } = VAR,
+          o = { $var: JSON.stringify({ on: !!varAway, seed, style, vari, ins, vol, mute, solo, bpm, k }) };
         SY_KEYS.forEach((k) => song[k] !== undefined && (o[k] = JSON.stringify(song[k])));
         if (song.chN === undefined) o.chN = "4"; // four channels is the default and has no field: say it so that a device with more goes back to four
         Object.entries(SY_CTL).forEach(([k, id]) => (o[k] = JSON.stringify($(id).value)));
@@ -20560,7 +20565,31 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
         }
       }
       // ---- what arrives
+      // the Variator's settings and whether the sync is in it: all the devices show the same Variator, and enter and leave it together
+      function syVarIn(v) {
+        const arr = (a, ok) => Array.isArray(a) && a.length === 8 && a.every(ok),
+          f01 = (x) => typeof x === "number" && x >= 0 && x <= 1;
+        if (!v || !Number.isFinite(v.seed) || !Object.hasOwn(V_STY, v.style) || !arr(v.vari, (x) => syInt(x, 0, 12)) || !arr(v.ins, (x) => x == null || syInt(x, 0, INST.length + SLOTS - 1)) || v.ins[0] >= KITS.length ||
+            !arr(v.vol, (x) => x == null || f01(x)) || !arr(v.mute, (x) => typeof x === "boolean") || !syInt(v.solo, -1, 7) || !(v.bpm == null || syInt(v.bpm, 40, 240)) || !v.k || !Object.keys(VAR.k).every((q) => f01(v.k[q])))
+          throw new Error("variator");
+        Object.assign(VAR, { seed: v.seed, style: v.style, vari: v.vari, ins: v.ins.map((x) => x ?? null), vol: v.vol.map((x) => x ?? null), mute: v.mute, solo: v.solo, bpm: v.bpm ?? null, k: Object.fromEntries(Object.keys(VAR.k).map((q) => [q, v.k[q]])) });
+        if (v.on && !varAway) {
+          saveNow(); // this device's song is safe before autosave pauses (as in varEnter); it comes back when the Variator or the sync ends
+          varAway = { song, pk: S.pk, pat: S.pat, ordSel: S.ordSel, swing: $("#swing").value, col: S.col };
+          S.pk = "song";
+        } else if (!v.on && varAway) {
+          const a = varAway; // the song that follows (the one of the device that ended it) replaces the Variator's
+          varKeys("pats");
+          varAway = null;
+          VAR.liveSlot = -1;
+          S.col = a.col;
+          S.pk = a.pk;
+          if (S.tab === "var") showTab("trk");
+        }
+        if (S.tab === "var") varRender();
+      }
       function syKey(k, v) {
+        if (k === "$var") return syVarIn(v);
         if (SY_CTL[k]) {
           const el = $(SY_CTL[k]);
           el.value = v;
@@ -20579,8 +20608,11 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
         S.ordSel = clamp(S.ordSel, 0, song.order.length - 1);
         $("#bpm").value = song.bpm;
         $("#songName").value = song.name || "";
-        S.root = (song.scale && song.scale.root) || 0;
-        S.scaleT = (song.scale && song.scale.type) || 0;
+        if (!varAway) {
+          // not in the Variator: its song carries its own key, and the piano keeps the scale chosen on this device (as on the device that opened it)
+          S.root = (song.scale && song.scale.root) || 0;
+          S.scaleT = (song.scale && song.scale.type) || 0;
+        }
         song.mix.forEach((m) => Object.keys(MIXDEF).forEach((q) => m[q] === undefined && (m[q] = MIXDEF[q])));
         chResize();
         if (ctx && G && G.buses.length !== CH) {
@@ -20616,7 +20648,9 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
         try {
           await dbSet("song:Before sync " + new Date().toISOString().slice(0, 16).replace("T", " "), serialize());
         } catch {}
+        const sc = [S.root, S.scaleT];
         loadData(o);
+        if (varAway) (([S.root, S.scaleT] = sc), refreshAll()); // the host is in the Variator: its song's key does not lock this piano
       }
       function syGo(play) {
         const at = Date.now() + 250;
@@ -20656,9 +20690,16 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
           return;
         }
         if (m.t === "hi") return void (SYNC.host && ((peer.name = String(m.name).slice(0, 40)), syWho(), syFace())); // a guest's name for the list
-        if (m.t === "who") return void (!SYNC.host && Array.isArray(m.l) && ((SYNC.who = { you: m.you | 0, l: m.l.slice(0, 32).map((x) => String(x).slice(0, 40)) }), syFace())); // the host's list
+        if (m.t === "who") return void (!SYNC.host && Array.isArray(m.l) && ((SYNC.who = { you: m.you | 0, snd: m.snd | 0, l: m.l.slice(0, 32).map((x) => String(x).slice(0, 40)) }), syFace())); // the host's list
         if (SYNC.host && !SYNC.peers.includes(peer)) return; // not confirmed yet
         if (m.t === "tp") return SYNC.host && syGo(!!m.want);
+        if (m.t === "solo") {
+          // another device took the sound: this one goes silent (the host remembers which, for the list and for when it leaves)
+          SYNC.silent = true;
+          if (SYNC.host) (SYNC.peers.forEach((x) => (x.snd = x === peer)), syWho());
+          applyMix();
+          syFace();
+        }
         if (SYNC.host && !joined) SYNC.peers.forEach((x) => x !== peer && syRaw(x.dc, raw)); // the hub passes it on
         try {
           if (m.t === "c") {
@@ -20680,7 +20721,7 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
           } else if (m.t === "lq") syLq(m);
           else if (m.t === "snap" && typeof m.d === "string" && !SYNC.host) {
             // the host let this device in: its song arrives and the pairing dialog closes
-            if (!SYNC.in) ((SYNC.in = true), syDlg(null), toast("Synced"));
+            if (!SYNC.in) ((SYNC.in = SYNC.silent = true), applyMix(), syDlg(null), toast("Synced. Another device makes the sound: SOUND HERE moves it to this one", 3600));
             sySnap(m.d).then(syMark);
           }
         } catch (e) {
@@ -20700,7 +20741,7 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
       function syWho() {
         if (!SYNC.host) return;
         const open = syOpen();
-        open.forEach((p, i) => syTx(p.dc, { t: "who", you: i + 1, l: [syName(), ...open.map((x) => x.name || "Device")] }));
+        open.forEach((p, i) => syTx(p.dc, { t: "who", you: i + 1, snd: open.findIndex((x) => x.snd) + 1, l: [syName(), ...open.map((x) => x.name || "Device")] })); // snd: who makes the sound (0: the host)
       }
       function syWire(peer) {
         peer.dc.onopen = async () => {
@@ -20720,6 +20761,7 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
               return SYNC.host && !syN() ? syLeave(true) : syFace();
             }
             SYNC.peers.push(peer);
+            syTx(peer.dc, { t: "k", k: "$var", v: JSON.parse(syCur().$var) }); // first, so the guest knows whether the song that follows is the Variator's
             syTx(peer.dc, { t: "snap", d: serialize() });
             syWho();
             toast("Synced: " + (syN() + 1) + " devices");
@@ -20744,7 +20786,9 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
             return toast(joined ? "The sync ended" : "The host did not let this device in", 2600);
           }
           if (!SYNC.host) return;
-          if (was) (toast("A device left the sync"), syWho());
+          if (was && peer.snd) ((SYNC.silent = false), applyMix(), toast("The device that made the sound left: this one makes it now", 3200));
+          else if (was) toast("A device left the sync");
+          if (was) syWho();
           if (!syN() && !SYNC.ui) syLeave(true); // the last guest left: nothing to host
           else syFace();
         };
@@ -20783,14 +20827,15 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
         const n = syN();
         if (n || !SYNC.ui)
           $("#syStat").textContent = n
-            ? `Synced: ${SYNC.host ? n + " other device" + (n > 1 ? "s" : "") + " joined (HOST adds another)" : "you joined a host"}. ${SYNC.silent ? "This device is silent." : "This device makes sound."}`
+            ? `Synced: ${SYNC.host ? n + " other device" + (n > 1 ? "s" : "") + " joined (HOST adds another)" : "you joined a host"}. ${SYNC.silent ? "This device is silent." : "This device makes the sound."}`
             : "Not synced. Tap HOST on one device and JOIN on the others.";
         $("#syHost").classList.toggle("dis", !!SYNC.hub);
         $("#syJoin").classList.toggle("dis", !!n);
-        $("#sySilent").classList.toggle("on", SYNC.silent);
+        $("#sySound").classList.toggle("on", !!n && !SYNC.silent);
+        $("#sySound").classList.toggle("dis", !n);
         $("#syLeave").classList.toggle("dis", !n);
         // who is in: the host knows its guests, a guest has the host's list
-        const rows = !n ? [] : SYNC.host ? [syName() + " · host · this device", ...syOpen().map((x) => x.name || "Device")] : ((SYNC.who && SYNC.who.l) || []).map((x, i) => x + (i ? "" : " · host") + (i === SYNC.who.you ? " · this device" : ""));
+        const rows = !n ? [] : SYNC.host ? [syName() + " · host · this device" + (SYNC.silent ? "" : " · sound"), ...syOpen().map((x) => (x.name || "Device") + (x.snd ? " · sound" : ""))] : ((SYNC.who && SYNC.who.l) || []).map((x, i) => x + (i ? "" : " · host") + (i === SYNC.who.you ? " · this device" : "") + (i === SYNC.who.snd ? " · sound" : ""));
         const li = $("#syList");
         li.textContent = "";
         li.hidden = !rows.length;
@@ -20805,11 +20850,16 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
         b.classList.toggle("mute", SYNC.silent);
         b.textContent = "⇄ " + (SYNC.host ? n + 1 : SYNC.who ? SYNC.who.l.length : 2) + (SYNC.silent ? " · SILENT" : "");
       }
-      $("#sySilent").onclick = () => {
-        SYNC.silent = !SYNC.silent;
+      // SOUND HERE: one device makes the sound. The one that takes it tells the others, which go silent
+      $("#sySound").onclick = () => {
+        if (!syN()) return;
+        SYNC.silent = false;
+        SYNC.peers.forEach((x) => (x.snd = false));
+        syOut({ t: "solo" });
         applyMix();
+        syWho();
         syFace();
-        toast(SYNC.silent ? "This device is silent" : "This device makes sound");
+        toast("This device makes the sound. The others are silent", 2600);
       };
       $("#syLeave").onclick = () => syLeave();
       $("#syRep").onclick = () => {
@@ -24044,6 +24094,7 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
         el.innerHTML = `<div class="mlBox"><i>EXPORT · ${song.order.length} PATTERNS · ${esc(song.name)}</i>
 <button data-ve="add">ADD TO MY SONG<small>its patterns go at the end of the song you were writing (${esc(varAway.song.name) || "untitled"})</small></button>
 <button data-ve="open">OPEN AS A NEW SONG<small>the Variator's song becomes the one you edit (save yours first in Files)</small></button>
+${syN() ? `<button data-ve="back">BACK TO OUR SONG<small>ends the Variator on all the synced devices (it stays on while you visit other screens)</small></button>` : ""}
 <div class="vxs"><input id="vExpName" type="text" value="${esc(song.name)}"><button data-ve="save">SAVE IN FILES</button></div>
 <button data-ve="x" class="vxc">CANCEL</button></div>`;
         document.body.appendChild(el);
@@ -24073,6 +24124,11 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
             pkApply();
             toast("The Variator's song is open: save it in Files to keep it");
           } else if (k === "add") varAddToSong();
+          else if (k === "back") {
+            varLeave();
+            showTab("trk");
+            toast("Back to the song: the Variator ended on all the devices", 2600);
+          }
           el.remove();
         };
       };
@@ -24453,7 +24509,8 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
                 "- No sound and no microphone are used, and the camera picture never leaves the device. The first code holds a one-time secret and the answer carries a proof of it, so a device that never saw the host's code cannot join. Nothing leaves your Wi-Fi: the data travels in the part of the link after the #, which no server ever sees.",
                 "- A device that joins gets the host's song and samples; its own song is kept in the song list as *Before sync*. After that every device can edit: the last change wins. A change on one appears on the others in a moment, and so do the samples.",
                 "- **PLAY** and **STOP** on any device start and stop all of them together. Each device plays from what its own view shows (live patterns, song or pattern).",
-                "- **SILENT** mutes this device, because only one should make the sound (the one you record on or listen from). A MIDI knob on one device moves the mixer of all.",
+                "- **SOUND HERE:** one device makes the sound, the host at first; the others are silent. Tap **SOUND HERE** on the one you record on or listen from, and the list shows which it is. Keys and pads played on a silent device sound on that one. A MIDI knob on one device moves the mixer of all.",
+                "- **The Variator is shared too:** when a device opens it, all the devices are in the Variator with the same seed, style, knobs and patterns, and a change on one appears on the others. It stays on while you visit other screens (the mixer on one device, the piano on another). **EXPORT ▸ BACK TO OUR SONG** ends it for all and brings back the song you were writing.",
                 "- **APP QR** shows a QR code that opens this app: a new device points its camera at it and gets the app. **SAVE SVG** gives a sharp picture to print on cards or stickers.",
                 "- **LEAVE** leaves the session. If the host leaves, the session ends. The devices need enough free space for the samples; if a device has none it says so and skips them. It does not work on guest Wi-Fi networks that keep devices apart, or when one device is on mobile data.",
               ],
@@ -24464,7 +24521,8 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
                 "- No se usa sonido ni micrófono, y la imagen de la cámara no sale del dispositivo. El primer código lleva un secreto de un solo uso y la respuesta lleva una prueba de él, así que un dispositivo que no vio el código del anfitrión no puede unirse. Nada sale de tu Wi-Fi: los datos viajan en la parte del enlace después del #, que ningún servidor ve.",
                 "- El que se une recibe la canción y las muestras del host; la suya queda en la lista de canciones como *Before sync*. Después todos pueden editar: gana el último cambio. Un cambio en uno aparece en los demás al momento, igual que las muestras.",
                 "- **PLAY** y **STOP** en cualquiera arrancan y paran a todos a la vez. Cada dispositivo toca lo que muestra su vista (patrones en vivo, canción o patrón).",
-                "- **SILENT** silencia este dispositivo, porque solo uno debe sonar (el que grabas o escuchas). Un potenciómetro MIDI en uno mueve el mezclador de todos.",
+                "- **SOUND HERE:** un dispositivo hace el sonido, al principio el anfitrión; los demás están en silencio. Toca **SOUND HERE** en el que grabas o escuchas, y la lista muestra cuál es. Las teclas y los pads tocados en un dispositivo en silencio suenan en ese. Un potenciómetro MIDI en uno mueve el mezclador de todos.",
+                "- **El Variator también se comparte:** cuando un dispositivo lo abre, todos están en el Variator con la misma semilla, estilo, potenciómetros y patrones, y un cambio en uno aparece en los demás. Sigue activo mientras visitas otras pantallas (el mezclador en uno, el piano en otro). **EXPORT ▸ BACK TO OUR SONG** lo termina para todos y devuelve la canción que estabais escribiendo.",
                 "- **APP QR** muestra un código QR que abre esta app: un dispositivo nuevo apunta su cámara y recibe la app. **SAVE SVG** da una imagen nítida para imprimir en tarjetas o pegatinas.",
                 "- **LEAVE** sale de la sesión. Si sale el host, la sesión termina. Los dispositivos necesitan espacio libre para las muestras; si uno no tiene, lo dice y las omite. No funciona en redes Wi-Fi de invitados que aíslan los dispositivos, ni si uno está con datos móviles.",
               ],
@@ -24476,7 +24534,7 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
             b: {
               en: [
                 "## Version 1.3.0",
-                "- **Sync:** devices on the same Wi-Fi can share one session (Files ▸ **SYNC**, paired with QR codes, no server): the same song and samples, shared PLAY / STOP, edits on any device appear on the others, a **SILENT** switch so one device makes the sound, and a MIDI knob on one moves the mixer of all.",
+                "- **Sync:** devices on the same Wi-Fi can share one session (Files ▸ **SYNC**, paired with QR codes, no server): the same song and samples, shared PLAY / STOP, edits on any device appear on the others, **SOUND HERE** to choose the device that makes the sound, and a MIDI knob on one moves the mixer of all.",
                 "## Version 1.2.0",
                 "- **Install it:** the app is now a web app (PWA). Add it to the Home Screen (iPhone: Safari ▸ Share; Android and desktop: Chrome ▸ Install app) and it opens like an app and works offline. The Android APK is retired.",
                 "- **Variator:** new styles **Lo-Fi**, **Synthwave** and **Dungeon Synth**; the dice also shuffles the VARS knobs; the **♫** button rotates the lower part between patterns, a piano and drum pads (what you play there is not written into the song).",
@@ -24487,7 +24545,7 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
               ],
               es: [
                 "## Versión 1.3.0",
-                "- **Sincronizar:** los dispositivos de la misma Wi-Fi pueden compartir una sesión (Files ▸ **SYNC**, emparejados con códigos QR, sin servidor): la misma canción y muestras, PLAY / STOP compartidos, las ediciones de uno aparecen en los demás, un interruptor **SILENT** para que suene solo uno, y un potenciómetro MIDI en uno mueve el mezclador de todos.",
+                "- **Sincronizar:** los dispositivos de la misma Wi-Fi pueden compartir una sesión (Files ▸ **SYNC**, emparejados con códigos QR, sin servidor): la misma canción y muestras, PLAY / STOP compartidos, las ediciones de uno aparecen en los demás, **SOUND HERE** para elegir el dispositivo que suena, y un potenciómetro MIDI en uno mueve el mezclador de todos.",
                 "## Versión 1.2.0",
                 "- **Instálala:** la app ahora es una web app (PWA). Añádela a la pantalla de inicio (iPhone: Safari ▸ Compartir; Android y escritorio: Chrome ▸ Instalar app) y se abre como una app y funciona sin conexión. El APK de Android se retira.",
                 "- **Variator:** estilos nuevos **Lo-Fi**, **Synthwave** y **Dungeon Synth**; el dado también mezcla los potes de VARS; el botón **♫** rota la parte de abajo entre patrones, un piano y pads de batería (lo que toques ahí no se escribe en la canción).",
@@ -25606,5 +25664,5 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
         if (!localStorage.getItem("track-test.welcome")) welcomeShow();
       } catch {}
     </script>
-  <div style="position:fixed;left:4px;bottom:2px;z-index:99;font:700 9px monospace;opacity:.7;pointer-events:none;color:#ff5e7a">TEST BUILD · lan-sync · a886328</div></body>
+  <div style="position:fixed;left:4px;bottom:2px;z-index:99;font:700 9px monospace;opacity:.7;pointer-events:none;color:#ff5e7a">TEST BUILD · lan-sync · c4329c6</div></body>
 </html>
