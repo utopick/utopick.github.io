@@ -4,12 +4,11 @@ Ideas and plans for the Pocket apps, so they are not forgotten. Nothing here is 
 
 ## Where things stand
 
-Merged into `main`: TUNE `wind-wireframe` (the recorder and tin whistle redrawn as wireframes).
+Merged into `main`: TUNE `wind-wireframe` (the recorder and tin whistle redrawn as wireframes), and `midi-defaults` in all three apps (a starting function for each knob and pad of known controllers, with tags on the DEVICE drawing, plus the Korg nanoPAD2 and nanoKEY2 drawings).
 
 Feature branches published as test pages (TEST button on the landing page):
 - **SING** `air-detector`: the AIR view, a clean or breathy tone meter with a coloured waveform and a side view of the mouth and throat.
 - **TRACK** `lan-sync`: sync between devices on one Wi-Fi, paired by sound or by code, plus an APP QR that opens the app on a new device.
-- **All three** `midi-defaults`: a starting function for each knob and pad of known controllers, with tags on the DEVICE drawing, plus Korg nanoPAD2 and nanoKEY2 drawings.
 - **TUNE** `tune-storage`: an IndexedDB store, loops kept by themselves, sessions saved by name with export and import, and custom tunings moved to a `tune.` key.
 
 ## Next
