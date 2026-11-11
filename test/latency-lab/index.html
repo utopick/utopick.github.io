@@ -409,7 +409,7 @@ $('loopback').onclick=async()=>{
  const each=analyzeLoopback(d.buf,d.clicks,d.gap,s.ctx.sampleRate),ok=each.filter(v=>v!=null);
  if(!ok.length){$('rt').textContent='not heard';$('rtInfo').textContent='None of the clicks came back. Raise the output, bring it closer to the input, or check the cable.';log('Round trip: no click detected.',true);return;}
  const med=median(ok),spread=Math.max(...ok)-Math.min(...ok);
- const warn=each[0]==null&&ok.length>1?' The first click was missed: if the delay is close to a second, these numbers are wrong.':spread>5?' The clicks disagree by more than 5 ms: reflections or noise; try a cable or move closer.':'';
+ const warn=ok.length<3?` Only ${ok.length} of ${count} clicks came back: not reliable, measure again.`:each[0]==null&&ok.length>1?' The first click was missed: if the delay is close to a second, these numbers are wrong.':spread>5?' The clicks disagree by more than 5 ms: reflections or noise; try a cable or move closer.':'';
  $('rt').textContent=`${med.toFixed(2)} ms`;$('rtInfo').textContent=`${ok.length}/${count} clicks heard · min ${Math.min(...ok).toFixed(2)} · max ${Math.max(...ok).toFixed(2)} ms.${warn}`;
  const final=snapshot();
  results.push({...runBase(final),kind:'loopback',roundTripMs:med,roundTripEachMs:each,roundTripWarning:warn.trim()||null,finalDiagnostics:final});persist();redraw();
