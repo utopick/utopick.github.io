@@ -279,7 +279,8 @@ async function start(){
   const inputOption=$('inputDevice').selectedOptions[0];const outputOption=$('outputDevice').selectedOptions[0];
   const inputLabel=stream.getAudioTracks()[0].label||inputOption?.text||'System default';
   const outputLabel=outputOption?.text||'System default';
-  if($('inputDevice').value&&inputOption&&stream.getAudioTracks()[0].label&&stream.getAudioTracks()[0].label!==inputOption.text)log(`Asked for "${inputOption.text}" but the browser opened "${stream.getAudioTracks()[0].label}". On iPad/iPhone the system picks the input: unplug and replug the interface, then Start again.`,true);
+  const opened=stream.getAudioTracks()[0].getSettings().deviceId,otherId=!!opened&&opened!==$('inputDevice').value;
+  if($('inputDevice').value&&inputOption&&(otherId||(stream.getAudioTracks()[0].label&&stream.getAudioTracks()[0].label!==inputOption.text)))log(`Asked for "${inputOption.text}" but the browser opened "${stream.getAudioTracks()[0].label}"${otherId?' (another device id)':''}. On iPad/iPhone the system picks the input: unplug and replug the interface, then Start again.`,true);
   // Always start muted. A final native gain stage protects all processing routes.
   const master=ctx.createGain();master.gain.value=0;
   let processor=null,worklet=null,nativeDSP=null,probe=null,board=null;
