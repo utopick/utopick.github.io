@@ -10669,7 +10669,7 @@ a.length>D&&(D=a.length,p=0|1.25*D+7200,r=new Int8Array(p));a=u.lame_encode_buff
       };
       const syStat = (t) => ($("#syStat").textContent = t);
       // the connection: its states go to the log and the status line, and a silent failure is said out loud after 25 s
-      function syWatch(pc, who) {
+      function syWatch(pc, who, late) {
         const t0 = Date.now();
         ["iceconnectionstatechange", "connectionstatechange", "icegatheringstatechange", "signalingstatechange"].forEach((ev) =>
           pc.addEventListener(ev, () => {
@@ -10677,12 +10677,18 @@ a.length>D&&(D=a.length,p=0|1.25*D+7200,r=new Int8Array(p));a=u.lame_encode_buff
             if (pc.iceConnectionState === "failed") syStat("The devices heard each other but the network connection failed. Are both on the same Wi-Fi (not a guest network, no VPN)? Try the codes.");
           }),
         );
-        setTimeout(() => {
-          if (!syN() && pc.connectionState !== "closed" && SYNC.pend && SYNC.pend.pc === pc) {
-            syNote(`${who}: no connection after ${Math.round((Date.now() - t0) / 1000)} s`);
+        // late (QR): the 25 s start when both halves of the connection data are in (pc.syGo), not while the answer travels by sound
+        const chk = () => {
+          if (!SYNC.pend || SYNC.pend.pc !== pc) return;
+          if (late && !pc.syGo) return setTimeout(chk, 3000);
+          const left = (late ? pc.syGo : t0) + 25000 - Date.now();
+          if (left > 0) return setTimeout(chk, left);
+          if (!syN() && pc.connectionState !== "closed") {
+            syNote(`${who}: no connection after ${Math.round((Date.now() - (late ? pc.syGo : t0)) / 1000)} s`);
             syStat(`Still not connected (ice ${pc.iceConnectionState}). Same Wi-Fi? Guest networks and VPNs block it. Try the codes, or COPY REPORT.`);
           }
-        }, 25000);
+        };
+        setTimeout(chk, 25000);
       }
       const syDone = (ms) => new Promise((ok) => setTimeout(ok, ms));
       // ---- the conversation: short frames, one device talks while the other listens
@@ -11030,7 +11036,7 @@ a.length>D&&(D=a.length,p=0|1.25*D+7200,r=new Int8Array(p));a=u.lame_encode_buff
           const me = (SYNC.talk = { qr: true });
           $("#syHQImg").innerHTML = qrSvg(url);
           syNote("host: QR shown, " + url.length + " characters");
-          syWatch(pc, "host");
+          syWatch(pc, "host", true);
           syFace();
           const io = syIo(me);
           for (let tries = 0; tries < 5; tries++) {
@@ -11046,6 +11052,7 @@ a.length>D&&(D=a.length,p=0|1.25*D+7200,r=new Int8Array(p));a=u.lame_encode_buff
             syNote("host: heard the answer");
             syStat("Heard the answer. Connecting…");
             await pc.setRemoteDescription(syExpand(ans));
+            pc.syGo = Date.now();
             syQuiet();
             syFace();
             return;
@@ -11078,9 +11085,10 @@ a.length>D&&(D=a.length,p=0|1.25*D+7200,r=new Int8Array(p));a=u.lame_encode_buff
           const ans = syCompact(pc.localDescription),
             mac = await syMac(inv.secret, ans);
           syNote(`guest: answer ready, ${ans.length} bytes`);
-          syWatch(pc, "guest");
+          syWatch(pc, "guest", true);
           const sent = await sySendAll(syIo(me), Uint8Array.from([...mac, ...ans]), 1, inv.n8, syStat);
           if (!sent || SYNC.talk !== me) return;
+          pc.syGo = Date.now();
           syQuiet();
           syStat("Answer sent. Connecting…");
           syFace();
@@ -15512,5 +15520,5 @@ a.length>D&&(D=a.length,p=0|1.25*D+7200,r=new Int8Array(p));a=u.lame_encode_buff
         if (!localStorage.getItem("track-test.welcome")) welcomeShow();
       } catch {}
     </script>
-  <div style="position:fixed;left:4px;bottom:2px;z-index:99;font:700 9px monospace;opacity:.7;pointer-events:none;color:#ff5e7a">TEST BUILD · lan-sync · 2c4c878</div></body>
+  <div style="position:fixed;left:4px;bottom:2px;z-index:99;font:700 9px monospace;opacity:.7;pointer-events:none;color:#ff5e7a">TEST BUILD · lan-sync · 8f6c008</div></body>
 </html>
