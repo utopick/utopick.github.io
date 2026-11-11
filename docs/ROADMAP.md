@@ -9,6 +9,8 @@ Merged into `main`: TUNE `wind-wireframe` (the recorder and tin whistle redrawn 
 Feature branches published as test pages (TEST button on the landing page):
 - **SING** `air-detector`: the AIR view, a clean or breathy tone meter with a coloured waveform and a side view of the mouth and throat.
 - **TRACK** `lan-sync`: sync between devices on one Wi-Fi, paired by sound or by code, plus an APP QR that opens the app on a new device.
+- **TRACK** `track-fixes`, **TUNE** `tune-fixes`, **SING** `sing-fixes`: MIDI master knob follows on screen, the MIDI pads and keys play the FX pads while they are open (in all three apps), a piano, drum pads and waveform in TUNE's JAM with a KEYS PLAY instrument, bigger sampler marks in SING.
+- **TUNE** `cof-instruments`: the circle of fifths chords sound like the chosen instrument.
 - **TUNE** `tune-storage`: an IndexedDB store, loops kept by themselves, sessions saved by name with export and import, and custom tunings moved to a `tune.` key.
 
 ## Next
