@@ -9,10 +9,10 @@ Feature branches published as test pages (TEST button on the landing page):
 - **TRACK** `lan-sync`: sync between devices on one Wi-Fi, paired by sound or by code, plus an APP QR that opens the app on a new device.
 - **All three** `midi-defaults`: a starting function for each knob and pad of known controllers, with tags on the DEVICE drawing, plus Korg nanoPAD2 and nanoKEY2 drawings.
 - **TUNE** `wind-wireframe`: the recorder and tin whistle redrawn as wireframes.
+- **TUNE** `tune-storage`: an IndexedDB store, loops kept by themselves, sessions saved by name with export and import, and custom tunings moved to a `tune.` key.
 
 ## Next
 
-- **TUNE storage:** an IndexedDB store like TRACK's. Move `customTunings` to a `tune.` key, save looper sessions (the 16 loops and their settings), a Files panel with storage used, and export and import of session files. Looper recordings should survive a reload.
 - **SING sample recordings:** the voice sampler recordings can be saved, listed and opened again.
 - **More controllers:** Korg nanoKONTROL2, Akai MPK mini mk3 and IV, Launchkey Mini mk3, Arturia MiniLab 3, Akai APC mini mk2 and Novation Launchpad (an 8x8 grid for live patterns and samples), Behringer X-Touch Mini, M-Audio Keystation and Oxygen, and digital pianos from Roland, Yamaha and Kawai as variants of the Casio profile. Each one needs a real report (OPTIONS, MIDI, TEST, COPY REPORT) kept in `docs/integration/`.
 - **Launchkey lights:** LED feedback through MIDI out.
