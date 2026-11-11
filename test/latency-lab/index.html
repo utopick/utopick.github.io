@@ -279,8 +279,9 @@ async function start(){
   const inputOption=$('inputDevice').selectedOptions[0];const outputOption=$('outputDevice').selectedOptions[0];
   const inputLabel=stream.getAudioTracks()[0].label||inputOption?.text||'System default';
   const outputLabel=outputOption?.text||'System default';
+  let inputWarn=null;
   const opened=stream.getAudioTracks()[0].getSettings().deviceId,otherId=!!opened&&opened!==$('inputDevice').value;
-  if($('inputDevice').value&&inputOption&&(otherId||(stream.getAudioTracks()[0].label&&stream.getAudioTracks()[0].label!==inputOption.text)))log(`Asked for "${inputOption.text}" but the browser opened "${stream.getAudioTracks()[0].label}"${otherId?' (another device id)':''}. On iPad/iPhone the system picks the input: unplug and replug the interface, then Start again.`,true);
+  if($('inputDevice').value&&inputOption&&(otherId||(stream.getAudioTracks()[0].label&&stream.getAudioTracks()[0].label!==inputOption.text)))inputWarn=(`Asked for "${inputOption.text}" but the browser opened "${stream.getAudioTracks()[0].label}"${otherId?' (another device id)':''}. On iPad/iPhone the system picks the input: unplug and replug the interface, then Start again.`);
   // Always start muted. A final native gain stage protects all processing routes.
   const master=ctx.createGain();master.gain.value=0;
   let processor=null,worklet=null,nativeDSP=null,probe=null,board=null;
@@ -321,7 +322,8 @@ async function start(){
   snapshot();metricsTimer=setInterval(snapshot,1000);
   ctx.onstatechange=()=>{if(session?.ctx===ctx){updateStatus(`Audio state: ${ctx.state} · ${path}`,ctx.state==='running');snapshot();}};
   stream.getAudioTracks()[0].onended=()=>{log('Microphone track ended.',true);stop();};
-  log('Monitoring graph running, muted. Use headphones and raise volume intentionally.');
+  // the log holds one line: keep a wrong-input warning visible instead of the all-good message
+  log(inputWarn||'Monitoring graph running, muted. Use headphones and raise volume intentionally.',!!inputWarn);
  }catch(e){if(url)URL.revokeObjectURL(url);stream?.getTracks().forEach(t=>t.stop());if(ctx)await ctx.close().catch(()=>{});throw e;}
 }
 async function stop(){if(!session)return;const s=session;session=null;clearInterval(metricsTimer);metricsTimer=null;try{s.master.gain.value=0;s.raw.disconnect();s.source.disconnect();s.processor?.disconnect();s.probe?.disconnect();s.master.disconnect();s.stream.getTracks().forEach(t=>t.stop());await s.ctx.close();}catch{}setButtons(false);$('gain').value=0;$('gainValue').textContent='0%';updateStatus('Stopped · ready for next hardware or path test');log('Graph stopped.');}
