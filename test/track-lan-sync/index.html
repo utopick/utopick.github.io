@@ -10399,7 +10399,7 @@ a.length>D&&(D=a.length,p=0|1.25*D+7200,r=new Int8Array(p));a=u.lame_encode_buff
       // The connection data is cut down to about 71 bytes (the fingerprint, the ICE credentials and the addresses; the rest of the
       // SDP is rebuilt on the other side) and sent in small frames as 16-tone FSK (4 bits a symbol, 60 ms, 1.4 to 4.4 kHz): a
       // preamble, a length, the bytes and a CRC. The devices take turns (see "the conversation" below): the microphone is closed
-      // while a device plays, and every chunk of data is confirmed by the other side before the next one goes out.
+      // while a device plays, and the other side answers each burst with the list of pieces it got, so only the missing ones are repeated.
       const SYM = { MS: 60, F0: 1400, DF: 200, PRE: [0, 15, 0, 15], stream: null };
       function symCrc(a) {
         let c = 0xffff;
@@ -10659,71 +10659,88 @@ a.length>D&&(D=a.length,p=0|1.25*D+7200,r=new Int8Array(p));a=u.lame_encode_buff
         }, 25000);
       }
       const syDone = (ms) => new Promise((ok) => setTimeout(ok, ms));
-      // ---- the conversation: short frames, one device talks while the other listens, and every data frame is acknowledged
+      // ---- the conversation: short frames, one device talks while the other listens
       // frame = [type<<5 | fromJoiner<<4 | seq, ...]:  HELLO [h, nonce hi, nonce lo]  READY [h, nonce hi, nonce lo]
-      //          DATA [h, nonce8, chunks, ...up to 18 bytes]  ACK [h, nonce8].  The joiner ignores frames of the joiner and the host
-      // ignores frames of the host, so a device never obeys its own echo. The microphone is closed while a device plays.
+      //          DATA [h, nonce8, chunks, ...up to 18 bytes]  STATUS [h, nonce8, bitmap hi, bitmap lo]  (type ACK).
+      // The sender plays all the chunks in a burst; the receiver answers once with the list of those that arrived, and the sender
+      // plays only the missing ones. The joiner ignores frames of the joiner and the host ignores frames of the host, so a device
+      // never obeys its own echo, and the microphone is closed while a device plays.
       const SY = { HELLO: 0, READY: 1, DATA: 2, ACK: 3, CH: 18 };
       const syFr = (type, join, seq, rest) => Uint8Array.from([(type << 5) | (join << 4) | seq, ...rest]);
       const syKind = (f, join) => (f.length && ((f[0] >> 4) & 1) === join ? f[0] >> 5 : -1); // the type of a frame sent by that role
       const syN8 = (n) => ((n >> 8) ^ n) & 255;
-      // sends the message in chunks, each one until the other side acknowledges it
       async function sySendAll(io, msg, join, n8, say) {
         const parts = [];
         for (let i = 0; i < msg.length; i += SY.CH) parts.push(msg.subarray(i, i + SY.CH));
         if (!parts.length || parts.length > 16) throw new Error("the message does not fit");
-        for (let i = 0; i < parts.length; i++)
-          for (let t = 0; ; t++) {
-            if (io.dead()) return false;
-            // the joiner's last chunk: if the host never confirms it, the connection itself will tell whether it arrived
-            if (t >= 10) {
-              if (join && i === parts.length - 1) return true;
-              throw new Error("the other device stopped answering");
-            }
-            if (t) await io.pause(Math.random() * 1200); // a random pause, so two devices retrying together do not keep colliding
-            say(`Sending ${i + 1} of ${parts.length}${t ? " (again)" : ""}…`);
-            await io.send(syFr(SY.DATA, join, i, [n8, parts.length, ...parts[i]]));
-            // after the last chunk, the other side starting its own message also proves it got everything
-            if (await io.listen(2800, (f) => (syKind(f, 1 - join) === SY.ACK && (f[0] & 15) === i && f[1] === n8) || (i === parts.length - 1 && syKind(f, 1 - join) === SY.DATA && f[1] === n8))) break;
+        let need = parts.map((_, i) => i),
+          asked = true; // the last burst got a status back
+        for (let round = 0; ; round++) {
+          if (io.dead()) return false;
+          if (round >= 10) {
+            // the joiner's last chunks: if the host never says, the connection itself will tell whether they arrived
+            if (join) return true;
+            throw new Error("the other device stopped answering");
           }
-        return true;
+          if (round) await io.pause(Math.random() * 1200); // a random pause, so two devices retrying together do not keep colliding
+          const list = asked ? need : need.slice(-1); // no status last time: only the last chunk, which also asks for a status
+          say(!asked ? "Asking if it arrived…" : round ? `Sending the ${need.length} missing of ${parts.length}…` : `Sending ${parts.length} chunks…`);
+          for (let k = 0; k < list.length; k++) {
+            if (io.dead()) return false;
+            await io.send(syFr(SY.DATA, join, list[k], [n8, parts.length, ...parts[list[k]]]), k ? 100 : 250);
+          }
+          // a status, or the other side starting its own message, which proves it got everything
+          const st = await io.listen(3800, (f) => (syKind(f, 1 - join) === SY.ACK && f.length === 4 && f[1] === n8) || (syKind(f, 1 - join) === SY.DATA && f[1] === n8));
+          asked = !!st;
+          if (!st) continue;
+          if (syKind(st, 1 - join) === SY.DATA) return true;
+          const bm = (st[2] << 8) | st[3];
+          need = parts.map((_, i) => i).filter((i) => !((bm >> i) & 1));
+          if (!need.length) return true;
+        }
       }
-      // collects the chunks of the other side's message, acknowledging each; extra(f) handles other frames (null = ignore), idle() runs when nothing came
-      async function syRecvAll(io, join, n8, say, idleMs, maxIdle, extra, idle) {
+      // collects the chunks of the other side's message: after each burst it answers with a status; extra(f) handles other frames
+      async function syRecvAll(io, join, n8, say, firstMs, maxIdle, extra, idle, grace) {
         const got = [];
         let total = 0,
           quiet = 0;
         for (;;) {
-          const f = await io.listen(idleMs, (f) => (syKind(f, 1 - join) === SY.DATA && f[1] === n8 && f.length > 3) || (extra && extra(f)));
+          let hello = false;
+          const n = await io.burst(firstMs, 1000, (f) => {
+            if (syKind(f, 1 - join) === SY.DATA && f[1] === n8 && f.length > 3) {
+              const seq = f[0] & 15,
+                t = f[2];
+              if (!(t >= 1 && t <= 16 && seq < t)) return false;
+              total = t;
+              if (!got[seq]) got[seq] = f.slice(3);
+              say(`Receiving ${got.filter(Boolean).length} of ${total}…`);
+              return true;
+            }
+            return !!(extra && extra(f) && (hello = true));
+          });
           if (io.dead()) return null;
-          if (!f) {
+          if (!n) {
             if (++quiet > maxIdle) throw new Error("nothing came in");
             if (idle) await idle();
             continue;
           }
           quiet = 0;
-          if (syKind(f, 1 - join) !== SY.DATA) {
-            await extra.run(f);
+          if (!total) {
+            if (hello) await extra.run(); // the host calls again: it did not hear READY
             continue;
           }
-          const seq = f[0] & 15;
-          total = f[2];
-          if (!(total >= 1 && total <= 16 && seq < total)) continue;
-          if (!got[seq]) got[seq] = f.slice(3);
-          say(`Receiving ${got.filter(Boolean).length} of ${total}…`);
-          await io.send(syFr(SY.ACK, join, seq, [n8]));
-          if (got.filter(Boolean).length === total) {
-            // the other side may not have heard the last acknowledgement and send that chunk again: stay for a moment, and answer it
-            for (let i = 0; !io.dead() && i < 3; i++) {
-              const d = await io.listen(3400, (g) => syKind(g, 1 - join) === SY.DATA && g[1] === n8); // longer than the sender's retry cycle
-              if (!d) break;
-              await io.send(syFr(SY.ACK, join, d[0] & 15, [n8]));
-              i = 0;
-            }
-            const out = [];
-            got.forEach((c) => out.push(...c));
-            return Uint8Array.from(out);
-          }
+          const status = () => {
+            let bm = 0;
+            got.forEach((c, i) => c && (bm |= 1 << i));
+            return io.send(syFr(SY.ACK, join, 0, [n8, bm >> 8, bm & 255]));
+          };
+          await status();
+          if (got.filter(Boolean).length < total) continue;
+          // all here. If that status was lost, the sender asks again with its last chunk: stay a moment and answer it
+          while (grace && !io.dead() && (await io.listen(grace, (g) => syKind(g, 1 - join) === SY.DATA && g[1] === n8))) await status();
+          const out = [];
+          got.forEach((c) => out.push(...c));
+          return Uint8Array.from(out);
         }
       }
       // the host: calls until the joiner answers, sends the offer, receives the answer
@@ -10742,7 +10759,7 @@ a.length>D&&(D=a.length,p=0|1.25*D+7200,r=new Int8Array(p));a=u.lame_encode_buff
         if (!(await sySendAll(io, msg, 0, n8, say))) return null;
         syNote("host: offer sent");
         say("Offer sent. Waiting for the answer…");
-        return syRecvAll(io, 0, n8, say, 8000, 9);
+        return syRecvAll(io, 0, n8, say, 8000, 9, null, null, 0); // the answer is the last thing: the connection starts right away
       }
       // the joiner: waits for the call, answers it, receives the offer, makes and sends the answer
       async function syDialJoin(io, makeAnswer, say) {
@@ -10756,14 +10773,13 @@ a.length>D&&(D=a.length,p=0|1.25*D+7200,r=new Int8Array(p));a=u.lame_encode_buff
         say("Heard the host. Answering…");
         await ready();
         const hello = (f) => syKind(f, 0) === SY.HELLO && f.length === 3 && f[1] === nn[0] && f[2] === nn[1];
-        hello.run = ready; // the host calls again: it did not hear READY
-        const offer = await syRecvAll(io, 1, n8, say, 9500, 7, hello, ready);
+        hello.run = ready;
+        const offer = await syRecvAll(io, 1, n8, say, 9500, 7, hello, ready, 4200);
         if (!offer) return false;
         syNote("guest: offer received");
         say("Offer received. Making the answer…");
         const ans = await makeAnswer(offer);
         if (io.dead()) return false;
-        say("Sending the answer…");
         return sySendAll(io, ans, 1, n8, say);
       }
       // the microphone and the speaker, one at a time. rx.dec is null while a device plays, so nothing it hears is ever its own sound
@@ -10820,9 +10836,35 @@ a.length>D&&(D=a.length,p=0|1.25*D+7200,r=new Int8Array(p));a=u.lame_encode_buff
               );
               t = setTimeout(tick, ms);
             }),
-          send: async (bytes) => {
+          // frames in a row: onFrame(frame) returns true for a frame that counts; ends after quietMs without one (or firstMs if none came)
+          burst: (firstMs, quietMs, onFrame) =>
+            new Promise((res) => {
+              if (me.dead) return res(0);
+              let t,
+                n = 0,
+                last = 0,
+                ext = 0;
+              const end = () => {
+                clearTimeout(t);
+                rx.dec = rx.cancel = null;
+                res(n);
+              };
+              const arm = () => (clearTimeout(t), (t = setTimeout(tick, n ? quietMs : firstMs)));
+              const tick = () => (performance.now() - last < 500 && ext < 20000 ? ((ext += 500), (t = setTimeout(tick, 500))) : end());
+              rx.peak = 0;
+              rx.since = performance.now() + 150;
+              rx.cancel = end;
+              rx.dec = symDec(
+                ctx.sampleRate,
+                (f) => onFrame(f) && (n++, (ext = 0), arm()),
+                () => (last = performance.now()),
+                () => syNote("heard a frame, check failed"),
+              );
+              arm();
+            }),
+          send: async (bytes, gap = 250) => {
             rx.dec = null; // not listening while talking
-            await syDone(250); // a turn gap: the other device finishes its own sound and opens its microphone
+            await syDone(gap); // a turn gap: the other device finishes its own sound and opens its microphone
             if (me.dead) return;
             const data = symSynth(bytes, ctx.sampleRate),
               buf = ctx.createBuffer(1, data.length, ctx.sampleRate),
@@ -14144,7 +14186,7 @@ a.length>D&&(D=a.length,p=0|1.25*D+7200,r=new Int8Array(p));a=u.lame_encode_buff
             b: {
               en: [
                 "**SYNC** (Files screen) joins several devices on the **same Wi-Fi** into one session, with no server and no account: every device has the same song, the same samples and the same PLAY / STOP. Use it to have the mixer open on one device, the live patterns on another and the piano on a third, or to play together with a friend.",
-                "- **Pair by sound:** put the two devices close, volume up, in a quiet room. Tap **HOST** on one and **JOIN** on the other. The host calls with short tones, the joiner answers, and then they take turns: one plays a small piece of the connection data while the other listens and confirms it (a device never listens while it plays, so it does not hear itself). It takes about a minute. **STOP** ends a try at any time. Then both screens show the **same 4 digits**: if they match, tap **THEY MATCH** on the host (this stops anyone who overheard from joining). Repeat for each device you add.",
+                "- **Pair by sound:** put the two devices close, volume up, in a quiet room. Tap **HOST** on one and **JOIN** on the other. The host calls with short tones, the joiner answers, and then they take turns: one plays the connection data in a short burst of small pieces while the other listens and answers with what it got, and only the missing pieces are played again (a device never listens while it plays, so it does not hear itself). It takes about 40 seconds. **STOP** ends a try at any time. Then both screens show the **same 4 digits**: if they match, tap **THEY MATCH** on the host (this stops anyone who overheard from joining). Repeat for each device you add.",
                 "- **Pair by code** (no sound needed, or a noisy room): **HOST BY CODE** makes a code. Send it to the other device (a message, AirDrop, anything) and tap **JOIN BY CODE** there: paste the code and send back the answer it makes. Paste the answer on the host and tap **CONNECT**.",
                 "- A device that joins gets the host's song and samples; its own song is kept in the song list as *Before sync*. After that every device can edit: the last change wins. A change on one appears on the others in a moment, and so do the samples.",
                 "- **PLAY** and **STOP** on any device start and stop all of them together. Each device plays from what its own view shows (live patterns, song or pattern).",
@@ -14154,7 +14196,7 @@ a.length>D&&(D=a.length,p=0|1.25*D+7200,r=new Int8Array(p));a=u.lame_encode_buff
               ],
               es: [
                 "**SYNC** (pantalla Files) une varios dispositivos en la **misma Wi-Fi** en una sola sesión, sin servidor ni cuenta: todos tienen la misma canción, las mismas muestras y el mismo PLAY / STOP. Sirve para tener el mezclador abierto en uno, los patrones en vivo en otro y el piano en un tercero, o para tocar con un amigo.",
-                "- **Emparejar por sonido:** pon los dos dispositivos cerca, con el volumen alto, en una sala tranquila. Toca **HOST** en uno y **JOIN** en el otro. El host llama con tonos cortos, el otro responde, y luego se turnan: uno reproduce un trocito de los datos de conexión mientras el otro escucha y lo confirma (un dispositivo nunca escucha mientras suena, así que no se oye a sí mismo). Tarda cerca de un minuto. **STOP** termina un intento en cualquier momento. Luego las dos pantallas muestran los **mismos 4 dígitos**: si coinciden, toca **THEY MATCH** en el host (así nadie que haya oído el sonido puede entrar). Repite con cada dispositivo que añadas.",
+                "- **Emparejar por sonido:** pon los dos dispositivos cerca, con el volumen alto, en una sala tranquila. Toca **HOST** en uno y **JOIN** en el otro. El host llama con tonos cortos, el otro responde, y luego se turnan: uno reproduce los datos de conexión en una ráfaga de trocitos mientras el otro escucha y responde con lo que ha recibido, y solo se repiten los trocitos que faltan (un dispositivo nunca escucha mientras suena, así que no se oye a sí mismo). Tarda unos 40 segundos. **STOP** termina un intento en cualquier momento. Luego las dos pantallas muestran los **mismos 4 dígitos**: si coinciden, toca **THEY MATCH** en el host (así nadie que haya oído el sonido puede entrar). Repite con cada dispositivo que añadas.",
                 "- **Emparejar con código** (sin sonido, o en una sala ruidosa): **HOST BY CODE** crea un código. Envíalo al otro dispositivo (un mensaje, AirDrop, lo que sea) y toca **JOIN BY CODE** allí: pega el código y envía de vuelta la respuesta que genera. Pega la respuesta en el host y toca **CONNECT**.",
                 "- El que se une recibe la canción y las muestras del host; la suya queda en la lista de canciones como *Before sync*. Después todos pueden editar: gana el último cambio. Un cambio en uno aparece en los demás al momento, igual que las muestras.",
                 "- **PLAY** y **STOP** en cualquiera arrancan y paran a todos a la vez. Cada dispositivo toca lo que muestra su vista (patrones en vivo, canción o patrón).",
@@ -15300,5 +15342,5 @@ a.length>D&&(D=a.length,p=0|1.25*D+7200,r=new Int8Array(p));a=u.lame_encode_buff
         if (!localStorage.getItem("track-test.welcome")) welcomeShow();
       } catch {}
     </script>
-  <div style="position:fixed;left:4px;bottom:2px;z-index:99;font:700 9px monospace;opacity:.7;pointer-events:none;color:#ff5e7a">TEST BUILD · lan-sync · 35dddec</div></body>
+  <div style="position:fixed;left:4px;bottom:2px;z-index:99;font:700 9px monospace;opacity:.7;pointer-events:none;color:#ff5e7a">TEST BUILD · lan-sync · 308d431</div></body>
 </html>
