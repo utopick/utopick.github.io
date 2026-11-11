@@ -23,6 +23,10 @@ button,select,input{font:inherit;color:var(--text)}
 select,input[type=number],input[type=text]{width:100%;background:var(--panel2);border:1px solid var(--line);border-radius:var(--r);padding:7px 8px;min-height:44px}
 button{background:var(--panel2);border:1px solid var(--line);border-radius:var(--r);padding:8px 12px;min-height:44px;cursor:pointer;font:700 13px var(--mono);letter-spacing:.04em;touch-action:manipulation}
 button:active{transform:scale(.96)}button:disabled{opacity:.4;cursor:not-allowed;transform:none}
+button.on{background:var(--acc);color:var(--ink);border-color:var(--acc)}
+.pedals{display:grid;gap:10px}.pedal{background:var(--panel2);border:1px solid var(--line);border-radius:var(--r);padding:10px 12px}.pedal header{padding:0 0 4px}.pedal h3{margin:0;font-size:12px;color:var(--text)}
+.knob{display:block;font-size:13px;color:var(--dim)}.knob b{float:right;font-family:var(--mono);color:var(--acc)}
+@media(min-width:700px){.pedals{grid-template-columns:repeat(3,1fr)}}
 .primary{background:var(--acc);color:var(--ink);border-color:var(--acc)}.danger{background:var(--hot);color:#fff;border-color:var(--hot)}
 .buttons{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin:10px 0}
 input[type=range]{width:100%;accent-color:var(--acc);height:32px}input[type=checkbox]{accent-color:var(--acc);width:20px;height:20px;vertical-align:middle;margin:0 8px 0 0}
@@ -66,7 +70,7 @@ ol{margin:6px 0;padding-left:20px;color:var(--dim)}li{margin:4px 0}
 </section>
 
 <section class="panel"><h2>2 · Live monitoring</h2>
-<label class="field"><span>Processing path</span><select id="path"><option value="direct">Direct (no processing)</option><option value="native">Native GainNode</option><option value="worklet-js">AudioWorklet · JavaScript</option><option value="worklet-wasm">AudioWorklet · WebAssembly</option></select></label>
+<label class="field"><span>Processing path</span><select id="path"><option value="direct">Direct (no processing)</option><option value="native">Native GainNode</option><option value="worklet-js">AudioWorklet · JavaScript</option><option value="worklet-wasm">AudioWorklet · WebAssembly</option><option value="pedals">Pedalboard: drive → delay → reverb</option></select></label>
 <div class="mode" id="pathNote">Source → destination. The smallest browser graph; no custom processing.</div>
 <div class="buttons"><button class="primary" id="start">START (MUTED)</button><button class="danger" id="stop" disabled>STOP</button><button id="record" disabled>RECORD RUN · 8 S</button><button id="loopback" disabled>MEASURE ROUND TRIP</button></div>
 <div class="metric"><small>Measured round trip (median of 5 clicks)</small><strong id="rt">—</strong><span id="rtInfo" class="tiny">Plays 5 short clicks and listens for them on the input. Let the input hear the output: a cable from the interface output to its input (turn the input gain down), or the phone speaker next to its mic, or a headphone cup against the mic. Take headphones off your head first. Monitoring is muted while it runs.</span></div>
@@ -87,7 +91,26 @@ ol{margin:6px 0;padding-left:20px;color:var(--dim)}li{margin:4px 0}
 <div class="lineup"><span class="pill" id="wasmTag">WASM: checking</span><span class="pill" id="secureTag">Secure context: checking</span><span class="pill" id="workletTag">AudioWorklet: checking</span></div>
 </section>
 
-<section class="panel"><h2>3 · Results</h2>
+<section class="panel" id="pedalPanel"><h2>3 · Pedals</h2>
+<p>Choose <strong>Pedalboard</strong> as the processing path, start, put the headphones on and raise the monitor volume. Guitar in the instrument jack: pick its input channel (2 on a Scarlett Solo). Knobs work while playing.</p>
+<div class="pedals">
+<div class="pedal"><header><h3>DRIVE</h3><span class="grow"></span><button id="drvOn" class="on">ON</button></header>
+<label class="knob">Gain <b></b><input type="range" id="drvGain" min="1" max="60" step="1" value="12" data-unit="×"></label>
+<label class="knob">Tone <b></b><input type="range" id="drvTone" min="600" max="9000" step="100" value="3500" data-unit=" Hz"></label>
+<label class="knob">Level <b></b><input type="range" id="drvLevel" min="0" max="1" step="0.01" value="0.4"></label>
+<label class="field"><span>Oversampling (smoother clipping, but it delays the sound)</span><select id="drvOs"><option value="none">none · +0 ms</option><option value="2x">2× · +2.9 ms</option><option value="4x">4× · +4.4 ms</option></select></label></div>
+<div class="pedal"><header><h3>DELAY</h3><span class="grow"></span><button id="dlyOn">OFF</button></header>
+<label class="knob">Time <b></b><input type="range" id="dlyTime" min="40" max="900" step="10" value="350" data-unit=" ms"></label>
+<label class="knob">Feedback <b></b><input type="range" id="dlyFb" min="0" max="0.85" step="0.01" value="0.35"></label>
+<label class="knob">Mix <b></b><input type="range" id="dlyMix" min="0" max="1" step="0.01" value="0.35"></label></div>
+<div class="pedal"><header><h3>REVERB</h3><span class="grow"></span><button id="revOn">OFF</button></header>
+<label class="knob">Decay <b></b><input type="range" id="revDecay" min="0.3" max="5" step="0.1" value="1.8" data-unit=" s"></label>
+<label class="knob">Mix <b></b><input type="range" id="revMix" min="0" max="1" step="0.01" value="0.3"></label></div>
+</div>
+<p class="tiny">Drive is a tanh clipper with a low-pass tone (oversampling is the only part that adds delay: measured above); the delay has feedback; the reverb is a generated noise tail in a ConvolverNode. Delay and reverb add their echoes after the dry sound, never delay it.</p>
+</section>
+
+<section class="panel"><h2>4 · Results</h2>
 <p>Record a run per path with the same input and output, then repeat with the USB interface. Browser estimates cover the output side only; <strong>MEASURE ROUND TRIP</strong> is the real number (what you hear when monitoring, about this much late).</p>
 <div class="two"><div class="chartbox"><h3>Latency per run (ms) · <span class="good">green = measured round trip</span> · grey = browser estimate</h3><canvas id="latencyChart" aria-label="Estimated output latency bar chart"></canvas></div><div class="chartbox"><h3>Input level (dBFS) · this session</h3><canvas id="signalChart" aria-label="Input level history"></canvas></div></div>
 <div class="buttons"><button id="export">EXPORT JSON</button><button id="clear">CLEAR RESULTS</button></div>
@@ -95,14 +118,14 @@ ol{margin:6px 0;padding-left:20px;color:var(--dim)}li{margin:4px 0}
 <p class="tiny">*Only where the worklet has <span class="kbd">performance.now()</span> (not Chrome): it is processing time, not audio delay. Missing values show as —.</p>
 </section>
 
-<section class="panel"><h2>4 · Physical measurement</h2><p>The real mic-to-headphone delay needs a reference sound and a two-channel recording (or an oscilloscope). Measure it outside, then attach it to a run here; it goes into the export.</p>
+<section class="panel"><h2>5 · Physical measurement</h2><p>The real mic-to-headphone delay needs a reference sound and a two-channel recording (or an oscilloscope). Measure it outside, then attach it to a run here; it goes into the export.</p>
 <label class="field"><span>Run</span><select id="calRun"><option value="">Choose run</option></select></label>
 <label class="field"><span>Measured mic-to-output delay (ms)</span><input type="number" id="physicalMs" min="0" max="2000" step="0.01" inputmode="decimal" placeholder="e.g. 18.75"></label>
 <div class="buttons"><button id="saveCal">SAVE</button><button id="pulse">PLAY 3 CHIRPS</button></div>
 <p class="tiny">The chirps are a test sound, not an automatic measurement. Start quiet. For a cable loopback, lower the level first; never connect a speaker amplifier output to an audio input.</p>
 </section>
 
-<section class="panel"><h2>5 · Diagnostics</h2><div class="buttons"><button id="refresh">REFRESH</button><button id="copy">COPY</button></div><pre id="diagnostics">No audio session yet.</pre><p id="notes" class="hint">Everything runs in this page: browser audio and a small embedded WebAssembly module, no network. Choosing the output isn't possible in every browser (Safari, Chrome on Android); the system default always works.</p><div id="logs" class="tiny" aria-live="polite">Ready.</div></section>
+<section class="panel"><h2>6 · Diagnostics</h2><div class="buttons"><button id="refresh">REFRESH</button><button id="copy">COPY</button></div><pre id="diagnostics">No audio session yet.</pre><p id="notes" class="hint">Everything runs in this page: browser audio and a small embedded WebAssembly module, no network. Choosing the output isn't possible in every browser (Safari, Chrome on Android); the system default always works.</p><div id="logs" class="tiny" aria-live="polite">Ready.</div></section>
 
 <section class="panel"><h2>How to compare</h2><ol><li>Use HTTPS or <span class="kbd">localhost</span>, allow the mic and pick the built-in microphone.</li><li>Headphones on, monitor volume at zero unless you want to hear yourself.</li><li>Record a run for Direct, Native, Worklet JS and Worklet WASM.</li><li>Switch to the USB interface and repeat.</li><li>Measure the round trip with a loopback (section 2) for each input and output.</li><li>Export the JSON.</li></ol><p class="tiny">JS and WASM do the same gain, so they compare processing speed, not end-to-end delay. Runs only compare fairly with the same output route and capture settings.</p></section>
 </main>
@@ -193,7 +216,7 @@ const log=(msg,bad=false)=>{const now=new Date().toLocaleTimeString();$('logs').
 let session=null,results=[];try{const stored=JSON.parse(localStorage.getItem(STORAGE)||'[]');if(Array.isArray(stored))results=stored;}catch{}
 let chartRms=[];const persist=()=>{try{localStorage.setItem(STORAGE,JSON.stringify(results));}catch(e){log('Local storage blocked; export JSON to preserve results.',true);}};
 let metricsTimer=null;let currentGain=0;
-const pathNotes={direct:'Source → destination. The smallest browser graph; no custom processing.',native:'Source → native GainNode → destination. Browser-native DSP.', 'worklet-js':'Source → JS AudioWorklet → destination. Direct 128-frame processing, no custom queues.', 'worklet-wasm':'Source → WebAssembly AudioWorklet → destination. Real compiled WASM scalar gain DSP; one copy into WASM memory and one copy out per block.'};
+const pathNotes={direct:'Source → destination. The smallest browser graph; no custom processing.',native:'Source → native GainNode → destination. Browser-native DSP.', 'worklet-js':'Source → JS AudioWorklet → destination. Direct 128-frame processing, no custom queues.', pedals:'Source → drive → delay → reverb → destination. Built-in Web Audio nodes only, set in section 3; they can be changed while it runs.','worklet-wasm':'Source → WebAssembly AudioWorklet → destination. Real compiled WASM scalar gain DSP; one copy into WASM memory and one copy out per block.'};
 $('path').addEventListener('change',()=>{$('pathNote').textContent=pathNotes[$('path').value]});
 const fmt=(v,d=2)=>Number.isFinite(v)?v.toFixed(d):'—';
 const db=r=>r>0?20*Math.log10(r):-120;
@@ -255,7 +278,7 @@ async function start(){
   const outputLabel=outputOption?.text||'System default';
   // Always start muted. A final native gain stage protects all processing routes.
   const master=ctx.createGain();master.gain.value=0;
-  let processor=null,worklet=null,nativeDSP=null,probe=null;
+  let processor=null,worklet=null,nativeDSP=null,probe=null,board=null;
   if(ctx.audioWorklet && window.AudioWorkletNode){
    url=URL.createObjectURL(new Blob([workletCode],{type:'text/javascript'}));
    await ctx.audioWorklet.addModule(url);URL.revokeObjectURL(url);url=null;
@@ -264,6 +287,7 @@ async function start(){
    source.connect(probe);probe.connect(ctx.destination);
   }
   if(path==='direct'){source.connect(master);}
+  else if(path==='pedals'){board=makeBoard(ctx);source.connect(board.input);board.output.connect(master);}
   else if(path==='native'){nativeDSP=ctx.createGain();nativeDSP.gain.value=1;source.connect(nativeDSP);nativeDSP.connect(master);}
   else{
    if(!ctx.audioWorklet || !window.AudioWorkletNode)throw new Error('AudioWorklet unsupported in this browser.');
@@ -281,7 +305,7 @@ async function start(){
   }
   master.connect(ctx.destination);
   await ctx.resume();
-  session={stream,ctx,source,raw,inChannel,processor,probe,master,path,inputLabel,outputLabel,hint,wasmReady:false,lastRms:null,quantum:null,maxUs:null};
+  session={stream,ctx,source,raw,inChannel,board,processor,probe,master,path,inputLabel,outputLabel,hint,wasmReady:false,lastRms:null,quantum:null,maxUs:null};
   if(path==='worklet-wasm'){
    // The module is real compiled WebAssembly. Transfer buffer once before monitoring is enabled.
    const bytes=bytesWasm();processor.port.postMessage({type:'wasm',bytes:bytes.buffer},[bytes.buffer]);
@@ -298,6 +322,36 @@ async function start(){
 async function stop(){if(!session)return;const s=session;session=null;clearInterval(metricsTimer);metricsTimer=null;try{s.master.gain.value=0;s.raw.disconnect();s.source.disconnect();s.processor?.disconnect();s.probe?.disconnect();s.master.disconnect();s.stream.getTracks().forEach(t=>t.stop());await s.ctx.close();}catch{}setButtons(false);$('gain').value=0;$('gainValue').textContent='0%';updateStatus('Stopped · ready for next hardware or path test');log('Graph stopped.');}
 $('start').onclick=()=>start().catch(e=>log('Start failed: '+e.message,true));$('stop').onclick=stop;
 $('gain').oninput=()=>{currentGain=Number($('gain').value)/100;$('gainValue').textContent=Math.round(currentGain*100)+'%';if(session){session.master.gain.setTargetAtTime(currentGain,session.ctx.currentTime,0.005);}};
+// ---- pedalboard: drive -> delay -> reverb, native nodes, live knobs
+function impulse(ctx,sec){const n=Math.round(ctx.sampleRate*sec),b=ctx.createBuffer(2,n,ctx.sampleRate);for(let c=0;c<2;c++){const d=b.getChannelData(c);for(let i=0;i<n;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/n,4);}return b;}
+function makeBoard(ctx){
+ const v=id=>Number($(id).value),on=id=>$(id).classList.contains('on'),ramp=(param,x)=>param.setTargetAtTime(x,ctx.currentTime,0.01);
+ const input=ctx.createGain(),output=ctx.createGain();
+ // drive: bypass and effect run side by side, crossfaded by two gains (no clicks when switching)
+ const dByp=ctx.createGain(),pre=ctx.createGain(),shaper=ctx.createWaveShaper(),tone=ctx.createBiquadFilter(),dFx=ctx.createGain(),dOut=ctx.createGain();
+ const curve=new Float32Array(4096);for(let i=0;i<curve.length;i++){const x=i/(curve.length-1)*2-1;curve[i]=Math.tanh(3*x)/Math.tanh(3);}
+ shaper.curve=curve;tone.type='lowpass';tone.Q.value=0.7;
+ input.connect(dByp);dByp.connect(dOut);input.connect(pre);pre.connect(shaper);shaper.connect(tone);tone.connect(dFx);dFx.connect(dOut);
+ // delay: the dry signal always passes; the echoes are added
+ const dly=ctx.createDelay(2),fb=ctx.createGain(),dWet=ctx.createGain(),yOut=ctx.createGain();
+ dOut.connect(yOut);dOut.connect(dly);dly.connect(fb);fb.connect(dly);dly.connect(dWet);dWet.connect(yOut);
+ // reverb: the same, with a convolver tail
+ const conv=ctx.createConvolver(),rWet=ctx.createGain();
+ yOut.connect(output);yOut.connect(conv);conv.connect(rWet);rWet.connect(output);
+ let decay=null;
+ function update(){
+  shaper.oversample=$('drvOs').value; // measured in Chrome at 44.1 kHz: none 0, 2x 128, 4x 192 samples of delay
+  const d=on('drvOn');ramp(dByp.gain,d?0:1);ramp(dFx.gain,d?v('drvLevel'):0);ramp(pre.gain,v('drvGain'));ramp(tone.frequency,v('drvTone'));
+  ramp(dly.delayTime,v('dlyTime')/1000);ramp(fb.gain,v('dlyFb'));ramp(dWet.gain,on('dlyOn')?v('dlyMix'):0);
+  ramp(rWet.gain,on('revOn')?v('revMix'):0);
+  if(decay!==v('revDecay')){decay=v('revDecay');conv.buffer=impulse(ctx,decay);}
+ }
+ update();return {input,output,update};
+}
+const showKnob=r=>{r.previousElementSibling.textContent=r.value+(r.dataset.unit||'');};
+document.querySelectorAll('#pedalPanel input[type=range]').forEach(r=>{showKnob(r);r.addEventListener('input',()=>{showKnob(r);session?.board?.update();});});
+$('drvOs').onchange=()=>session?.board?.update();
+for(const id of ['drvOn','dlyOn','revOn'])$(id).onclick=()=>{const b=$(id);b.classList.toggle('on');b.textContent=b.classList.contains('on')?'ON':'OFF';session?.board?.update();};
 $('refresh').onclick=()=>snapshot();$('copy').onclick=async()=>{try{await navigator.clipboard.writeText($('diagnostics').textContent);log('Snapshot copied.');}catch(e){log('Clipboard unavailable: '+e.message,true);}};
 function runLabel(r){return `${new Date(r.at).toLocaleTimeString()} · ${r.inputLabel.slice(0,22)} · ${r.path}`;}
 function drawTable(){
