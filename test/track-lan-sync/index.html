@@ -763,16 +763,13 @@
         font-size: 12px;
         line-height: 1.4;
       }
-      #syBox textarea {
-        width: 100%;
-        font: 11px var(--mono);
-        background: var(--panel2);
-        color: var(--text);
-        border: 1px solid var(--line);
-        border-radius: 6px;
-        padding: 6px;
-        resize: none;
-        margin-bottom: 4px;
+      #syList {
+        margin: 10px 0 0;
+        font-size: 13px;
+        line-height: 1.7;
+      }
+      #syList[hidden] {
+        display: none;
       }
       #file .fpanel button.dis {
         opacity: 0.35;
@@ -2695,6 +2692,15 @@
       }
       #syHQBody .hint {
         margin: 0;
+        font-size: 14px;
+      }
+      #syHQTxt {
+        color: var(--text);
+      }
+      #syHQNum {
+        font: 800 72px var(--mono);
+        letter-spacing: 6px;
+        color: var(--acc);
       }
       #syHQImg,
       #syCam {
@@ -4045,47 +4051,27 @@
           <div class="lbl" style="margin-bottom: 6px">Sync devices on the same Wi-Fi</div>
           <div class="hint" id="syStat" style="margin: 0 0 8px"></div>
           <div class="bar" style="padding: 0; flex-wrap: wrap">
-            <button id="syHost" title="Start a sync: this device plays a sound that the other one listens to">HOST</button>
-            <button id="syJoin" title="Join the sync of another device by listening to it (it replaces this song)">JOIN</button>
-            <button id="syHostQ" title="Start a sync with QR codes only: the other device scans this one with its camera, then shows a code that this device reads with SCAN">HOST QR</button>
-            <button id="syHi" title="Pair with near-ultrasound tones that are hard to hear: set it the same on both devices (a QR carries it)">QUIET</button>
+            <button id="syHost" title="Start a sync, or add one more device to it: this device shows a QR code for the other one">HOST</button>
+            <button id="syJoin" title="Join the sync of another device: this device's camera reads the code the host shows (the host's song replaces this one)">JOIN</button>
             <button id="sySilent" title="Mute this device: another one makes the sound">SILENT</button>
-            <button id="syStop" class="on" hidden title="Stop trying to pair: the sound, the microphone and the connection attempt">STOP</button>
             <button id="syLeave" title="Leave the sync">LEAVE</button>
           </div>
           <div class="bar" style="padding: 0; margin-top: 6px">
-            <button id="syHostC" title="Start a sync with a code you copy to the other device">HOST BY CODE</button>
-            <button id="syJoinC" title="Join with a code you paste">JOIN BY CODE</button>
             <button id="syQr" title="A QR code that opens this app on another device: scan it with its camera">APP QR</button>
             <button id="syRep" title="Copy what happened while pairing, to send to whoever helps you">COPY REPORT</button>
           </div>
-          <div id="syQJ" hidden style="border: 1px solid var(--acc); border-radius: 8px; padding: 10px; margin: 10px 0">
-            <div class="hint" style="margin: 0 0 8px"><b>A device invites you to its sync.</b> This device's song is kept in FILE as “Before sync”, then replaced by the host's. Only join a device you trust that is next to you.</div>
-            <div class="bar" style="padding: 0"><button id="syQJyes" class="on" title="Join the sync (the other device must be next to you, volume up)">JOIN</button><button id="syQJno" title="Ignore the invitation">NO</button></div>
-          </div>
+          <div id="syList" hidden></div>
           <div id="syQrBox" hidden>
             <div id="syQrImg" style="background: #fff; border-radius: 8px; padding: 4px; width: min(280px, 100%); margin: 10px auto 4px"></div>
             <div class="hint" id="syQrUrl" style="text-align: center; margin: 0 0 6px"></div>
             <div class="bar" style="padding: 0"><button id="syQrSave" title="A vector picture to print on cards or stickers">SAVE SVG</button><button id="syQrShare" title="Send the link">SHARE LINK</button></div>
           </div>
-          <div id="syChk" hidden>
-            <div class="lbl" id="syChkT" style="margin: 10px 0 4px"></div>
-            <div class="bar" style="padding: 0"><button id="syYes">THEY MATCH</button><button id="syNo">NO</button></div>
-          </div>
-          <div id="syBox" hidden>
-            <div class="lbl" id="syL1" style="margin: 10px 0 4px"></div>
-            <textarea id="syOut" readonly rows="4" title="The code to send"></textarea>
-            <div class="bar" style="padding: 0"><button id="syCopy">COPY</button><button id="syShare">SHARE</button></div>
-            <div class="lbl" id="syL2" style="margin: 10px 0 4px"></div>
-            <textarea id="syIn" rows="4" title="Paste the code you got" spellcheck="false" autocapitalize="off" autocomplete="off"></textarea>
-            <div class="bar" style="padding: 0"><button id="syGo">CONNECT</button></div>
-          </div>
           <p class="hint" style="margin: 8px 0 0">
-            Hold the two devices close with the volume up: <b>HOST</b> calls with short tones and <b>JOIN</b> answers, then they take
-            turns (one plays while the other listens, so neither hears itself). It needs the microphone, and a quiet room helps. <b>STOP</b> ends a try. No sound? Use the codes. One device is
-            the <b>host</b> and the others <b>join</b>: the song, the samples and PLAY / STOP are shared, and every
-            device can edit. Only one should make the sound: tap <b>SILENT</b> on the others. A MIDI knob on one device moves
-            the mixer of all.
+            One device is the <b>host</b> and the others <b>join</b>. Tap <b>HOST</b> on one: it shows a code. Tap <b>JOIN</b> on the other
+            and point its camera at that code; it then shows a code of its own, which the host reads with <b>SCAN</b>. Both show the same
+            number: confirm it on the host. Tap <b>HOST</b> again for each device you add. The song, the samples and PLAY / STOP are
+            shared, and every device can edit. Only one should make the sound: tap <b>SILENT</b> on the others. A MIDI knob on one
+            device moves the mixer of all.
           </p>
         </div>
         <div class="prow" id="fileTabs">
@@ -4101,16 +4087,25 @@
     <!-- SYNC by QR: the code to show or the camera that reads the answer (out of the file panel, so it covers the whole screen) -->
     <div id="syHQ" hidden>
       <div class="hp" role="dialog" aria-modal="true">
-        <div class="hh"><b>SYNC BY QR</b><button id="syHQStop" title="Stop pairing and close this" aria-label="Stop">✕</button></div>
+        <div class="hh"><b>SYNC</b><button id="syHQStop" title="Stop pairing and close this" aria-label="Stop">✕</button></div>
         <div id="syHQBody">
-          <div id="syHQImg"></div>
+          <div id="syHQImg" hidden></div>
           <div id="syCam" hidden><video id="syCamV" playsinline muted></video></div>
+          <div id="syHQNum" hidden></div>
           <div class="hint" id="syHQTxt"></div>
           <div class="hint" id="syHQStat"></div>
           <div class="bar" id="syScanBar" hidden style="padding: 0">
-            <button id="syScanA" title="Read the other device's answer code with this device's camera (our own reader)">SCAN</button>
-            <button id="syScanB" title="Read the other device's answer code with this device's camera (the jsQR reader, to compare)">SCAN jsQR</button>
+            <button id="syScanA" title="Read the code on the other device with this device's camera (our own reader)">SCAN</button>
+            <button id="syScanB" title="Read the code on the other device with this device's camera (the jsQR reader, to compare)">SCAN jsQR</button>
             <button id="syCamNext" hidden title="Use the next camera of this device (when this one cannot focus on the code)">CAMERA</button>
+          </div>
+          <div class="bar" id="syAskBar" hidden style="padding: 0">
+            <button id="syQJyes" class="on" title="Join the sync: the host's song replaces this device's (which is kept in FILE)">JOIN</button>
+            <button id="syQJno" title="Ignore the invitation">NO</button>
+          </div>
+          <div class="bar" id="syChkBar" hidden style="padding: 0">
+            <button id="syYes" class="on" title="Both screens show the same number: let the device in">THEY MATCH</button>
+            <button id="syNo" title="The numbers differ: do not let the device in">NO</button>
           </div>
         </div>
       </div>
@@ -16505,7 +16500,7 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
       // samples
       // ======================================================================
       // SYNC (the module is further down): defined here because the mixer reads .silent
-      const SYNC = { then: null, me: Math.random().toString(36).slice(2, 6), goAt: 0, host: false, peers: [], hub: null, off: 0, rtt: 1e9, silent: false, last: {}, smp: [], got: {}, pend: null, apply: 0 };
+      const SYNC = { then: null, me: Math.random().toString(36).slice(2, 6), goAt: 0, host: false, peers: [], hub: null, off: 0, rtt: 1e9, silent: false, last: {}, smp: [], got: {}, pend: null, apply: 0, ui: null, qa: null, who: null, in: false, chk: null, chkPeer: null };
       const samples = new Array(SLOTS).fill(null); // AudioBuffer-like: {rate, data:Float32Array}
       const sampleSettings = Array.from({ length: SLOTS }, () => ({ velocity: 1, pitch: 0, hold: true }));
       const bufCache = new WeakMap();
@@ -20456,28 +20451,16 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
       }
 
       // ======================================================================
-      // SYNC: devices on the same Wi-Fi share one song, with no server (WebRTC, paired by copying two codes)
+      // SYNC: devices on the same Wi-Fi share one song, with no server (WebRTC, paired with two QR codes)
       // ======================================================================
       // The host is the hub: guests talk to it and it passes every message on. What travels: the song, key by key (a changed key is
       // sent, so a knob is a few bytes); the 16 samples (in pieces, when they change); PLAY / STOP, which the host times 250 ms ahead
-      // of the clocks it has measured. Last writer wins. shortcut: the host leaving ends the sync; no QR code (copy or share the code).
+      // of the clocks it has measured. Last writer wins. shortcut: the host leaving ends the sync.
       const SY_KEYS = ["chN", "name", "bpm", "kit", "chInst", "patterns", "order", "scale", "mix", "xInst", "xMix", "instAll", "loopA", "loopB", "arpRate"];
       const SY_CTL = { $master: "#master", $swing: "#swing", $echo: "#echo", $echoTime: "#echoTime" };
-      const syN = () => (SYNC.host ? SYNC.peers.filter((x) => x.dc.readyState === "open").length : SYNC.hub && SYNC.hub.dc.readyState === "open" ? 1 : 0);
+      const syN = () => (SYNC.host ? SYNC.peers.filter((x) => x.dc.readyState === "open").length : SYNC.hub && SYNC.in && SYNC.hub.dc.readyState === "open" ? 1 : 0); // a guest is in once the host has confirmed it
       const syNow = () => Date.now() + SYNC.off;
       const syB64 = (u8) => btoa(Array.from(u8, (c) => String.fromCharCode(c)).join("")).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-      async function syPack(o) {
-        const st = new Blob([JSON.stringify(o)]).stream().pipeThrough(new CompressionStream("deflate-raw"));
-        return syB64(new Uint8Array(await new Response(st).arrayBuffer()));
-      }
-      async function syUnpack(t) {
-        t = String(t).replace(/\s+/g, "");
-        if (!t || t.length > 20000) throw new Error("size");
-        const b = Uint8Array.from(atob(t.replace(/-/g, "+").replace(/_/g, "/")), (c) => c.charCodeAt(0));
-        const o = JSON.parse(await new Response(new Blob([b]).stream().pipeThrough(new DecompressionStream("deflate-raw"))).text());
-        if (!o || typeof o.sdp !== "string" || !/^(offer|answer)$/.test(o.type)) throw new Error("code");
-        return { type: o.type, sdp: o.sdp };
-      }
       const syGathered = (pc) =>
         new Promise((ok) => {
           const f = () => pc.iceGatheringState === "complete" && (pc.removeEventListener("icegatheringstatechange", f), ok());
@@ -20582,7 +20565,10 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
           const el = $(SY_CTL[k]);
           el.value = v;
           if (String(el.value) !== String(v)) el.value = el.defaultValue;
-          return applyMix();
+          applyMix();
+          renderMix(); // the master knobs and the echo banner show the new value
+          if (S.tab === "var") varRender();
+          return;
         }
         if (!SY_KEYS.includes(k)) return;
         const cand = Object.assign({}, song, { [k]: v });
@@ -20605,6 +20591,7 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
         }
         fixLoop();
         refreshAll();
+        if (S.tab === "var") varRender(); // its volume knobs are not part of refreshAll
         applyMix();
       }
       async function sySmp(m) {
@@ -20668,6 +20655,8 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
           SYNC.rtt += 2; // an old best sample ages out
           return;
         }
+        if (m.t === "hi") return void (SYNC.host && ((peer.name = String(m.name).slice(0, 40)), syWho(), syFace())); // a guest's name for the list
+        if (m.t === "who") return void (!SYNC.host && Array.isArray(m.l) && ((SYNC.who = { you: m.you | 0, l: m.l.slice(0, 32).map((x) => String(x).slice(0, 40)) }), syFace())); // the host's list
         if (SYNC.host && !SYNC.peers.includes(peer)) return; // not confirmed yet
         if (m.t === "tp") return SYNC.host && syGo(!!m.want);
         if (SYNC.host && !joined) SYNC.peers.forEach((x) => x !== peer && syRaw(x.dc, raw)); // the hub passes it on
@@ -20689,50 +20678,75 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
           } else if (m.t === "fx") {
             if (typeof m.id === "string" && FXS.some((d) => d.id === m.id)) (SYNC.apply++, fxSet(m.id, !!m.on), SYNC.apply--);
           } else if (m.t === "lq") syLq(m);
-          else if (m.t === "snap" && typeof m.d === "string") sySnap(m.d).then(syMark);
+          else if (m.t === "snap" && typeof m.d === "string" && !SYNC.host) {
+            // the host let this device in: its song arrives and the pairing dialog closes
+            if (!SYNC.in) ((SYNC.in = true), syDlg(null), toast("Synced"));
+            sySnap(m.d).then(syMark);
+          }
         } catch (e) {
           console.warn("sync: a message was refused", e);
         }
       }
       // ---- the connection
+      // a short name for the list of devices (only a label: shown as text, cut to 40 characters on arrival)
+      const syName = () => {
+        const u = navigator.userAgent,
+          os = /iPhone/.test(u) ? "iPhone" : /iPad/.test(u) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1) ? "iPad" : /Android/.test(u) ? "Android" : /Mac/.test(u) ? "Mac" : /Windows/.test(u) ? "Windows" : /Linux|CrOS/.test(u) ? "Linux" : "Device",
+          br = /Firefox|FxiOS/.test(u) ? "Firefox" : /Edg/.test(u) ? "Edge" : /Chrome|CriOS/.test(u) ? "Chrome" : /Safari/.test(u) ? "Safari" : "";
+        return os + (br ? " · " + br : "");
+      };
+      const syOpen = () => SYNC.peers.filter((x) => x.dc.readyState === "open");
+      // the host tells every guest who is in the sync
+      function syWho() {
+        if (!SYNC.host) return;
+        const open = syOpen();
+        open.forEach((p, i) => syTx(p.dc, { t: "who", you: i + 1, l: [syName(), ...open.map((x) => x.name || "Device")] }));
+      }
       function syWire(peer) {
         peer.dc.onopen = async () => {
           syNote("data channel open");
-          syQuiet();
+          if (SYNC.pend === peer) SYNC.pend = null; // connected: the next HOST must not close it as an unfinished try
           const num = await syVerify(peer.pc);
           if (SYNC.host) {
-            // both screens show the same 4 digits: someone who listened in and answered first would not match
-            $("#syChkT").textContent = `Check: the other device must show ${num}. Do they match?`;
-            $("#syChk").hidden = false;
-            $("#syBox").hidden = true;
-            await new Promise((ok) => {
-              $("#syYes").onclick = () => ok(true);
-              $("#syNo").onclick = () => ok(false);
-            }).then((yes) => {
-              $("#syChk").hidden = true;
-              if (!yes) return peer.pc.close();
-              SYNC.peers.push(peer);
-              syTx(peer.dc, { t: "snap", d: serialize() });
-            });
-            if (!SYNC.peers.includes(peer)) return syFace();
+            // both screens show the same 4 digits: a device that answered in the place of the real one would not match
+            SYNC.chkPeer = peer;
+            syDlg({ num, chk: true, txt: "The other device must show the same number. Do they match?", stat: "Connected." });
+            const yes = await new Promise((ok) => (SYNC.chk = ok)); // true: THEY MATCH, false: NO or ✕, null: the device went away
+            SYNC.chk = SYNC.chkPeer = null;
+            syDlg(null);
+            if (yes !== true || !SYNC.host || peer.dc.readyState !== "open") {
+              peer.pc.close();
+              if (yes === false) toast("Not joined: the numbers did not match", 2600);
+              return SYNC.host && !syN() ? syLeave(true) : syFace();
+            }
+            SYNC.peers.push(peer);
+            syTx(peer.dc, { t: "snap", d: serialize() });
+            syWho();
+            toast("Synced: " + (syN() + 1) + " devices");
           } else {
-            $("#syChkT").textContent = `Check: the host's screen must show ${num}. If it does not, tap LEAVE.`;
-            $("#syChk").hidden = false;
-            $("#syYes").hidden = $("#syNo").hidden = true;
+            // joined when the host confirms and its song arrives (the "snap" message)
             SYNC.hub = peer;
+            syDlg({ num, txt: "The host's screen must show the same number.", stat: "Connected. Waiting for the host to confirm…" });
+            syRaw(peer.dc, JSON.stringify({ t: "hi", name: syName() }));
             for (let i = 0; i < 6; i++) setTimeout(() => syRaw(peer.dc, JSON.stringify({ t: "p", c: Date.now() })), i * 300);
             const iv = setInterval(() => (peer.dc.readyState === "open" ? syRaw(peer.dc, JSON.stringify({ t: "p", c: Date.now() })) : clearInterval(iv)), 8000);
             syMark();
           }
-          $("#syBox").hidden = true;
-          if (SYNC.host) $("#syYes").hidden = $("#syNo").hidden = false;
-          toast("Synced");
           syFace();
         };
         peer.dc.onclose = () => {
+          const was = SYNC.peers.includes(peer);
           SYNC.peers = SYNC.peers.filter((x) => x !== peer);
-          if (!SYNC.host) syLeave(true);
-          syFace();
+          if (SYNC.chkPeer === peer && SYNC.chk) SYNC.chk(null);
+          if (SYNC.hub === peer) {
+            const joined = SYNC.in;
+            syLeave(true);
+            return toast(joined ? "The sync ended" : "The host did not let this device in", 2600);
+          }
+          if (!SYNC.host) return;
+          if (was) (toast("A device left the sync"), syWho());
+          if (!syN() && !SYNC.ui) syLeave(true); // the last guest left: nothing to host
+          else syFace();
         };
         peer.dc.onmessage = (e) => typeof e.data === "string" && syGot(peer, e.data);
       }
@@ -20742,121 +20756,65 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
         const h = new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode([fp(pc.localDescription), fp(pc.remoteDescription)].sort().join("|"))));
         return String((((h[0] << 16) | (h[1] << 8) | h[2]) >>> 0) % 10000).padStart(4, "0");
       }
+      let syInv = null; // an invitation that waits for a tap on JOIN
       function syLeave(quiet) {
-        SYNC.talk = null; // ends a pairing by sound that is still playing or listening
-        syQuiet();
-        $("#syChk").hidden = true;
-        SYNC.peers.forEach((x) => x.pc.close());
-        if (SYNC.hub) SYNC.hub.pc.close();
-        if (SYNC.pend) SYNC.pend.pc.close();
-        Object.assign(SYNC, { host: false, peers: [], hub: null, pend: null, silent: false, got: {} });
+        const all = [...SYNC.peers, SYNC.hub, SYNC.pend].filter(Boolean);
+        Object.assign(SYNC, { host: false, peers: [], hub: null, pend: null, qa: null, who: null, in: false, silent: false, got: {} });
+        syInv = null;
+        if (SYNC.chk) SYNC.chk(null);
+        all.forEach((x) => x.pc.close());
+        syDlg(null);
         applyMix();
-        $("#syBox").hidden = true;
+        if (varAway && S.tab !== "var" && S.tab !== "mix") varLeave(); // the Variator's song stayed in on every screen while synced (showTab)
         syFace();
         if (!quiet) toast("Left the sync");
       }
+      // ✕: ends an unfinished pairing; the devices already synced stay
+      function syStop(quiet) {
+        const had = !!SYNC.ui || !!SYNC.pend;
+        syInv = SYNC.qa = null;
+        if (SYNC.pend) (SYNC.pend.pc.close(), (SYNC.pend = null));
+        if (SYNC.chk) SYNC.chk(false);
+        syDlg(null);
+        if (!syN()) syLeave(true);
+        if (!quiet && had) toast("Stopped");
+      }
       function syFace() {
-        const n = syN(),
-          role = SYNC.host ? "host" : SYNC.hub ? "guest" : "";
-        if (n || !SYNC.talk) // while pairing by sound the status line says what the sound is doing
-        $("#syStat").textContent = n
-          ? `Synced: ${role === "host" ? n + " other device" + (n > 1 ? "s" : "") + " joined" : "you joined a host"}. ${SYNC.silent ? "This device is silent." : "This device makes sound."}`
-          : SYNC.host ? "Waiting for a device to join." : "Not synced. On one device tap HOST; on the others tap JOIN.";
+        const n = syN();
+        if (n || !SYNC.ui)
+          $("#syStat").textContent = n
+            ? `Synced: ${SYNC.host ? n + " other device" + (n > 1 ? "s" : "") + " joined (HOST adds another)" : "you joined a host"}. ${SYNC.silent ? "This device is silent." : "This device makes sound."}`
+            : "Not synced. Tap HOST on one device and JOIN on the others.";
         $("#syHost").classList.toggle("dis", !!SYNC.hub);
-        $("#syHostC").classList.toggle("dis", !!SYNC.hub);
-        $("#syJoinC").classList.toggle("dis", !!SYNC.host || !!SYNC.hub);
-        $("#syJoin").classList.toggle("dis", !!SYNC.host || !!SYNC.hub);
+        $("#syJoin").classList.toggle("dis", !!n);
         $("#sySilent").classList.toggle("on", SYNC.silent);
-        $("#syLeave").classList.toggle("dis", !SYNC.host && !SYNC.hub && !SYNC.talk);
-        $("#syStop").hidden = !(SYNC.talk || (SYNC.pend && !syN()));
-        $("#syHQ").hidden = !(SYNC.talk && SYNC.talk.qr);
-        $("#syScanBar").hidden = !SYNC.qa; // only the host reads an answer
+        $("#syLeave").classList.toggle("dis", !n);
+        // who is in: the host knows its guests, a guest has the host's list
+        const rows = !n ? [] : SYNC.host ? [syName() + " · host · this device", ...syOpen().map((x) => x.name || "Device")] : ((SYNC.who && SYNC.who.l) || []).map((x, i) => x + (i ? "" : " · host") + (i === SYNC.who.you ? " · this device" : ""));
+        const li = $("#syList");
+        li.textContent = "";
+        li.hidden = !rows.length;
+        ["Devices in this sync", ...rows].forEach((t, i) => {
+          const d = document.createElement("div");
+          d.className = i ? "" : "lbl";
+          d.textContent = (i ? "● " : "") + t;
+          li.appendChild(d);
+        });
         const b = $("#syBadge");
         b.hidden = !n;
         b.classList.toggle("mute", SYNC.silent);
-        b.textContent = "⇄ " + (n + (SYNC.host ? 1 : 0)) + (SYNC.silent ? " · SILENT" : "");
+        b.textContent = "⇄ " + (SYNC.host ? n + 1 : SYNC.who ? SYNC.who.l.length : 2) + (SYNC.silent ? " · SILENT" : "");
       }
-      let syMode = "";
-      function syShow(l1, out, l2, ph) {
-        $("#syBox").hidden = false;
-        $("#syL1").textContent = l1;
-        $("#syL2").textContent = l2;
-        $("#syOut").value = out;
-        $("#syOut").hidden = $("#syCopy").hidden = $("#syShare").hidden = !out;
-        $("#syL1").hidden = !l1;
-        $("#syIn").value = "";
-        $("#syIn").placeholder = ph;
-      }
-      $("#syHostC").onclick = async () => {
-        if (SYNC.hub) return;
-        syStop(true); // a try by sound that is still going would collide with this one
-        ensureCtx(); // iOS only lets a page make sound after a tap
-        try {
-          SYNC.host = true;
-          if (SYNC.pend) SYNC.pend.pc.close();
-          const pc = syPc(),
-            peer = { pc, dc: pc.createDataChannel("t") };
-          SYNC.pend = peer;
-          syWire(peer);
-          syMode = "host";
-          await pc.setLocalDescription(await pc.createOffer());
-          await syGathered(pc);
-          syShow("1 · Send this code to the other device (message, AirDrop, anything).", await syPack({ type: "offer", sdp: pc.localDescription.sdp }), "3 · Paste the answer it gives you here.", "Paste the answer");
-          syFace();
-        } catch (e) {
-          toast("Could not start the sync: " + (e.message || e));
-        }
-      };
-      $("#syJoinC").onclick = () => {
-        if (!syN()) syStop(true); // an unfinished try leaves SYNC.host set: clear it
-        if (SYNC.host || SYNC.hub) return;
-        ensureCtx();
-        syMode = "join";
-        syShow("", "", "1 · Paste the host's code here. This device's song is kept in FILE as “Before sync”, then replaced by the host's.", "Paste the host's code");
-      };
-      $("#syGo").onclick = async () => {
-        try {
-          const d = await syUnpack($("#syIn").value);
-          if (syMode === "host") {
-            if (d.type !== "answer") throw new Error("this is not an answer code");
-            await SYNC.pend.pc.setRemoteDescription(d);
-            toast("Connecting…");
-          } else {
-            if (d.type !== "offer") throw new Error("this is not a host code");
-            const pc = syPc(),
-              peer = { pc };
-            pc.ondatachannel = (e) => ((peer.dc = e.channel), syWire(peer));
-            SYNC.pend = peer;
-            await pc.setRemoteDescription(d);
-            await pc.setLocalDescription(await pc.createAnswer());
-            await syGathered(pc);
-            syShow("2 · Send this answer back to the host. It connects by itself.", await syPack({ type: "answer", sdp: pc.localDescription.sdp }), "", "");
-            $("#syIn").hidden = $("#syGo").hidden = true;
-          }
-        } catch (e) {
-          toast("That code does not work: " + (e.message || e), 2600);
-        }
-      };
-      $("#syCopy").onclick = () => navigator.clipboard.writeText($("#syOut").value).then(() => toast("Copied"), () => ($("#syOut").select(), toast("Select and copy the code")));
-      $("#syShare").onclick = () => (navigator.share ? navigator.share({ text: $("#syOut").value }).catch(() => {}) : $("#syCopy").click());
       $("#sySilent").onclick = () => {
         SYNC.silent = !SYNC.silent;
         applyMix();
         syFace();
         toast(SYNC.silent ? "This device is silent" : "This device makes sound");
       };
-      const syHiFace = () => $("#syHi").classList.toggle("on", SYM.F0 > 5000);
-      $("#syHi").onclick = () => {
-        syBand(SYM.F0 < 5000);
-        localStorage.setItem("track-test.syHi", SYM.F0 > 5000 ? "1" : "0");
-        syHiFace();
-        toast(SYM.F0 > 5000 ? "Quiet tones: set it on the other device too. Needs a speaker and microphone that reach 18 kHz" : "Normal tones", 3200);
-      };
       $("#syLeave").onclick = () => syLeave();
-      $("#syStop").onclick = () => syStop();
       $("#syRep").onclick = () => {
         const t = ["TRACK.Pocket sync report", navigator.userAgent, "status: " + $("#syStat").textContent, ...syLog].join("\n");
-        navigator.clipboard.writeText(t).then(() => toast("Report copied"), () => ($("#syOut").value = t) && ($("#syBox").hidden = false));
+        navigator.clipboard.writeText(t).then(() => toast("Report copied"), () => toast("This browser did not let the report be copied", 2600));
       };
       // a QR code that opens this app: a device that has not got it points its camera at the screen
       const syAppUrl = () => new URL(".", location.href).href;
@@ -20872,168 +20830,13 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
       $("#syQrSave").onclick = () => download(new Blob([qrSvg(syAppUrl())], { type: "image/svg+xml" }), "track-pocket-qr.svg");
       $("#syQrShare").onclick = () => (navigator.share ? navigator.share({ url: syAppUrl() }).catch(() => {}) : navigator.clipboard.writeText(syAppUrl()).then(() => toast("Link copied")));
 
-      // ======================================================================
-      // SYNC by sound: the pairing data is played as chirps and heard by the microphone of the other device
-      // ======================================================================
-      // The connection data is cut down to about 71 bytes (the fingerprint, the ICE credentials and the addresses; the rest of the
-      // SDP is rebuilt on the other side) and sent in small frames as 16-tone FSK (4 bits a symbol, 60 ms, 1.4 to 4.4 kHz): a
-      // preamble, a length, the bytes and a CRC. The devices take turns (see "the conversation" below): the microphone is closed
-      // while a device plays, and the other side answers each burst with the list of pieces it got, so only the missing ones are repeated.
-      const SYM = { MS: 60, F0: 1400, DF: 200, PRE: [0, 15, 0, 15], stream: null };
-      // QUIET: the same 16 tones at 17.5 to 19.8 kHz, which most adults barely hear (both devices must use the same band)
-      const syBand = (hi) => ((SYM.F0 = hi ? 17500 : 1400), (SYM.DF = hi ? 150 : 200));
-      syBand(localStorage.getItem("track-test.syHi") === "1");
-      syHiFace();
-      function symCrc(a) {
-        let c = 0xffff;
-        for (const b of a) {
-          c ^= b << 8;
-          for (let i = 0; i < 8; i++) c = c & 0x8000 ? ((c << 1) ^ 0x1021) & 0xffff : (c << 1) & 0xffff;
-        }
-        return c;
-      }
-      // one frame: preamble (4 symbols), length (1 byte), the bytes, crc16, then a short silence
-      function symSynth(bytes, sr) {
-        const T = Math.round((sr * SYM.MS) / 1000),
-          L = bytes.length,
-          crc = symCrc([L, ...bytes]),
-          nib = [...SYM.PRE];
-        [L, ...bytes, crc >> 8, crc & 255].forEach((b) => nib.push(b >> 4, b & 15));
-        const out = new Float32Array(nib.length * T + Math.round(sr * 0.1)),
-          ramp = Math.round(sr * 0.004);
-        nib.forEach((k, i) => {
-          const w = (2 * Math.PI * (SYM.F0 + SYM.DF * k)) / sr;
-          for (let n = 0; n < T; n++) out[i * T + n] = 0.5 * Math.sin(w * n) * Math.min(1, n / ramp, (T - n) / ramp);
-        });
-        return out;
-      }
-      // feed it the microphone in pieces: push(Float32Array); onMsg(bytes) when a message passes its CRC
-      function symDec(sr, onMsg, onProg, onFail) {
-        const T = Math.round((sr * SYM.MS) / 1000),
-          K = 16,
-          PRE = SYM.PRE,
-          step = Math.round(T / 8),
-          co = Array.from({ length: K }, (_, k) => 2 * Math.cos((2 * Math.PI * (SYM.F0 + SYM.DF * k)) / sr));
-        let buf = new Float32Array(sr * 8),
-          len = 0,
-          pos = 0,
-          fs = -1,
-          cur = [],
-          comb = null,
-          total = 0;
-        const en = (st) => {
-          const e = new Float32Array(K);
-          for (let k = 0; k < K; k++) {
-            let s1 = 0,
-              s2 = 0;
-            const c = co[k];
-            for (let n = 0; n < T; n++) {
-              const s0 = buf[st + n] + c * s1 - s2;
-              s2 = s1;
-              s1 = s0;
-            }
-            e[k] = s1 * s1 + s2 * s2 - c * s1 * s2;
-          }
-          return e;
-        };
-        const top = (e) => {
-          let k = 0,
-            sum = 1e-12;
-          for (let i = 0; i < K; i++) ((sum += e[i]), e[i] > e[k] && (k = i));
-          return [k, e[k] / (sum - e[k] + 1e-12), sum];
-        };
-        const argmax = (v) => v.reduce((m, x, i) => (x > v[m] ? i : m), 0);
-        const bytesOf = (acc, n0, n) => Array.from({ length: n }, (_, j) => (argmax(acc[n0 + 2 * j]) << 4) | argmax(acc[n0 + 2 * j + 1]));
-        function decode(acc, L) {
-          const b = bytesOf(acc, 2, L + 2);
-          return symCrc([L, ...b.slice(0, L)]) === ((b[L] << 8) | b[L + 1]) ? b.slice(0, L) : null;
-        }
-        function run() {
-          for (;;) {
-            if (fs < 0) {
-              if (pos + PRE.length * T + T > len) return;
-              const [k, r, sum] = top(en(pos));
-              let ok = k === PRE[0] && r > 3 && sum > 1e-4;
-              for (let i = 1; ok && i < PRE.length; i++) {
-                const [kk, rr] = top(en(pos + i * T));
-                ok = kk === PRE[i] && rr > 3;
-              }
-              if (!ok) {
-                pos += step;
-                continue;
-              }
-              // the first windows that fit are a little off the symbols: find the best alignment around here
-              let best = pos,
-                bs = -1;
-              for (let d = -T / 2; d <= T / 2; d += T / 16) {
-                const q = Math.round(pos + d);
-                if (q < 0 || q + PRE.length * T + T > len) continue;
-                let sc = 0;
-                PRE.forEach((t, i) => {
-                  const e = en(q + i * T);
-                  sc += e[t] / top(e)[2];
-                });
-                if (sc > bs) ((bs = sc), (best = q));
-              }
-              fs = best;
-              cur = [];
-              total = 0;
-            }
-            for (;;) {
-              const st = fs + (PRE.length + cur.length) * T;
-              if (st + T > len) return;
-              const e = en(st),
-                sum = e.reduce((a, b) => a + b, 1e-12);
-              cur.push(e.map((x) => x / sum));
-              onProg && onProg(cur.length, total);
-              if (cur.length === 2) {
-                const [L] = bytesOf(cur, 0, 1);
-                total = L > 0 && L <= 64 ? 2 + 2 * (L + 2) : -1;
-                if (total < 0) ((pos = st + T), (fs = -1));
-                if (total < 0) break;
-                cur.L = L;
-              }
-              if (total > 0 && cur.length === total) {
-                const L = cur.L;
-                comb = comb && comb.L === L ? comb : Object.assign(cur.map((v) => v.map(() => 0)), { L });
-                cur.forEach((v, i) => v.forEach((x, k) => (comb[i][k] += x)));
-                const got = decode(comb, L) || decode(cur, L);
-                pos = st + T;
-                fs = -1;
-                if (got) return (comb = null), onMsg(Uint8Array.from(got));
-                onFail && onFail(); // a whole pass came in but the check did not fit: noise, or too far
-                break;
-              }
-            }
-          }
-        }
-        return {
-          push(x) {
-            if (len + x.length > buf.length) {
-              const keep = Math.max(0, fs >= 0 ? Math.min(fs, pos) : pos);
-              buf.copyWithin(0, keep, len);
-              len -= keep;
-              pos -= keep;
-              if (fs >= 0) fs -= keep;
-              if (len + x.length > buf.length) {
-                const nb = new Float32Array((len + x.length) * 2);
-                nb.set(buf.subarray(0, len));
-                buf = nb;
-              }
-            }
-            buf.set(x, len);
-            len += x.length;
-            run();
-          },
-        };
-      }
       // ---- the connection data, cut down to what the other side cannot guess
       function syCompact(desc, maxAddr = 4) {
         const g = (re) => (desc.sdp.match(re) || [])[1],
           ufrag = g(/a=ice-ufrag:(\S+)/),
           pwd = g(/a=ice-pwd:(\S+)/),
           fp = g(/a=fingerprint:sha-256 ([0-9A-Fa-f:]+)/);
-        if (!ufrag || !pwd || !fp) throw new Error("this browser's connection data is not supported: use the codes");
+        if (!ufrag || !pwd || !fp) throw new Error("this browser's connection data is not supported");
         const out = [desc.type === "answer" ? 1 : 0],
           put = (t) => (out.push(t.length), [...t].forEach((c) => out.push(c.charCodeAt(0) & 255))),
           cs = [];
@@ -21049,12 +20852,12 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
         }
         if (!cs.length) {
           syNote("candidates seen: " + ((desc.sdp.match(/a=candidate:.*/g) || []).join(" | ") || "none"));
-          throw new Error("no network address found: use the codes");
+          throw new Error("no network address found");
         }
         // a device can have several networks (Wi-Fi, a VPN, virtual machines): the home ranges go first, link-local and loopback are left out
         const rank = (c) => (c[0] === 1 ? 1 : c[1] === 192 && c[2] === 168 ? 0 : c[1] === 10 ? 1 : c[1] === 172 && c[2] >= 16 && c[2] <= 31 ? 2 : c[1] === 169 || c[1] === 127 ? 9 : 3);
         const best = cs.filter((c) => rank(c) < 9).sort((a, b) => rank(a) - rank(b)).slice(0, maxAddr);
-        if (!best.length) throw new Error("no usable network address found: use the codes");
+        if (!best.length) throw new Error("no usable network address found");
         syNote("addresses sent: " + best.map((c) => (c[0] ? "mdns:" : c.slice(1, 5).join(".") + ":") + ((c[c.length - 2] << 8) | c[c.length - 1])).join(", "));
         out.push(best.length);
         best.forEach((c) => out.push(...c));
@@ -21096,34 +20899,7 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
           "a=ice-ufrag:" + ufrag, "a=ice-pwd:" + pwd, "a=fingerprint:sha-256 " + fp, "a=setup:" + (type === "offer" ? "actpass" : "active"), "a=mid:0", "a=sctp-port:5000", "a=max-message-size:262144", ...cand, "a=end-of-candidates", ""].join("\r\n");
         return { type, sdp };
       }
-      // ---- the speaker and the microphone
-      // ends the pairing by sound: the sound, the listening and the microphone
-      function syQuiet() {
-        const t = SYNC.talk;
-        SYNC.talk = null;
-        $("#syHQ").hidden = true;
-        syCamOff();
-        if (t) ((t.dead = true), t.stop && t.stop());
-        if (SYM.stream) SYM.stream.getTracks().forEach((x) => x.stop());
-        SYM.stream = null;
-      }
-      // STOP: ends an unfinished try (by sound or by code) and puts the buttons back
-      function syStop(quiet) {
-        const had = !!SYNC.talk || !!SYNC.pend;
-        syQuiet();
-        if (syN()) {
-          if (SYNC.pend) (SYNC.pend.pc.close(), (SYNC.pend = null));
-          syFace();
-        } else syLeave(true);
-        if (!quiet && had) toast("Stopped");
-      }
-      async function syMic() {
-        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) throw new Error("this browser has no microphone access: use the codes");
-        SYM.stream = SYM.stream || (await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } })); // filters would eat the tones
-        await ctx.resume();
-        return SYM.stream;
-      }
-      // a short log of the pairing (what was heard, the connection states) that COPY REPORT puts on the clipboard
+      // a short log of the pairing (the connection states, what the camera read) that COPY REPORT puts on the clipboard
       const syLog = [];
       const syNote = (t) => {
         syLog.push(((performance.now() / 1000) | 0) + "s " + t);
@@ -21131,322 +20907,31 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
       };
       const syStat = (t) => ($("#syStat").textContent = $("#syHQStat").textContent = t);
       // the connection: its states go to the log and the status line, and a silent failure is said out loud after 25 s
-      function syWatch(pc, who, late) {
-        const t0 = Date.now();
+      function syWatch(pc, who) {
         ["iceconnectionstatechange", "connectionstatechange", "icegatheringstatechange", "signalingstatechange"].forEach((ev) =>
           pc.addEventListener(ev, () => {
             syNote(`${who}: ${ev.replace("statechange", "")} = ${pc.iceConnectionState}/${pc.connectionState}/${pc.iceGatheringState}`);
-            if (pc.iceConnectionState === "failed") syStat("The devices heard each other but the network connection failed. Are both on the same Wi-Fi (not a guest network, no VPN)? Try the codes.");
+            if (pc.iceConnectionState === "failed") syStat("The codes were read but the network connection failed. Are both devices on the same Wi-Fi (not a guest network, no VPN)?");
           }),
         );
-        // late (QR): the 25 s start when both halves of the connection data are in (pc.syGo), not while the answer travels by sound
+        // the 25 s start when both halves of the connection data are in (pc.syGo), not while the codes are being shown
         const chk = () => {
           if (!SYNC.pend || SYNC.pend.pc !== pc) return;
-          if (late && !pc.syGo) return setTimeout(chk, 3000);
-          const left = (late ? pc.syGo : t0) + 25000 - Date.now();
+          if (!pc.syGo) return setTimeout(chk, 3000);
+          const left = pc.syGo + 25000 - Date.now();
           if (left > 0) return setTimeout(chk, left);
-          if (!syN() && pc.connectionState !== "closed") {
-            syNote(`${who}: no connection after ${Math.round((Date.now() - (late ? pc.syGo : t0)) / 1000)} s`);
-            syStat(`Still not connected (ice ${pc.iceConnectionState}). Same Wi-Fi? Guest networks and VPNs block it. Try the codes, or COPY REPORT.`);
+          if (pc.connectionState !== "closed") {
+            syNote(`${who}: no connection after ${Math.round((Date.now() - pc.syGo) / 1000)} s`);
+            syStat(`Still not connected (ice ${pc.iceConnectionState}). Same Wi-Fi? Guest networks and VPNs block it. Close this and try again, or COPY REPORT.`);
           }
         };
         setTimeout(chk, 25000);
       }
-      const syDone = (ms) => new Promise((ok) => setTimeout(ok, ms));
-      // ---- the conversation: short frames, one device talks while the other listens
-      // frame = [type<<5 | fromJoiner<<4 | seq, ...]:  HELLO [h, nonce hi, nonce lo]  READY [h, nonce hi, nonce lo]
-      //          DATA [h, nonce8, chunks, ...up to 18 bytes]  STATUS [h, nonce8, bitmap hi, bitmap lo]  (type ACK).
-      // The sender plays all the chunks in a burst; the receiver answers once with the list of those that arrived, and the sender
-      // plays only the missing ones. The joiner ignores frames of the joiner and the host ignores frames of the host, so a device
-      // never obeys its own echo, and the microphone is closed while a device plays.
-      const SY = { HELLO: 0, READY: 1, DATA: 2, ACK: 3, CH: 18 };
-      const syFr = (type, join, seq, rest) => Uint8Array.from([(type << 5) | (join << 4) | seq, ...rest]);
-      const syKind = (f, join) => (f.length && ((f[0] >> 4) & 1) === join ? f[0] >> 5 : -1); // the type of a frame sent by that role
-      const syN8 = (n) => ((n >> 8) ^ n) & 255;
-      async function sySendAll(io, msg, join, n8, say) {
-        const parts = [];
-        for (let i = 0; i < msg.length; i += SY.CH) parts.push(msg.subarray(i, i + SY.CH));
-        if (!parts.length || parts.length > 16) throw new Error("the message does not fit");
-        let need = parts.map((_, i) => i),
-          asked = true; // the last burst got a status back
-        for (let round = 0; ; round++) {
-          if (io.dead()) return false;
-          if (round >= 10) {
-            // the joiner's last chunks: if the host never says, the connection itself will tell whether they arrived
-            if (join) return true;
-            throw new Error("the other device stopped answering");
-          }
-          if (round) await io.pause(Math.random() * 1200); // a random pause, so two devices retrying together do not keep colliding
-          const list = asked ? need : need.slice(-1); // no status last time: only the last chunk, which also asks for a status
-          say(!asked ? "Asking if it arrived…" : round ? `Sending the ${need.length} missing of ${parts.length}…` : `Sending ${parts.length} chunks…`);
-          for (let k = 0; k < list.length; k++) {
-            if (io.dead()) return false;
-            await io.send(syFr(SY.DATA, join, list[k], [n8, parts.length, ...parts[list[k]]]), k ? 100 : 250);
-          }
-          // a status, or the other side starting its own message, which proves it got everything
-          const st = await io.listen(3800, (f) => (syKind(f, 1 - join) === SY.ACK && f.length === 4 && f[1] === n8) || (syKind(f, 1 - join) === SY.DATA && f[1] === n8));
-          asked = !!st;
-          if (!st) continue;
-          if (syKind(st, 1 - join) === SY.DATA) return true;
-          const bm = (st[2] << 8) | st[3];
-          need = parts.map((_, i) => i).filter((i) => !((bm >> i) & 1));
-          if (!need.length) return true;
-        }
-      }
-      // collects the chunks of the other side's message: after each burst it answers with a status; extra(f) handles other frames
-      async function syRecvAll(io, join, n8, say, firstMs, maxIdle, extra, idle, grace) {
-        const got = [];
-        let total = 0,
-          quiet = 0;
-        for (;;) {
-          let hello = false;
-          const n = await io.burst(firstMs, 1000, (f) => {
-            if (syKind(f, 1 - join) === SY.DATA && f[1] === n8 && f.length > 3) {
-              const seq = f[0] & 15,
-                t = f[2];
-              if (!(t >= 1 && t <= 16 && seq < t)) return false;
-              total = t;
-              if (!got[seq]) got[seq] = f.slice(3);
-              say(`Receiving ${got.filter(Boolean).length} of ${total}…`);
-              return true;
-            }
-            return !!(extra && extra(f) && (hello = true));
-          });
-          if (io.dead()) return null;
-          if (!n) {
-            if (++quiet > maxIdle) throw new Error("nothing came in");
-            if (idle) await idle();
-            continue;
-          }
-          quiet = 0;
-          if (!total) {
-            if (hello) await extra.run(); // the host calls again: it did not hear READY
-            continue;
-          }
-          const status = () => {
-            let bm = 0;
-            got.forEach((c, i) => c && (bm |= 1 << i));
-            return io.send(syFr(SY.ACK, join, 0, [n8, bm >> 8, bm & 255]));
-          };
-          await status();
-          if (got.filter(Boolean).length < total) continue;
-          // all here. If that status was lost, the sender asks again with its last chunk: stay a moment and answer it
-          while (grace && !io.dead() && (await io.listen(grace, (g) => syKind(g, 1 - join) === SY.DATA && g[1] === n8))) await status();
-          const out = [];
-          got.forEach((c) => out.push(...c));
-          return Uint8Array.from(out);
-        }
-      }
-      // the host: calls until the joiner answers, sends the offer, receives the answer
-      async function syDialHost(io, msg, say) {
-        const n = (Math.random() * 65536) | 0,
-          n8 = syN8(n),
-          t0 = Date.now();
-        for (;;) {
-          if (io.dead()) return null;
-          if (Date.now() - t0 > 120000) throw new Error("nobody answered");
-          say("Calling the other device… (on it, tap JOIN)");
-          await io.send(syFr(SY.HELLO, 0, 0, [n >> 8, n & 255]));
-          if (await io.listen(2400, (f) => syKind(f, 1) === SY.READY && f.length === 3 && f[1] === n >> 8 && f[2] === (n & 255))) break;
-        }
-        syNote("host: handshake done");
-        if (!(await sySendAll(io, msg, 0, n8, say))) return null;
-        syNote("host: offer sent");
-        say("Offer sent. Waiting for the answer…");
-        return syRecvAll(io, 0, n8, say, 8000, 9, null, null, 0); // the answer is the last thing: the connection starts right away
-      }
-      // the joiner: waits for the call, answers it, receives the offer, makes and sends the answer
-      async function syDialJoin(io, makeAnswer, say) {
-        say("Listening for the host… (on the other device, tap HOST)");
-        const h = await io.listen(600000, (f) => syKind(f, 0) === SY.HELLO && f.length === 3);
-        if (!h || io.dead()) return false;
-        const nn = [h[1], h[2]],
-          n8 = syN8((h[1] << 8) | h[2]),
-          ready = () => io.send(syFr(SY.READY, 1, 0, nn));
-        syNote("guest: heard the call");
-        say("Heard the host. Answering…");
-        await ready();
-        const hello = (f) => syKind(f, 0) === SY.HELLO && f.length === 3 && f[1] === nn[0] && f[2] === nn[1];
-        hello.run = ready;
-        const offer = await syRecvAll(io, 1, n8, say, 9500, 7, hello, ready, 4200);
-        if (!offer) return false;
-        syNote("guest: offer received");
-        say("Offer received. Making the answer…");
-        const ans = await makeAnswer(offer);
-        if (io.dead()) return false;
-        return sySendAll(io, ans, 1, n8, say);
-      }
-      // the microphone and the speaker, one at a time. rx.dec is null while a device plays, so nothing it hears is ever its own sound
-      function syIo(me) {
-        const src = ctx.createMediaStreamSource(SYM.stream),
-          proc = ctx.createScriptProcessor(4096, 1, 1),
-          mute = ctx.createGain(),
-          rx = { dec: null, since: 0, cancel: null, peak: 0 };
-        let playing = null;
-        mute.gain.value = 0;
-        proc.onaudioprocess = (e) => {
-          const x = new Float32Array(e.inputBuffer.getChannelData(0));
-          if (!rx.dec || performance.now() < rx.since) return;
-          for (let i = 0; i < x.length; i += 8) rx.peak = Math.max(rx.peak, Math.abs(x[i]));
-          rx.dec.push(x);
-        };
-        src.connect(proc);
-        proc.connect(mute);
-        mute.connect(ctx.destination);
-        me.stop = () => {
-          me.dead = true;
-          if (rx.cancel) rx.cancel();
-          try {
-            playing && playing.stop();
-          } catch {}
-          proc.onaudioprocess = null;
-          [src, proc, mute].forEach((n) => n.disconnect());
-        };
-        return {
-          dead: () => me.dead,
-          pause: syDone,
-          listen: (ms, accept) =>
-            new Promise((res) => {
-              if (me.dead) return res(null);
-              let t,
-                last = 0,
-                ext = 0;
-              // the time is up: but a frame that is half heard is not cut off
-              const tick = () => (performance.now() - last < 500 && ext < 8000 ? ((ext += 500), (t = setTimeout(tick, 500))) : end(null));
-              const end = (v) => {
-                clearTimeout(t);
-                rx.dec = rx.cancel = null;
-                if (!v && !me.dead) syNote(`listened ${(ms / 1000).toFixed(1)} s, nothing for me (mic peak ${rx.peak.toFixed(3)})`);
-                res(v);
-              };
-              rx.peak = 0;
-              rx.since = performance.now() + 150; // the tail of the last sound, ours or the room's
-              rx.cancel = () => end(null);
-              rx.dec = symDec(
-                ctx.sampleRate,
-                (f) => accept(f) && end(f),
-                () => (last = performance.now()),
-                () => syNote("heard a frame, check failed"),
-              );
-              t = setTimeout(tick, ms);
-            }),
-          // frames in a row: onFrame(frame) returns true for a frame that counts; ends after quietMs without one (or firstMs if none came)
-          burst: (firstMs, quietMs, onFrame) =>
-            new Promise((res) => {
-              if (me.dead) return res(0);
-              let t,
-                n = 0,
-                last = 0,
-                ext = 0;
-              const end = () => {
-                clearTimeout(t);
-                rx.dec = rx.cancel = null;
-                res(n);
-              };
-              const arm = () => (clearTimeout(t), (t = setTimeout(tick, n ? quietMs : firstMs)));
-              const tick = () => (performance.now() - last < 500 && ext < 20000 ? ((ext += 500), (t = setTimeout(tick, 500))) : end());
-              rx.peak = 0;
-              rx.since = performance.now() + 150;
-              rx.cancel = end;
-              rx.dec = symDec(
-                ctx.sampleRate,
-                (f) => onFrame(f) && (n++, (ext = 0), arm()),
-                () => (last = performance.now()),
-                () => syNote("heard a frame, check failed"),
-              );
-              arm();
-            }),
-          send: async (bytes, gap = 250) => {
-            rx.dec = null; // not listening while talking
-            await syDone(gap); // a turn gap: the other device finishes its own sound and opens its microphone
-            if (me.dead) return;
-            const data = symSynth(bytes, ctx.sampleRate),
-              buf = ctx.createBuffer(1, data.length, ctx.sampleRate),
-              s = ctx.createBufferSource();
-            buf.copyToChannel(data, 0);
-            s.buffer = buf;
-            s.connect(ctx.destination); // straight to the speaker: not the mixer, so SILENT and MASTER do not change it
-            playing = s;
-            await new Promise((ok) => ((s.onended = ok), s.start()));
-            playing = null;
-          },
-        };
-      }
-      async function syHostS() {
-        if (SYNC.hub) return;
-        syStop(true); // an earlier try, by sound or by code, ends here
-        try {
-          ensureCtx();
-          await syMic();
-          const pc = syPc(),
-            peer = { pc, dc: pc.createDataChannel("t") };
-          SYNC.host = true;
-          SYNC.pend = peer;
-          syWire(peer);
-          await pc.setLocalDescription(await pc.createOffer());
-          await syGathered(pc);
-          const msg = syCompact(pc.localDescription),
-            me = (SYNC.talk = {});
-          syNote(`host: offer ready, ${msg.length} bytes`);
-          syWatch(pc, "host");
-          toast("Volume up, and hold the devices close", 2600);
-          syFace();
-          const ans = await syDialHost(syIo(me), msg, syStat);
-          if (!ans || SYNC.talk !== me) return;
-          syNote("host: heard the answer");
-          syStat("Heard the answer. Connecting…");
-          syFace();
-          await pc.setRemoteDescription(syExpand(ans));
-          syQuiet(); // the answer is in: the microphone and the speaker are done
-          syFace();
-        } catch (e) {
-          if (!SYNC.talk && !SYNC.pend) return; // stopped meanwhile
-          syNote("host failed: " + (e.message || e));
-          syStop(true);
-          toast("Could not pair by sound: " + (e.message || e) + ". Try again or use the codes.", 3600);
-        }
-      }
-      async function syJoinS() {
-        if (SYNC.hub) return;
-        syStop(true);
-        try {
-          ensureCtx();
-          await syMic();
-          const me = (SYNC.talk = {}),
-            pc = syPc(),
-            peer = { pc };
-          pc.ondatachannel = (e) => ((peer.dc = e.channel), syWire(peer));
-          SYNC.pend = peer;
-          syFace();
-          const sent = await syDialJoin(
-            syIo(me),
-            async (offer) => {
-              await pc.setRemoteDescription(syExpand(offer));
-              await pc.setLocalDescription(await pc.createAnswer());
-              await syGathered(pc);
-              const m = syCompact(pc.localDescription);
-              syNote(`guest: answer ready, ${m.length} bytes`);
-              syWatch(pc, "guest");
-              return m;
-            },
-            syStat,
-          );
-          if (!sent || SYNC.talk !== me) return;
-          syQuiet();
-          syStat("Answer sent. Connecting…");
-          syFace();
-        } catch (e) {
-          if (!SYNC.talk && !SYNC.pend) return;
-          syNote("guest failed: " + (e.message || e));
-          syStop(true);
-          toast("Could not pair by sound: " + (e.message || e) + ". Try again or use the codes.", 3600);
-        }
-      }
-      // ---- pairing by QR: the host's connection data travels in a link (in the part after the #, which no server ever sees), the other
-      // device scans it with its camera and answers by sound. The QR also holds a one-time secret: the answer carries a proof (an HMAC
-      // of the answer under that secret), so the host ignores an answer from anyone who only heard the sound.
-      // Everything in a link is untrusted data: sizes are limited, the contents are checked (syExpand), nothing is shown as HTML, and
-      // nothing happens until the person taps JOIN.
+      // ---- pairing by QR: the host's connection data travels in a link (in the part after the #, which no server ever sees) shown as
+      // a QR code; the other device reads it and shows its answer as a second code, which the host reads. The first code also holds
+      // a one-time secret and the answer carries a proof (an HMAC of the answer under that secret), so the host ignores an answer
+      // from a device that never saw its code. Everything in a code is untrusted data: sizes are limited, the contents are checked
+      // (syExpand), nothing is shown as HTML, and nothing happens until the person taps JOIN.
       const syUnB64 = (t) => {
         if (!/^[A-Za-z0-9_-]{8,700}$/.test(t)) throw new Error("damaged");
         return Uint8Array.from(atob(t.replace(/-/g, "+").replace(/_/g, "/")), (c) => c.charCodeAt(0));
@@ -21455,37 +20940,61 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
         const k = await crypto.subtle.importKey("raw", secret, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
         return new Uint8Array(await crypto.subtle.sign("HMAC", k, bytes)).slice(0, 8);
       }
-      // the link's data: [1 sound, 2 quiet sound or 3 QR both ways, nonce hi, nonce lo, 6 bytes of secret, the host's connection data]
-      function syQrPayload(n, secret, off, kind = 3) {
-        return Uint8Array.from([kind, n >> 8, n & 255, ...secret, ...off]);
-      }
+      // the link's data: [3 (1 and 2 were the pairings by sound of older versions), 2 unused bytes, 6 bytes of secret, the host's connection data]
       function syQrParse(t) {
         const u = syUnB64(t);
-        if (!(u[0] >= 1 && u[0] <= 3) || u.length < 9 + 40 || u.length > 260) throw new Error("this link is not a sync invitation");
+        if (u[0] !== 3 || u.length < 9 + 40 || u.length > 260) throw new Error("this is not a sync invitation of this version");
         const offer = u.slice(9);
         syExpand(offer); // throws when the connection data is damaged
-        return { hi: u[0] === 2, full: u[0] === 3, n8: syN8((u[1] << 8) | u[2]), secret: u.slice(3, 9), offer };
+        return { secret: u.slice(3, 9), offer };
       }
-      // QR both ways: the host shows its QR, the guest scans it with the camera app and shows an answer QR, the host scans that with its camera app.
-      // The answer's link opens in a new tab of the same browser, which hands it to this tab (BroadcastChannel): no camera code, no sound.
-      async function syHostQ() {
+      // ---- the dialog: the whole pairing happens in it, one step at a time, and it closes when the device is in (or with ✕)
+      // a step: { qr: a link to show as a code, num: the 4 digits, txt, stat, scan: "a" the host reads an answer / "j" a guest reads an invitation, ask, chk: which buttons }
+      function syDlg(o) {
+        SYNC.ui = o || null;
+        syStat((o && o.stat) || "");
+        syCamOff();
+        syFace();
+      }
+      function syDlgFace() {
+        const o = SYNC.ui,
+          cam = !!SYM.cam;
+        $("#syHQ").hidden = !o;
+        if (!o) return;
+        const im = $("#syHQImg");
+        im.hidden = !o.qr || cam; // the camera view takes the place of the code
+        if (o.qr && im.dataset.u !== o.qr) ((im.innerHTML = qrSvg(o.qr)), (im.dataset.u = o.qr));
+        $("#syCam").hidden = !cam;
+        $("#syHQNum").hidden = !o.num;
+        $("#syHQNum").textContent = o.num || "";
+        $("#syHQTxt").textContent = cam ? "Hold this device 25 to 30 cm from the other screen, so the code fills the square. Closer than that the camera cannot focus. Blurred all the same? Try CAMERA." : o.txt || "";
+        $("#syScanBar").hidden = !o.scan;
+        $("#syCamNext").hidden = !cam || !(SYM.cams > 1);
+        $("#syScanA").classList.toggle("on", cam && !SYM.lib);
+        $("#syScanB").classList.toggle("on", cam && !!SYM.lib);
+        $("#syAskBar").hidden = !o.ask;
+        $("#syChkBar").hidden = !o.chk;
+      }
+      // HOST: starts a sync, or adds one more device to it
+      async function syHost() {
         if (SYNC.hub) return;
-        syStop(true);
+        syStop(true); // an unfinished try; the devices already synced stay
+        const pc = syPc(),
+          peer = { pc, dc: pc.createDataChannel("t") };
         try {
-          const pc = syPc(),
-            peer = { pc, dc: pc.createDataChannel("t") };
           SYNC.host = true;
           SYNC.pend = peer;
           syWire(peer);
+          syDlg({ stat: "Making the code…" });
           await pc.setLocalDescription(await pc.createOffer());
           await syGathered(pc);
-          const n = (Math.random() * 65536) | 0,
-            secret = crypto.getRandomValues(new Uint8Array(6));
+          if (SYNC.pend !== peer) return; // closed meanwhile
+          const secret = crypto.getRandomValues(new Uint8Array(6));
           let url = null,
             why = null;
           for (const k of [4, 2, 1]) {
             try {
-              const u = syAppUrl() + "#j=" + syB64(syQrPayload(n, secret, syCompact(pc.localDescription, k), 3));
+              const u = syAppUrl() + "#j=" + syB64(Uint8Array.from([3, 0, 0, ...secret, ...syCompact(pc.localDescription, k)]));
               qrMake(u); // throws when it does not fit
               url = u;
               break;
@@ -21495,67 +21004,62 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
             }
           }
           if (!url) throw why;
-          const me = (SYNC.talk = { qr: true });
-          SYNC.qa = { pc, secret, me };
-          $("#syHQImg").innerHTML = qrSvg(url);
-          $("#syHQTxt").textContent = "Step 1: point the other device's camera at this code. It opens the app and asks to join. Then it shows a code of its own: tap SCAN here and point this device's camera at it. Keep this screen open.";
+          SYNC.qa = { pc, secret };
+          syDlg({ qr: url, scan: "a", txt: "1 · On the other device tap JOIN (Files ▸ SYNC) and point its camera at this code. Its camera app works too. 2 · It then shows a code of its own: tap SCAN here and point this device's camera at it.", stat: "Waiting for the other device…" });
           syNote("host: QR shown, " + url.length + " characters");
-          syWatch(pc, "host", true);
-          syFace();
-          syStat("Waiting for the other device to scan the code and show its answer…");
+          syWatch(pc, "host");
         } catch (e) {
-          if (!SYNC.talk && !SYNC.pend) return;
+          if (SYNC.pend !== peer) return;
           syNote("host failed: " + (e.message || e));
           syStop(true);
           toast("Could not start: " + (e.message || e), 3600);
         }
       }
-      // the answer link was opened (here or in another tab): check its proof, then finish the connection
+      // the guest's answer arrived (read by the camera here, or as a link opened by the camera app): check its proof, then finish the connection
       async function syAnswerIn(t) {
         const q = SYNC.qa;
-        if (!q || SYNC.talk !== q.me) return false;
+        if (!q) return false;
         try {
           const u = syUnB64(t);
           if (u.length < 8 + 40 || u.length > 8 + 260) throw new Error("size");
           const ans = u.slice(8);
           if (!(await syMac(q.secret, ans)).every((v, i) => v === u[i])) {
             syNote("host: an answer without the right proof was ignored");
-            toast("An answer that did not know the QR code was ignored", 3000);
+            toast("An answer that did not know this device's code was ignored", 3000);
             return false;
           }
+          if (SYNC.qa !== q) return false;
           syNote("host: got the answer by QR");
           await q.pc.setRemoteDescription(syExpand(ans));
           q.pc.syGo = Date.now();
           SYNC.qa = null;
-          syStat("Got the answer. Connecting…");
-          syQuiet();
-          syFace();
+          syDlg({ stat: "Got the answer. Connecting…" });
           return true;
         } catch (e) {
           toast("That answer code does not work", 2600);
           return false;
         }
       }
-      // the host reads the guest's answer code with its own camera, inside the page. Two readers to compare: ours (qrRead) and jsQR.
+      // ---- the camera reads the other device's code inside the page. Two readers to compare: ours (qrRead) and jsQR.
       // Only the middle 60% of the picture is shown and read: the code fills the view from 25 to 30 cm away, where a phone camera
       // can still focus (most cannot closer than about 15 cm, and a page cannot switch them to their macro lens).
-      const SY_CROP = 0.6;
+      const SYM = { cam: null, lib: false, cams: 0 },
+        SY_CROP = 0.6;
       function syCamOff() {
-        if (SYM.cam) (SYM.cam.getTracks().forEach((x) => x.stop()), ($("#syHQTxt").textContent = SYM.txt));
+        if (SYM.cam) SYM.cam.getTracks().forEach((x) => x.stop());
         SYM.cam = null;
-        $("#syCam").hidden = $("#syCamNext").hidden = true;
-        $("#syHQImg").hidden = false;
-        $("#syScanA").classList.remove("on");
-        $("#syScanB").classList.remove("on");
+        syDlgFace();
       }
       async function syCamScan(lib, id) {
-        const was = SYM.cam && SYM.lib === lib && !id;
+        const was = SYM.cam && SYM.lib === lib && !id,
+          step = SYNC.ui,
+          want = step && step.scan;
         syCamOff();
-        if (was || !SYNC.qa) return; // a second tap closes the camera
+        if (was || !want) return; // a second tap closes the camera
         try {
           if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) throw new Error("this browser has no camera access");
           const cam = await navigator.mediaDevices.getUserMedia({ video: { ...(id ? { deviceId: { exact: id } } : { facingMode: { ideal: "environment" } }), width: { ideal: 1920 }, height: { ideal: 1080 } } }); // the back camera, when there is one
-          if (!SYNC.qa || SYM.cam) return cam.getTracks().forEach((x) => x.stop());
+          if (SYNC.ui !== step || SYM.cam) return cam.getTracks().forEach((x) => x.stop());
           SYM.cam = cam;
           SYM.lib = lib;
           const v = $("#syCamV"),
@@ -21567,20 +21071,15 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
           if (tr.getCapabilities && (tr.getCapabilities().focusMode || []).includes("continuous")) tr.applyConstraints({ advanced: [{ focusMode: "continuous" }] }).catch(() => {});
           v.srcObject = cam;
           await v.play();
-          SYM.txt = $("#syHQTxt").textContent;
-          $("#syHQTxt").textContent = "Hold this device 25 to 30 cm from the other screen, so the code fills the square. Closer than that the camera cannot focus. Blurred all the same? Try CAMERA.";
-          $("#syCam").hidden = false;
-          $("#syHQImg").hidden = true; // the guest has scanned it by now, and the camera view needs the room
-          $(lib ? "#syScanB" : "#syScanA").classList.add("on");
           const all = (await navigator.mediaDevices.enumerateDevices()).filter((d) => d.kind === "videoinput" && d.deviceId);
-          $("#syCamNext").hidden = all.length < 2;
+          SYM.cams = all.length;
           $("#syCamNext").onclick = () => {
             const nx = all[(all.findIndex((d) => d.deviceId === tr.getSettings().deviceId) + 1) % all.length];
             toast("Camera: " + (nx.label || "the next one"));
             syCamScan(lib, nx.deviceId);
           };
-          syNote(`host: camera ${tr.label}, ${tr.getSettings().width}x${tr.getSettings().height}`);
-          if (!id) toast("Camera on: point it at the code on the other device");
+          syDlgFace();
+          syNote(`camera ${tr.label}, ${tr.getSettings().width}x${tr.getSettings().height}`);
           let n = 0,
             ms = 0;
           const tick = async () => {
@@ -21601,12 +21100,12 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
               }
               ms += performance.now() - t0;
               n++;
-              syStat(`${name}: looking for the answer code… picture ${n}, ${Math.round(ms / n)} ms each`);
+              syStat(`${name}: looking for the code… picture ${n}, ${Math.round(ms / n)} ms each`);
               if (t) {
-                const i = t.indexOf("#a=");
-                syNote(`host: ${name} read a code on picture ${n} (${Math.round(ms / n)} ms each, ${d.width}x${d.height})`);
-                if (i < 0) toast("That is not an answer code: point at the code the joining device shows", 2600);
-                else if (await syAnswerIn(t.slice(i + 3))) return; // connecting: the camera is already off
+                const i = t.indexOf(want === "a" ? "#a=" : "#j=");
+                syNote(`${name} read a code on picture ${n} (${Math.round(ms / n)} ms each, ${d.width}x${d.height})`);
+                if (i < 0) toast(want === "a" ? "That is not an answer: point at the code the joining device shows" : "That is not a host's code: point at the code the host shows", 2600);
+                else if (want === "a" ? await syAnswerIn(t.slice(i + 3)) : syJoinRead(t.slice(i + 3))) return; // the next step closed the camera
                 wait = 1500;
               }
             }
@@ -21621,89 +21120,92 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
       $("#syScanA").onclick = () => syCamScan(false);
       $("#syScanB").onclick = () => syCamScan(true);
       $("#syHQStop").onclick = () => syStop();
+      $("#syYes").onclick = () => SYNC.chk && SYNC.chk(true);
+      $("#syNo").onclick = () => SYNC.chk && SYNC.chk(false);
+      // the answer as a link, opened by the host's camera app in a new tab: that tab hands it to the one that waits (the same browser only)
       const syBc = "BroadcastChannel" in window ? new BroadcastChannel("track-sync") : null;
       if (syBc)
         syBc.onmessage = async (e) => {
           const d = e.data;
           if (d && typeof d.a === "string" && d.a.length < 700 && SYNC.qa && (await syAnswerIn(d.a))) syBc.postMessage({ ok: 1 });
         };
-      async function syJoinQ(inv) {
+      // JOIN: this device's camera reads the host's code (the tap on JOIN is the yes)
+      function syJoinCam() {
+        if (syN()) return;
         syStop(true);
-        if (!inv.full) (syBand(inv.hi), syHiFace()); // an older link: it says which tones the host listens for
+        syDlg({ scan: "j", txt: "Point this device's camera at the code on the host (tap HOST there). This device's song is kept in FILE as “Before sync”, then replaced by the host's." });
+        syCamScan(false);
+      }
+      function syJoinRead(t) {
         try {
-          ensureCtx();
-          if (!inv.full) await syMic();
-          const me = (SYNC.talk = inv.full ? { qr: true } : {}),
-            pc = syPc(),
-            peer = { pc };
+          syJoinQ(syQrParse(t));
+          return true;
+        } catch (e) {
+          toast("That code does not work: " + (e.message || e), 3200);
+          return false;
+        }
+      }
+      // the guest's half: make the answer to the host's code and show it as a code for the host's camera
+      async function syJoinQ(inv) {
+        if (syN()) return toast("This device is in a sync: LEAVE it to join another", 3000);
+        syStop(true);
+        const pc = syPc(),
+          peer = { pc };
+        try {
+          ensureCtx(); // iOS only lets a page make sound after a tap
           pc.ondatachannel = (e) => ((peer.dc = e.channel), syWire(peer));
           SYNC.pend = peer;
-          syFace();
-          syStat("Making the answer…");
+          syDlg({ stat: "Making the answer…" });
           await pc.setRemoteDescription(syExpand(inv.offer));
           await pc.setLocalDescription(await pc.createAnswer());
           await syGathered(pc);
+          if (SYNC.pend !== peer) return; // closed meanwhile
           const ans = syCompact(pc.localDescription),
             mac = await syMac(inv.secret, ans);
           syNote(`guest: answer ready, ${ans.length} bytes`);
-          syWatch(pc, "guest", true);
-          if (inv.full) {
-            // QR both ways: the answer is shown as a link for the host's camera, no sound
-            pc.syGo = Date.now() + 30000; // time to scan it
-            $("#syHQImg").innerHTML = qrSvg(syAppUrl() + "#a=" + syB64(Uint8Array.from([...mac, ...ans])));
-            $("#syHQTxt").textContent = "Step 2: on the host tap SCAN and point its camera at this code. Keep this screen open until it connects.";
-            syStat("Show this code to the host's camera…");
-            syFace();
-            return;
-          }
-          const sent = await sySendAll(syIo(me), Uint8Array.from([...mac, ...ans]), 1, inv.n8, syStat);
-          if (!sent || SYNC.talk !== me) return;
-          pc.syGo = Date.now();
-          syQuiet();
-          syStat("Answer sent. Connecting…");
-          syFace();
+          syWatch(pc, "guest");
+          pc.syGo = Date.now() + 30000; // time to scan it
+          syDlg({ qr: syAppUrl() + "#a=" + syB64(Uint8Array.from([...mac, ...ans])), txt: "On the host tap SCAN and point its camera at this code. Keep this screen open until it connects.", stat: "Waiting for the host to read this code…" });
         } catch (e) {
-          if (!SYNC.talk && !SYNC.pend) return;
+          if (SYNC.pend !== peer) return;
           syNote("guest failed: " + (e.message || e));
           syStop(true);
           toast("Could not join: " + (e.message || e), 3600);
         }
       }
-      // a link opened here: show the invitation and wait for a tap
-      let syInv = null;
+      // a link opened here (by the camera app): an invitation waits for a tap, an answer goes to the host that waits for it
       function syLink() {
         const h = location.hash;
         if (h.startsWith("#a=")) {
-          // the host scanned a guest's answer: this is a new tab, so hand it to the tab that is waiting for it
+          // the host's camera app read a guest's answer: this is a new tab, so hand it to the tab that is waiting for it
           history.replaceState(null, "", location.pathname + location.search);
           if (SYNC.qa) return void syAnswerIn(h.slice(3)); // opened in the waiting tab itself
           if (!syBc || h.length > 710) return toast("That answer link does not work here", 3200);
-          const t = setTimeout(() => toast("No waiting host found in this browser. Open the answer in the browser where HOST QR was started.", 5000), 2500);
+          const t = setTimeout(() => toast("No waiting host found in this browser. Read the code with SCAN on the host instead.", 5000), 2500);
           syBc.onmessage = (e) => e.data && e.data.ok && (clearTimeout(t), toast("Answer delivered to the host. You can close this tab.", 5000));
           syBc.postMessage({ a: h.slice(3) });
           return;
         }
         if (!h.startsWith("#j=")) return;
         history.replaceState(null, "", location.pathname + location.search); // a link is used once
+        if (syN()) return toast("This device is in a sync: LEAVE it to join another", 3200);
         try {
-          syInv = syQrParse(h.slice(3));
+          const inv = syQrParse(h.slice(3));
+          syStop(true);
+          syInv = inv;
+          syDlg({ ask: true, txt: "A device invites you to its sync. This device's song is kept in FILE as “Before sync”, then replaced by the host's. Only join a device you trust that is next to you." });
         } catch (e) {
-          return toast("That sync link does not work: " + (e.message || e), 3200);
+          toast("That sync link does not work: " + (e.message || e), 3200);
         }
-        $("#hFile").click();
-        if (fpOpen !== "sync") filePanel("sync");
-        $("#syQJ").hidden = false;
       }
       $("#syQJyes").onclick = () => {
         const i = syInv;
         syInv = null;
-        $("#syQJ").hidden = true;
         if (i) syJoinQ(i);
       };
-      $("#syQJno").onclick = () => ((syInv = null), ($("#syQJ").hidden = true));
-      $("#syHostQ").onclick = syHostQ;
-      $("#syHost").onclick = syHostS;
-      $("#syJoin").onclick = syJoinS;
+      $("#syQJno").onclick = () => syStop(true);
+      $("#syHost").onclick = syHost;
+      $("#syJoin").onclick = syJoinCam;
       // PLAY / STOP: a guest asks the host, the host sets the time for all
       const togglePlayLocal = togglePlay;
       togglePlay = function () {
@@ -24946,9 +24448,9 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
             b: {
               en: [
                 "**SYNC** (Files screen) joins several devices on the **same Wi-Fi** into one session, with no server and no account: every device has the same song, the same samples and the same PLAY / STOP. Use it to have the mixer open on one device, the live patterns on another and the piano on a third, or to play together with a friend.",
-                "- **Pair by QR (the quickest):** tap **HOST QR** on one device: it shows a QR code. Point the other device's normal camera app at it: the link opens the app and asks to join (**JOIN** or **NO**: nothing starts until you tap). The joining device then shows an answer code: on the host tap **SCAN** and point its camera at it (**SCAN jsQR** does the same with a second reader, to compare; the host's normal camera app also works when its link opens in the same browser). No sound and no microphone are used, and the camera picture never leaves the device. The code holds a one-time secret and the answer carries a proof of it, so a device that only saw or heard the pairing cannot join without it. Then the same 4-digit check follows. Nothing leaves your Wi-Fi: the data travels in the part of the link after the #, which no server ever sees.",
-                "- **Pair by sound:** put the two devices close, volume up, in a quiet room. Tap **HOST** on one and **JOIN** on the other. The host calls with short tones, the joiner answers, and then they take turns: one plays the connection data in a short burst of small pieces while the other listens and answers with what it got, and only the missing pieces are played again (a device never listens while it plays, so it does not hear itself). It takes about 40 seconds. **STOP** ends a try at any time. Then both screens show the **same 4 digits**: if they match, tap **THEY MATCH** on the host (this stops anyone who overheard from joining). Repeat for each device you add. **QUIET** switches to near-ultrasound tones that most adults barely hear: set it on both devices (a QR carries it), and it needs a speaker and microphone that reach 18 kHz, so try the normal tones if it fails.",
-                "- **Pair by code** (no sound needed, or a noisy room): **HOST BY CODE** makes a code. Send it to the other device (a message, AirDrop, anything) and tap **JOIN BY CODE** there: paste the code and send back the answer it makes. Paste the answer on the host and tap **CONNECT**.",
+                "- **Pair with two QR codes:** tap **HOST** on one device: it shows a code. On the other tap **JOIN** and point its camera at that code (its normal camera app works too: the link opens the app and asks **JOIN** or **NO**). The joining device then shows a code of its own: on the host tap **SCAN** and point its camera at it (**SCAN jsQR** does the same with a second reader, to compare, and **CAMERA** changes to the next camera when the picture stays blurred). Hold the camera 25 to 30 cm away. Then both screens show the **same 4 digits**: if they match, tap **THEY MATCH** on the host. The whole pairing happens in one dialog on each device, which closes when the device is in; ✕ stops it.",
+                "- **More devices:** tap **HOST** again on the host for each one. The devices already in stay in, and the SYNC panel lists who is in the sync.",
+                "- No sound and no microphone are used, and the camera picture never leaves the device. The first code holds a one-time secret and the answer carries a proof of it, so a device that never saw the host's code cannot join. Nothing leaves your Wi-Fi: the data travels in the part of the link after the #, which no server ever sees.",
                 "- A device that joins gets the host's song and samples; its own song is kept in the song list as *Before sync*. After that every device can edit: the last change wins. A change on one appears on the others in a moment, and so do the samples.",
                 "- **PLAY** and **STOP** on any device start and stop all of them together. Each device plays from what its own view shows (live patterns, song or pattern).",
                 "- **SILENT** mutes this device, because only one should make the sound (the one you record on or listen from). A MIDI knob on one device moves the mixer of all.",
@@ -24957,9 +24459,9 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
               ],
               es: [
                 "**SYNC** (pantalla Files) une varios dispositivos en la **misma Wi-Fi** en una sola sesión, sin servidor ni cuenta: todos tienen la misma canción, las mismas muestras y el mismo PLAY / STOP. Sirve para tener el mezclador abierto en uno, los patrones en vivo en otro y el piano en un tercero, o para tocar con un amigo.",
-                "- **Emparejar por QR (lo más rápido):** toca **HOST QR** en un dispositivo: muestra un código QR. Apunta la cámara normal del otro dispositivo: el enlace abre la app y pregunta si quieres unirte (**JOIN** o **NO**: no empieza nada hasta que toques). Después el dispositivo que se une muestra un código de respuesta: en el anfitrión toca **SCAN** y apunta su cámara a él (**SCAN jsQR** hace lo mismo con un segundo lector, para comparar; la cámara normal del anfitrión también sirve si su enlace se abre en el mismo navegador). No se usa sonido ni micrófono, y la imagen de la cámara no sale del dispositivo. El código lleva un secreto de un solo uso y la respuesta lleva una prueba de él, así que quien solo vio o oyó el emparejamiento no puede unirse sin él. Después sigue la misma comprobación de 4 dígitos. Nada sale de tu Wi-Fi: los datos viajan en la parte del enlace después del #, que ningún servidor ve.",
-                "- **Emparejar por sonido:** pon los dos dispositivos cerca, con el volumen alto, en una sala tranquila. Toca **HOST** en uno y **JOIN** en el otro. El host llama con tonos cortos, el otro responde, y luego se turnan: uno reproduce los datos de conexión en una ráfaga de trocitos mientras el otro escucha y responde con lo que ha recibido, y solo se repiten los trocitos que faltan (un dispositivo nunca escucha mientras suena, así que no se oye a sí mismo). Tarda unos 40 segundos. **STOP** termina un intento en cualquier momento. Luego las dos pantallas muestran los **mismos 4 dígitos**: si coinciden, toca **THEY MATCH** en el host (así nadie que haya oído el sonido puede entrar). Repite con cada dispositivo que añadas. **QUIET** cambia a tonos casi ultrasónicos que la mayoría de adultos apenas oye: actívalo en los dos dispositivos (un QR lo lleva), y hace falta un altavoz y un micrófono que lleguen a 18 kHz, así que prueba los tonos normales si falla.",
-                "- **Emparejar con código** (sin sonido, o en una sala ruidosa): **HOST BY CODE** crea un código. Envíalo al otro dispositivo (un mensaje, AirDrop, lo que sea) y toca **JOIN BY CODE** allí: pega el código y envía de vuelta la respuesta que genera. Pega la respuesta en el host y toca **CONNECT**.",
+                "- **Emparejar con dos códigos QR:** toca **HOST** en un dispositivo: muestra un código. En el otro toca **JOIN** y apunta su cámara a ese código (también sirve su cámara normal: el enlace abre la app y pregunta **JOIN** o **NO**). Después el dispositivo que se une muestra su propio código: en el anfitrión toca **SCAN** y apunta su cámara a él (**SCAN jsQR** hace lo mismo con un segundo lector, para comparar, y **CAMERA** cambia a la siguiente cámara si la imagen sigue borrosa). Mantén la cámara a 25 o 30 cm. Luego las dos pantallas muestran los **mismos 4 dígitos**: si coinciden, toca **THEY MATCH** en el anfitrión. Todo el emparejamiento ocurre en un diálogo en cada dispositivo, que se cierra cuando el dispositivo ha entrado; ✕ lo detiene.",
+                "- **Más dispositivos:** toca **HOST** otra vez en el anfitrión para cada uno. Los que ya están siguen dentro, y el panel SYNC muestra quién está en la sesión.",
+                "- No se usa sonido ni micrófono, y la imagen de la cámara no sale del dispositivo. El primer código lleva un secreto de un solo uso y la respuesta lleva una prueba de él, así que un dispositivo que no vio el código del anfitrión no puede unirse. Nada sale de tu Wi-Fi: los datos viajan en la parte del enlace después del #, que ningún servidor ve.",
                 "- El que se une recibe la canción y las muestras del host; la suya queda en la lista de canciones como *Before sync*. Después todos pueden editar: gana el último cambio. Un cambio en uno aparece en los demás al momento, igual que las muestras.",
                 "- **PLAY** y **STOP** en cualquiera arrancan y paran a todos a la vez. Cada dispositivo toca lo que muestra su vista (patrones en vivo, canción o patrón).",
                 "- **SILENT** silencia este dispositivo, porque solo uno debe sonar (el que grabas o escuchas). Un potenciómetro MIDI en uno mueve el mezclador de todos.",
@@ -24974,7 +24476,7 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
             b: {
               en: [
                 "## Version 1.3.0",
-                "- **Sync:** devices on the same Wi-Fi can share one session (Files ▸ **SYNC**, paired by sound or by copying two codes, no server): the same song and samples, shared PLAY / STOP, edits on any device appear on the others, a **SILENT** switch so one device makes the sound, and a MIDI knob on one moves the mixer of all.",
+                "- **Sync:** devices on the same Wi-Fi can share one session (Files ▸ **SYNC**, paired with QR codes, no server): the same song and samples, shared PLAY / STOP, edits on any device appear on the others, a **SILENT** switch so one device makes the sound, and a MIDI knob on one moves the mixer of all.",
                 "## Version 1.2.0",
                 "- **Install it:** the app is now a web app (PWA). Add it to the Home Screen (iPhone: Safari ▸ Share; Android and desktop: Chrome ▸ Install app) and it opens like an app and works offline. The Android APK is retired.",
                 "- **Variator:** new styles **Lo-Fi**, **Synthwave** and **Dungeon Synth**; the dice also shuffles the VARS knobs; the **♫** button rotates the lower part between patterns, a piano and drum pads (what you play there is not written into the song).",
@@ -24985,7 +24487,7 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
               ],
               es: [
                 "## Versión 1.3.0",
-                "- **Sincronizar:** los dispositivos de la misma Wi-Fi pueden compartir una sesión (Files ▸ **SYNC**, emparejados por sonido o copiando dos códigos, sin servidor): la misma canción y muestras, PLAY / STOP compartidos, las ediciones de uno aparecen en los demás, un interruptor **SILENT** para que suene solo uno, y un potenciómetro MIDI en uno mueve el mezclador de todos.",
+                "- **Sincronizar:** los dispositivos de la misma Wi-Fi pueden compartir una sesión (Files ▸ **SYNC**, emparejados con códigos QR, sin servidor): la misma canción y muestras, PLAY / STOP compartidos, las ediciones de uno aparecen en los demás, un interruptor **SILENT** para que suene solo uno, y un potenciómetro MIDI en uno mueve el mezclador de todos.",
                 "## Versión 1.2.0",
                 "- **Instálala:** la app ahora es una web app (PWA). Añádela a la pantalla de inicio (iPhone: Safari ▸ Compartir; Android y escritorio: Chrome ▸ Instalar app) y se abre como una app y funciona sin conexión. El APK de Android se retira.",
                 "- **Variator:** estilos nuevos **Lo-Fi**, **Synthwave** y **Dungeon Synth**; el dado también mezcla los potes de VARS; el botón **♫** rota la parte de abajo entre patrones, un piano y pads de batería (lo que toques ahí no se escribe en la canción).",
@@ -26043,7 +25545,7 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
         if (pocketOn() && !["trk", "smp", "mix", "file", "var"].includes(id)) id = "trk";
         // the Variator's song stays in while you visit the mixer; any other screen brings yours back
         if (id === "var") varEnter();
-        else if (varAway && id !== "mix") varLeave(); // song / live / FX / pads live inside the tracker view now
+        else if (varAway && id !== "mix" && !syN()) varLeave(); // song / live / FX / pads live inside the tracker view now. In a sync it stays on every screen: leaving would stop and swap the song of all the devices
         if (id !== S.tab && S.del) setDel(false);
         S.tab = id;
         $("#chRow").hidden = !(id === "trk" || id === "mix");
@@ -26104,5 +25606,5 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
         if (!localStorage.getItem("track-test.welcome")) welcomeShow();
       } catch {}
     </script>
-  <div style="position:fixed;left:4px;bottom:2px;z-index:99;font:700 9px monospace;opacity:.7;pointer-events:none;color:#ff5e7a">TEST BUILD · lan-sync · c0bed31</div></body>
+  <div style="position:fixed;left:4px;bottom:2px;z-index:99;font:700 9px monospace;opacity:.7;pointer-events:none;color:#ff5e7a">TEST BUILD · lan-sync · a886328</div></body>
 </html>
