@@ -57,3 +57,10 @@ After that, a desktop-oriented mix of all the apps in one window, free and open,
 - Release the first versions of the PWA builds (TRACK 1.2.0, TUNE 2.3.0 and SING 1.3.0 are in the pages and not tagged yet). Update the version tags on the landing page by hand with each release.
 - Test the sound pairing and the AIR thresholds on real devices and real voices, and tune the numbers from what comes back.
 - Delete a test page folder and its card when its branch is merged.
+
+## Sync as several screens of one instrument (TRACK)
+Idea from the owner: the synced devices act like extra screens. The piano open on one, the effects on another, the mixer on the PC, all driving the same sound.
+- Already shared: the song, the mixer values (volume, pan, effects, mute), master, swing, echo, play/stop, samples. SILENT keeps a device from making sound.
+- Missing: the screens themselves (each device shows what it chooses), and live playing. A note on the piano, a Live FX pad or a live loop trigger on one device does not reach the others.
+- Plan: small live events (`t:"n"` note on/off with channel, `t:"fx"` pad state, `t:"lp"` loop trigger) sent to the host and passed on, played by devices that are not SILENT. Each device keeps its own view. Events are untrusted data: numbers clamped, channels checked against the song.
+- Open question: when two devices play at once, whose sound wins (both play, or only the device chosen as the sound maker).

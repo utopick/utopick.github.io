@@ -9952,22 +9952,22 @@ a.length>D&&(D=a.length,p=0|1.25*D+7200,r=new Int8Array(p));a=u.lame_encode_buff
       // pagehide also covers reloads, which Safari does not always announce with visibilitychange
       addEventListener("pagehide", saveNow);
 
-      // ---- QR code (byte mode, error correction M, versions 1 to 9: up to 178 bytes). Small and without libraries: it is only for web addresses.
+      // ---- QR code (byte mode, error correction M, versions 1 to 16: up to 450 bytes). Small and without libraries: it is only for web addresses.
       function qrMake(text) {
         const data = new TextEncoder().encode(text),
           // version: [codewords, EC codewords per block, [[blocks, data codewords]...]]
-          T = [0, [26, 10, [[1, 16]]], [44, 16, [[1, 28]]], [70, 26, [[1, 44]]], [100, 18, [[2, 32]]], [134, 24, [[2, 43]]], [172, 16, [[4, 27]]], [196, 18, [[4, 31]]], [242, 22, [[2, 38], [2, 39]]], [292, 22, [[3, 36], [2, 37]]]],
-          AL = [0, [], [6, 18], [6, 22], [6, 26], [6, 30], [6, 34], [6, 22, 38], [6, 24, 42], [6, 26, 46]],
+          T = [0, [26, 10, [[1, 16]]], [44, 16, [[1, 28]]], [70, 26, [[1, 44]]], [100, 18, [[2, 32]]], [134, 24, [[2, 43]]], [172, 16, [[4, 27]]], [196, 18, [[4, 31]]], [242, 22, [[2, 38], [2, 39]]], [292, 22, [[3, 36], [2, 37]]], [346, 26, [[4, 43], [1, 44]]], [404, 30, [[1, 50], [4, 51]]], [466, 22, [[6, 36], [2, 37]]], [532, 22, [[8, 37], [1, 38]]], [581, 24, [[4, 40], [5, 41]]], [655, 24, [[5, 41], [5, 42]]], [733, 28, [[7, 45], [3, 46]]]],
+          AL = [0, [], [6, 18], [6, 22], [6, 26], [6, 30], [6, 34], [6, 22, 38], [6, 24, 42], [6, 26, 46], [6, 28, 50], [6, 30, 54], [6, 32, 58], [6, 34, 62], [6, 26, 46, 66], [6, 26, 48, 70], [6, 26, 50, 74]],
           cap = (k) => T[k][2].reduce((a, [n, d]) => a + n * d, 0);
         let v = 1;
-        while (v <= 9 && cap(v) < data.length + 2) v++;
-        if (v > 9) throw new Error("QR: text too long");
+        while (v <= 16 && cap(v) < data.length + (v > 9 ? 3 : 2)) v++;
+        if (v > 16) throw new Error("QR: text too long");
         const [, ecn, groups] = T[v],
           N = 17 + 4 * v,
           bits = [],
           put = (val, n) => { for (let i = n - 1; i >= 0; i--) bits.push((val >> i) & 1); };
         put(4, 4);
-        put(data.length, 8);
+        put(data.length, v > 9 ? 16 : 8);
         data.forEach((b) => put(b, 8));
         put(0, Math.min(4, cap(v) * 8 - bits.length));
         while (bits.length % 8) bits.push(0);
@@ -10980,7 +10980,7 @@ a.length>D&&(D=a.length,p=0|1.25*D+7200,r=new Int8Array(p));a=u.lame_encode_buff
       // Everything in a link is untrusted data: sizes are limited, the contents are checked (syExpand), nothing is shown as HTML, and
       // nothing happens until the person taps JOIN.
       const syUnB64 = (t) => {
-        if (!/^[A-Za-z0-9_-]{8,400}$/.test(t)) throw new Error("damaged");
+        if (!/^[A-Za-z0-9_-]{8,700}$/.test(t)) throw new Error("damaged");
         return Uint8Array.from(atob(t.replace(/-/g, "+").replace(/_/g, "/")), (c) => c.charCodeAt(0));
       };
       async function syMac(secret, bytes) {
@@ -10993,7 +10993,7 @@ a.length>D&&(D=a.length,p=0|1.25*D+7200,r=new Int8Array(p));a=u.lame_encode_buff
       }
       function syQrParse(t) {
         const u = syUnB64(t);
-        if (!(u[0] === 1 || u[0] === 2) || u.length < 9 + 40 || u.length > 140) throw new Error("this link is not a sync invitation");
+        if (!(u[0] === 1 || u[0] === 2) || u.length < 9 + 40 || u.length > 260) throw new Error("this link is not a sync invitation");
         const offer = u.slice(9);
         syExpand(offer); // throws when the connection data is damaged
         return { hi: u[0] === 2, n8: syN8((u[1] << 8) | u[2]), secret: u.slice(3, 9), offer };
@@ -11015,7 +11015,7 @@ a.length>D&&(D=a.length,p=0|1.25*D+7200,r=new Int8Array(p));a=u.lame_encode_buff
             secret = crypto.getRandomValues(new Uint8Array(6));
           let url = null,
             why = null;
-          for (const k of [2, 1]) {
+          for (const k of [4, 2, 1]) {
             try {
               const u = syAppUrl() + "#j=" + syB64(syQrPayload(n, secret, syCompact(pc.localDescription, k)));
               qrMake(u); // throws when it does not fit
@@ -15512,5 +15512,5 @@ a.length>D&&(D=a.length,p=0|1.25*D+7200,r=new Int8Array(p));a=u.lame_encode_buff
         if (!localStorage.getItem("track-test.welcome")) welcomeShow();
       } catch {}
     </script>
-  <div style="position:fixed;left:4px;bottom:2px;z-index:99;font:700 9px monospace;opacity:.7;pointer-events:none;color:#ff5e7a">TEST BUILD · lan-sync · d19906f</div></body>
+  <div style="position:fixed;left:4px;bottom:2px;z-index:99;font:700 9px monospace;opacity:.7;pointer-events:none;color:#ff5e7a">TEST BUILD · lan-sync · 2c4c878</div></body>
 </html>
