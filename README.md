@@ -11,3 +11,7 @@ The **TEST** button in the header lists feature branches published as test pages
 `../test-build.sh <app> <branch>` (it gives the copy its own storage names, so it cannot touch the real apps' data, and
 removes the manifest), commit and push, and add or update its card in the `TESTS` list in `index.html`. Delete the folder and
 its card when the branch is merged.
+
+## Roadmap
+
+Plans and ideas are in [docs/ROADMAP.md](docs/ROADMAP.md). The QR codes in `img/qr/` are made from each app address with the QR generator inside TRACK, so they can be rebuilt without any service.
