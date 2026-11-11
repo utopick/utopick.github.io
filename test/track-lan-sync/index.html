@@ -4004,6 +4004,7 @@
             <button id="syHostC" title="Start a sync with a code you copy to the other device">HOST BY CODE</button>
             <button id="syJoinC" title="Join with a code you paste">JOIN BY CODE</button>
             <button id="syQr" title="A QR code that opens this app on another device: scan it with its camera">APP QR</button>
+            <button id="syRep" title="Copy what happened while pairing, to send to whoever helps you">COPY REPORT</button>
           </div>
           <div id="syQrBox" hidden>
             <div id="syQrImg" style="background: #fff; border-radius: 8px; padding: 4px; width: min(280px, 100%); margin: 10px auto 4px"></div>
@@ -10225,6 +10226,7 @@ a.length>D&&(D=a.length,p=0|1.25*D+7200,r=new Int8Array(p));a=u.lame_encode_buff
       // ---- the connection
       function syWire(peer) {
         peer.dc.onopen = async () => {
+          syNote("data channel open");
           syQuiet();
           const num = await syVerify(peer.pc);
           if (SYNC.host) {
@@ -10368,6 +10370,10 @@ a.length>D&&(D=a.length,p=0|1.25*D+7200,r=new Int8Array(p));a=u.lame_encode_buff
         toast(SYNC.silent ? "This device is silent" : "This device makes sound");
       };
       $("#syLeave").onclick = () => syLeave();
+      $("#syRep").onclick = () => {
+        const t = ["TRACK.Pocket sync report", navigator.userAgent, "status: " + $("#syStat").textContent, ...syLog].join("\n");
+        navigator.clipboard.writeText(t).then(() => toast("Report copied"), () => ($("#syOut").value = t) && ($("#syBox").hidden = false));
+      };
       // a QR code that opens this app: a device that has not got it points its camera at the screen
       const syAppUrl = () => new URL(".", location.href).href;
       $("#syQr").onclick = () => {
@@ -10413,7 +10419,7 @@ a.length>D&&(D=a.length,p=0|1.25*D+7200,r=new Int8Array(p));a=u.lame_encode_buff
         return out;
       }
       // feed it the microphone in pieces: push(Float32Array); onMsg(bytes) when a message passes its CRC
-      function symDec(sr, onMsg, onProg) {
+      function symDec(sr, onMsg, onProg, onFail) {
         const T = Math.round((sr * SYM.MS) / 1000),
           K = 16,
           PRE = SYM.PRE,
@@ -10507,6 +10513,7 @@ a.length>D&&(D=a.length,p=0|1.25*D+7200,r=new Int8Array(p));a=u.lame_encode_buff
                 pos = st + T;
                 fs = -1;
                 if (got) return onMsg(Uint8Array.from(got));
+                onFail && onFail(); // a whole pass came in but the check did not fit: noise, or too far
                 break;
               }
             }
@@ -10553,8 +10560,13 @@ a.length>D&&(D=a.length,p=0|1.25*D+7200,r=new Int8Array(p));a=u.lame_encode_buff
           else if (u) cs.push([1, ...u.slice(1).join("").match(/../g).map((h) => parseInt(h, 16)), port >> 8, port & 255]);
         }
         if (!cs.length) throw new Error("no network address found: use the codes");
-        out.push(Math.min(3, cs.length));
-        cs.slice(0, 3).forEach((c) => out.push(...c));
+        // a device can have several networks (Wi-Fi, a VPN, virtual machines): the home ranges go first, link-local and loopback are left out
+        const rank = (c) => (c[0] === 1 ? 1 : c[1] === 192 && c[2] === 168 ? 0 : c[1] === 10 ? 1 : c[1] === 172 && c[2] >= 16 && c[2] <= 31 ? 2 : c[1] === 169 || c[1] === 127 ? 9 : 3);
+        const best = cs.filter((c) => rank(c) < 9).sort((a, b) => rank(a) - rank(b)).slice(0, 4);
+        if (!best.length) throw new Error("no usable network address found: use the codes");
+        syNote("addresses sent: " + best.map((c) => (c[0] ? "mdns:" : c.slice(1, 5).join(".") + ":") + ((c[c.length - 2] << 8) | c[c.length - 1])).join(", "));
+        out.push(best.length);
+        best.forEach((c) => out.push(...c));
         return Uint8Array.from(out);
       }
       function syExpand(u) {
@@ -10575,7 +10587,7 @@ a.length>D&&(D=a.length,p=0|1.25*D+7200,r=new Int8Array(p));a=u.lame_encode_buff
         const n = u[i++],
           hex = (a) => Array.from(a, (b) => b.toString(16).padStart(2, "0")).join(""),
           cand = [];
-        if (!(n >= 1 && n <= 3)) throw new Error("damaged");
+        if (!(n >= 1 && n <= 4)) throw new Error("damaged");
         for (let c = 0; c < n; c++) {
           const kind = u[i++];
           let addr;
@@ -10619,7 +10631,17 @@ a.length>D&&(D=a.length,p=0|1.25*D+7200,r=new Int8Array(p));a=u.lame_encode_buff
               SYM.stop = null;
               res(v);
             },
-            dec = symDec(ctx.sampleRate, (b) => (b[0] & 1) === want && end(b), (n, tot) => say(tot > 0 ? `Receiving… ${Math.round((n / tot) * 100)}%` : "Hearing something…")),
+            bad = { n: 0 },
+            dec = symDec(
+              ctx.sampleRate,
+              (b) => (b[0] & 1) === want && end(b),
+              (n, tot) => say(tot > 0 ? `Receiving… ${Math.round((n / tot) * 100)}%` : "Hearing something…"),
+              () => {
+                bad.n++;
+                syNote(`heard a whole pass, check failed (${bad.n})`);
+                say(`Heard it, but garbled (${bad.n}). Closer together, volume up, a quieter room.`);
+              },
+            ),
             t = ms ? setTimeout(() => end(null), ms) : 0;
           mute.gain.value = 0;
           proc.onaudioprocess = (e) => dec.push(new Float32Array(e.inputBuffer.getChannelData(0)));
@@ -10646,7 +10668,29 @@ a.length>D&&(D=a.length,p=0|1.25*D+7200,r=new Int8Array(p));a=u.lame_encode_buff
         };
         return done;
       }
+      // a short log of the pairing (what was heard, the connection states) that COPY REPORT puts on the clipboard
+      const syLog = [];
+      const syNote = (t) => {
+        syLog.push(((performance.now() / 1000) | 0) + "s " + t);
+        if (syLog.length > 120) syLog.shift();
+      };
       const syStat = (t) => ($("#syStat").textContent = t);
+      // the connection: its states go to the log and the status line, and a silent failure is said out loud after 25 s
+      function syWatch(pc, who) {
+        const t0 = Date.now();
+        ["iceconnectionstatechange", "connectionstatechange", "icegatheringstatechange", "signalingstatechange"].forEach((ev) =>
+          pc.addEventListener(ev, () => {
+            syNote(`${who}: ${ev.replace("statechange", "")} = ${pc.iceConnectionState}/${pc.connectionState}/${pc.iceGatheringState}`);
+            if (pc.iceConnectionState === "failed") syStat("The devices heard each other but the network connection failed. Are both on the same Wi-Fi (not a guest network, no VPN)? Try the codes.");
+          }),
+        );
+        setTimeout(() => {
+          if (!syN() && pc.connectionState !== "closed" && SYNC.pend && SYNC.pend.pc === pc) {
+            syNote(`${who}: no connection after ${Math.round((Date.now() - t0) / 1000)} s`);
+            syStat(`Still not connected (ice ${pc.iceConnectionState}). Same Wi-Fi? Guest networks and VPNs block it. Try the codes, or COPY REPORT.`);
+          }
+        }, 25000);
+      }
       const syDone = (ms) => new Promise((ok) => setTimeout(ok, ms));
       async function syHostS() {
         if (SYNC.hub) return;
@@ -10664,6 +10708,8 @@ a.length>D&&(D=a.length,p=0|1.25*D+7200,r=new Int8Array(p));a=u.lame_encode_buff
           const msg = syCompact(pc.localDescription),
             t0 = Date.now(),
             me = (SYNC.talk = {});
+          syNote(`host: offer ready, ${msg.length} bytes`);
+          syWatch(pc, "host");
           toast("Volume up, and hold the devices close", 2600);
           syFace();
           // play a pass, then listen for the answer, again and again for 3 minutes
@@ -10676,6 +10722,7 @@ a.length>D&&(D=a.length,p=0|1.25*D+7200,r=new Int8Array(p));a=u.lame_encode_buff
             if (SYNC.talk !== me) return;
             if (ans) {
               syQuiet();
+              syNote("host: heard the answer");
               syStat("Heard the answer. Connecting…");
               return await pc.setRemoteDescription(syExpand(ans));
             }
@@ -10699,6 +10746,7 @@ a.length>D&&(D=a.length,p=0|1.25*D+7200,r=new Int8Array(p));a=u.lame_encode_buff
           if (SYNC.talk !== me) return;
           if (!got) return (syQuiet(), toast("Heard nothing: try again or use the codes", 2600));
           syQuiet(); // the microphone is off while this device plays
+          syNote("guest: heard the offer");
           syStat("Heard the host. Sending the answer…");
           const pc = syPc(),
             peer = { pc };
@@ -10708,6 +10756,8 @@ a.length>D&&(D=a.length,p=0|1.25*D+7200,r=new Int8Array(p));a=u.lame_encode_buff
           await pc.setLocalDescription(await pc.createAnswer());
           await syGathered(pc);
           const msg = syCompact(pc.localDescription);
+          syNote(`guest: answer ready, ${msg.length} bytes, playing it`);
+          syWatch(pc, "guest");
           syPlay(msg, true); // repeats until the connection opens (syWire stops it)
         } catch (e) {
           syQuiet();
@@ -15108,5 +15158,5 @@ a.length>D&&(D=a.length,p=0|1.25*D+7200,r=new Int8Array(p));a=u.lame_encode_buff
         if (!localStorage.getItem("track-test.welcome")) welcomeShow();
       } catch {}
     </script>
-  <div style="position:fixed;left:4px;bottom:2px;z-index:99;font:700 9px monospace;opacity:.7;pointer-events:none;color:#ff5e7a">TEST BUILD · lan-sync · 3afaad3</div></body>
+  <div style="position:fixed;left:4px;bottom:2px;z-index:99;font:700 9px monospace;opacity:.7;pointer-events:none;color:#ff5e7a">TEST BUILD · lan-sync · 69e906a</div></body>
 </html>
