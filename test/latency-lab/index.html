@@ -65,6 +65,7 @@ ol{margin:6px 0;padding-left:20px;color:var(--dim)}li{margin:4px 0}
 <div class="hint" id="sinkSupport">Checking output selection support…</div>
 <h3>Capture</h3>
 <div class="checks"><label><input type="checkbox" id="echo">Echo cancellation</label><label><input type="checkbox" id="noise">Noise suppression</label><label><input type="checkbox" id="agc">Automatic gain</label><label><input type="checkbox" id="mono" checked>Mono input</label><label><input type="checkbox" id="captureLatency" checked>Ask for the lowest capture latency</label></div>
+<label class="field"><span>Engine sample rate (match your interface: no conversion)</span><select id="ctxRate"><option value="">browser default</option><option value="44100">44100 Hz</option><option value="48000">48000 Hz</option><option value="96000">96000 Hz</option></select></label>
 <label class="field"><span>AudioContext latency hint</span><select id="latencyHint"><option value="interactive">interactive (recommended)</option><option value="0.005">5 ms (a wish, not a promise)</option><option value="balanced">balanced</option><option value="playback">playback</option></select></label>
 <div class="hint">Stop and start again after changing any of these. Device names appear once the mic is allowed.</div>
 </section>
@@ -246,7 +247,7 @@ function settingsRequest(){
  return c;
 }
 function updateStatus(text,on=false){$('status').textContent=text;$('statusDot').classList.toggle('on',on);}
-function setButtons(active){$('start').disabled=active;$('stop').disabled=!active;$('record').disabled=!active;$('loopback').disabled=!active||!session?.probe;for(const id of ['inputDevice','inChannel','outputDevice','path','echo','noise','agc','mono','captureLatency','latencyHint'])$(id).disabled=active;}
+function setButtons(active){$('start').disabled=active;$('stop').disabled=!active;$('record').disabled=!active;$('loopback').disabled=!active||!session?.probe;for(const id of ['inputDevice','inChannel','outputDevice','path','echo','noise','agc','mono','captureLatency','latencyHint','ctxRate'])$(id).disabled=active;}
 function statsFor(ctx){const s=ctx?.playbackStats;if(!s)return null;const out={};for(const k of ['underrunCount','underrunDuration','averageLatency','minimumLatency','maximumLatency']){try{if(typeof s[k]==='number')out[k]=s[k];}catch{}}return Object.keys(out).length?out:null;}
 function snapshot(){
  if(!session){$('diagnostics').textContent='No active audio session.';return null;}
@@ -266,7 +267,7 @@ async function start(){
  try{
   const requested=settingsRequest();stream=await navigator.mediaDevices.getUserMedia({audio:requested});
   const hint=$('latencyHint').value;
-  ctx=new AudioContext({latencyHint:hint==='0.005'?0.005:hint});
+  ctx=new AudioContext({latencyHint:hint==='0.005'?0.005:hint,...($('ctxRate').value?{sampleRate:Number($('ctxRate').value)}:{})});
   if($('outputDevice').value){if(typeof ctx.setSinkId==='function')await ctx.setSinkId($('outputDevice').value);else throw new Error('This browser cannot select an audio output. Choose system default or use system sound settings.');}
   const raw=ctx.createMediaStreamSource(stream),path=$('path').value,inChannel=$('inChannel').value;
   // one mono input for every path and the probe: the chosen channel, or the speaker downmix of all of them
