@@ -1,0 +1,329 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0d0f12">
+<title>LAB.Pocket · audio latency</title>
+<style>
+:root{color-scheme:dark;--bg:#0d0f12;--panel:#161a20;--panel2:#1d222a;--line:#2a313b;--text:#e8ecf1;--dim:#8a94a3;--acc:#7cf29a;--acc2:#ffb347;--hot:#ff5e7a;--blue:#6ab7ff;--ink:#0d0f12;--r:10px;--mono:ui-monospace,Menlo,Consolas,monospace}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:var(--bg);color:var(--text);font:15px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
+main{max-width:760px;margin:0 auto;padding:10px 12px 48px}
+header{display:flex;align-items:center;gap:8px;padding:2px 0 8px}
+.mark{display:flex;flex-direction:column;line-height:1;color:var(--text);text-decoration:none}
+.mark .t{font-weight:900;font-size:22px;letter-spacing:.5px}.mark b{color:var(--acc)}
+.mark .sub{font-size:11px;font-weight:800;letter-spacing:2.5px;text-transform:uppercase;color:var(--acc2);margin-top:4px}
+.grow{flex:1}
+h2{margin:0 0 10px;font:800 12px var(--mono);letter-spacing:.16em;color:var(--dim);text-transform:uppercase}
+h3{margin:12px 0 6px;font:800 11px var(--mono);letter-spacing:.12em;color:var(--dim);text-transform:uppercase}
+p{margin:8px 0;color:var(--dim)}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;margin:0 0 12px;min-width:0}
+.field{display:block;margin-bottom:10px}.field>span{display:block;color:var(--dim);font-size:12px;margin-bottom:4px}
+button,select,input{font:inherit;color:var(--text)}
+select,input[type=number],input[type=text]{width:100%;background:var(--panel2);border:1px solid var(--line);border-radius:var(--r);padding:7px 8px;min-height:44px}
+button{background:var(--panel2);border:1px solid var(--line);border-radius:var(--r);padding:8px 12px;min-height:44px;cursor:pointer;font:700 13px var(--mono);letter-spacing:.04em;touch-action:manipulation}
+button:active{transform:scale(.96)}button:disabled{opacity:.4;cursor:not-allowed;transform:none}
+.primary{background:var(--acc);color:var(--ink);border-color:var(--acc)}.danger{background:var(--hot);color:#fff;border-color:var(--hot)}
+.buttons{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin:10px 0}
+input[type=range]{width:100%;accent-color:var(--acc);height:32px}input[type=checkbox]{accent-color:var(--acc);width:20px;height:20px;vertical-align:middle;margin:0 8px 0 0}
+.checks{display:grid;gap:4px;margin:6px 0 10px}.checks label{color:var(--text);font-size:14px;min-height:34px;display:flex;align-items:center}
+.hint,.tiny{font-size:12px;color:var(--dim)}.warning{color:var(--acc2)}.bad{color:var(--hot)}.good{color:var(--acc)}.muted{color:var(--dim)}
+.status{display:flex;align-items:center;gap:10px;margin:0 0 12px;padding:10px 12px;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);font:700 12px var(--mono)}
+.dot{background:var(--dim);width:10px;height:10px;border-radius:50%;flex:none}.dot.on{background:var(--acc);box-shadow:0 0 0 4px #7cf29a22}
+.metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.metric{background:var(--panel2);border:1px solid var(--line);border-radius:var(--r);padding:10px}
+.metric small{display:block;color:var(--dim);font:700 10px var(--mono);letter-spacing:.06em;text-transform:uppercase}
+.metric strong{display:block;font:800 19px var(--mono);overflow-wrap:anywhere;font-variant-numeric:tabular-nums;color:var(--acc)}
+.line{height:1px;background:var(--line);margin:12px 0}
+.sliderrow{display:flex;align-items:center;justify-content:space-between;margin-top:6px}.sliderrow strong{font-family:var(--mono);color:var(--acc)}
+.mode{font-size:13px;color:var(--dim);padding:8px 10px;background:var(--panel2);border-radius:var(--r)}
+.lineup{display:flex;gap:6px;flex-wrap:wrap}.pill{padding:4px 9px;border-radius:999px;border:1px solid var(--line);color:var(--dim);font:700 11px var(--mono);letter-spacing:.04em}
+.chartbox canvas{width:100%;height:250px;display:block}
+.tablewrap{overflow:auto;-webkit-overflow-scrolling:touch}
+table{border-collapse:collapse;width:100%;white-space:nowrap;font:12px var(--mono);font-variant-numeric:tabular-nums}
+th,td{padding:8px;border-bottom:1px solid var(--line);text-align:left}th{font-size:10px;color:var(--dim);position:sticky;top:0;background:var(--panel);text-transform:uppercase;letter-spacing:.06em}
+td button{min-height:32px;min-width:32px;padding:2px 8px}
+pre{white-space:pre-wrap;overflow-wrap:anywhere;background:var(--bg);border:1px solid var(--line);padding:10px;border-radius:var(--r);max-height:220px;overflow:auto;font:11px var(--mono);color:var(--dim)}
+.kbd{font-family:var(--mono);background:var(--panel2);padding:1px 5px;border-radius:4px}
+ol{margin:6px 0;padding-left:20px;color:var(--dim)}li{margin:4px 0}
+@media(min-width:700px){.metrics{grid-template-columns:repeat(4,minmax(0,1fr))}.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}}
+</style>
+</head>
+<body><main>
+<header><a class="mark" href="../../" title="Pocket apps"><span class="t">LAB<b>.</b>Pocket</span><span class="sub">audio latency</span></a><span class="grow"></span><span class="pill">TEST TOOL</span></header>
+<div id="environment" class="status"><span id="statusDot" class="dot"></span><span id="status">Idle · plug in headphones before you turn monitoring up</span></div>
+
+<section class="panel"><h2>1 · Input and output</h2>
+<div class="buttons"><button id="permissions">ALLOW MIC · REFRESH</button></div>
+<label class="field"><span>Microphone / input device</span><select id="inputDevice"><option value="">System default</option></select></label>
+<label class="field"><span>Output device (when the browser allows it)</span><select id="outputDevice"><option value="">System default</option></select></label>
+<div class="hint" id="sinkSupport">Checking output selection support…</div>
+<h3>Capture</h3>
+<div class="checks"><label><input type="checkbox" id="echo">Echo cancellation</label><label><input type="checkbox" id="noise">Noise suppression</label><label><input type="checkbox" id="agc">Automatic gain</label><label><input type="checkbox" id="mono" checked>Mono input</label><label><input type="checkbox" id="captureLatency" checked>Ask for the lowest capture latency</label></div>
+<label class="field"><span>AudioContext latency hint</span><select id="latencyHint"><option value="interactive">interactive (recommended)</option><option value="0.005">5 ms (a wish, not a promise)</option><option value="balanced">balanced</option><option value="playback">playback</option></select></label>
+<div class="hint">Stop and start again after changing any of these. Device names appear once the mic is allowed.</div>
+</section>
+
+<section class="panel"><h2>2 · Live monitoring</h2>
+<label class="field"><span>Processing path</span><select id="path"><option value="direct">Direct (no processing)</option><option value="native">Native GainNode</option><option value="worklet-js">AudioWorklet · JavaScript</option><option value="worklet-wasm">AudioWorklet · WebAssembly</option></select></label>
+<div class="mode" id="pathNote">Source → destination. The smallest browser graph; no custom processing.</div>
+<div class="buttons"><button class="primary" id="start">START (MUTED)</button><button class="danger" id="stop" disabled>STOP</button><button id="record" disabled>RECORD RUN · 8 S</button></div>
+<div class="sliderrow"><label for="gain">Monitor volume (0 = muted)</label><strong id="gainValue">0%</strong></div><input id="gain" type="range" min="0" max="100" value="0" step="1">
+<div class="hint warning">Headphones only while monitoring: with speakers it can howl. Runs record fine while muted.</div>
+<div class="line"></div>
+<div class="metrics">
+<div class="metric"><small>Base output</small><strong id="base">—</strong></div>
+<div class="metric"><small>Device output</small><strong id="output">—</strong></div>
+<div class="metric"><small>Output sum*</small><strong id="sum">—</strong></div>
+<div class="metric"><small>Sample rate</small><strong id="sample">—</strong></div>
+<div class="metric"><small>Capture hint*</small><strong id="capture">—</strong></div>
+<div class="metric"><small>Worklet block</small><strong id="quantum">—</strong></div>
+<div class="metric"><small>Input level</small><strong id="rms">—</strong></div>
+<div class="metric"><small>State / underruns</small><strong id="state">—</strong></div>
+</div>
+<p class="tiny">*What the browser reports, not measured mic-to-headphone delay. The worklet block is a processing size, not the whole added delay.</p>
+<div class="lineup"><span class="pill" id="wasmTag">WASM: checking</span><span class="pill" id="secureTag">Secure context: checking</span><span class="pill" id="workletTag">AudioWorklet: checking</span></div>
+</section>
+
+<section class="panel"><h2>3 · Results</h2>
+<p>Record a run per path with the same input and output, then repeat with the USB interface. The chart shows the browser's output-side estimate only: input delay and the real round trip are <strong>not</strong> in it.</p>
+<div class="two"><div class="chartbox"><h3>Estimated output path (ms)</h3><canvas id="latencyChart" aria-label="Estimated output latency bar chart"></canvas></div><div class="chartbox"><h3>Input level (dBFS) · this session</h3><canvas id="signalChart" aria-label="Input level history"></canvas></div></div>
+<div class="buttons"><button id="export">EXPORT JSON</button><button id="clear">CLEAR RESULTS</button></div>
+<div class="tablewrap"><table><thead><tr><th>Time</th><th>Input</th><th>Output</th><th>Path</th><th>Rate</th><th>Base ms</th><th>Output ms</th><th>Sum ms</th><th>Capture ms</th><th>Level dBFS</th><th>Max DSP µs*</th><th>Underruns</th><th>Physical ms</th><th></th></tr></thead><tbody id="results"><tr><td colspan="14" class="muted">No runs yet</td></tr></tbody></table></div>
+<p class="tiny">*Only where the worklet has <span class="kbd">performance.now()</span> (not Chrome): it is processing time, not audio delay. Missing values show as —.</p>
+</section>
+
+<section class="panel"><h2>4 · Physical measurement</h2><p>The real mic-to-headphone delay needs a reference sound and a two-channel recording (or an oscilloscope). Measure it outside, then attach it to a run here; it goes into the export.</p>
+<label class="field"><span>Run</span><select id="calRun"><option value="">Choose run</option></select></label>
+<label class="field"><span>Measured mic-to-output delay (ms)</span><input type="number" id="physicalMs" min="0" max="2000" step="0.01" inputmode="decimal" placeholder="e.g. 18.75"></label>
+<div class="buttons"><button id="saveCal">SAVE</button><button id="pulse">PLAY 3 CHIRPS</button></div>
+<p class="tiny">The chirps are a test sound, not an automatic measurement. Start quiet. For a cable loopback, lower the level first; never connect a speaker amplifier output to an audio input.</p>
+</section>
+
+<section class="panel"><h2>5 · Diagnostics</h2><div class="buttons"><button id="refresh">REFRESH</button><button id="copy">COPY</button></div><pre id="diagnostics">No audio session yet.</pre><p id="notes" class="hint">Everything runs in this page: browser audio and a small embedded WebAssembly module, no network. Choosing the output isn't possible in every browser (Safari, Chrome on Android); the system default always works.</p><div id="logs" class="tiny" aria-live="polite">Ready.</div></section>
+
+<section class="panel"><h2>How to compare</h2><ol><li>Use HTTPS or <span class="kbd">localhost</span>, allow the mic and pick the built-in microphone.</li><li>Headphones on, monitor volume at zero unless you want to hear yourself.</li><li>Record a run for Direct, Native, Worklet JS and Worklet WASM.</li><li>Switch to the USB interface and repeat.</li><li>Attach a real round-trip measurement to a run (section 4).</li><li>Export the JSON.</li></ol><p class="tiny">JS and WASM do the same gain, so they compare processing speed, not end-to-end delay. Runs only compare fairly with the same output route and capture settings.</p></section>
+</main>
+<script type="module">
+const $ = id => document.getElementById(id);
+const VERSION='1.0.0', STORAGE='audio-latency-lab-v1';
+const WASM_BASE64='AGFzbQEAAAABCAFgBH9/f30AAwIBAAQFAXABAQEFAwEAAgYIAX8BQYCIBAsHFAIGbWVtb3J5AgAHcHJvY2VzcwAACt4BAdsBAQV/AkAgAkEBSA0AIAJBA3EhBEEAIQUCQCACQQRJDQAgAkH8////B3EhBkEAIQJBACEFA0AgASACaiIHIAAgAmoiCCoCACADlDgCACAHQQRqIAhBBGoqAgAgA5Q4AgAgB0EIaiAIQQhqKgIAIAOUOAIAIAdBDGogCEEMaioCACADlDgCACACQRBqIQIgBiAFQQRqIgVHDQALCyAERQ0AIAAgBUECdCIHaiECIAEgB2ohBwNAIAcgAioCACADlDgCACACQQRqIQIgB0EEaiEHIARBf2oiBA0ACwsLADEEbmFtZQAKCWdhaW4ud2FzbQEKAQAHcHJvY2VzcwcSAQAPX19zdGFja19wb2ludGVyAH8JcHJvZHVjZXJzAQxwcm9jZXNzZWQtYnkBBWNsYW5nXzE3LjAuMCAoaHR0cHM6Ly9naXRodWIuY29tL3N3aWZ0bGFuZy9sbHZtLXByb2plY3QuZ2l0IDEwOTk5YjZkMDM0ZmUzMThmM2Q1NmM4M2JkZGI2NTcyNTkzYThiYjApAEkPdGFyZ2V0X2ZlYXR1cmVzBCsKbXVsdGl2YWx1ZSsPbXV0YWJsZS1nbG9iYWxzKw9yZWZlcmVuY2UtdHlwZXMrCHNpZ24tZXh0';
+const workletCode = String.raw`
+class LabDSP extends AudioWorkletProcessor {
+  constructor(options){
+    super();
+    this.kind=options.processorOptions.kind;
+    this.gain=1; this.blocks=0; this.samples=0;
+    this.acc=0; this.peak=0; this.maxUs=0;
+    this.wasm=null; this.mem=null; this.processWasm=null;
+    this.hist=[];
+    this.port.onmessage=e=>{
+      if(e.data.type==='gain')this.gain=e.data.value;
+      if(e.data.type==='wasm'){
+        try{
+          const module=new WebAssembly.Module(e.data.bytes);
+          const instance=new WebAssembly.Instance(module,{});
+          this.wasm=instance;
+          this.mem=new Float32Array(instance.exports.memory.buffer);
+          this.processWasm=instance.exports.process;
+          this.port.postMessage({type:'ready',wasm:true});
+        }catch(err){this.port.postMessage({type:'error',message:String(err)});}
+      }
+    };
+  }
+  process(inputs,outputs){
+    const start=typeof performance!=='undefined' && performance.now?performance.now():null;
+    const input=inputs[0],output=outputs[0];
+    const n=output[0]?.length||128;
+    let sum=0, peak=0;
+    for(let c=0;c<output.length;c++){
+      const src=input[c]||input[0]; const dst=output[c];
+      if(!src){dst.fill(0);continue;}
+      if(this.kind==='wasm' && this.processWasm && n<=1024){
+        this.mem.set(src,0);
+        this.processWasm(0,4096,n,this.gain);
+        dst.set(this.mem.subarray(1024,1024+n));
+      }else if(this.kind==='wasm' && !this.processWasm){
+        dst.fill(0);
+      }else{
+        const g=this.gain;
+        for(let i=0;i<n;i++)dst[i]=src[i]*g;
+      }
+      if(c===0)for(let i=0;i<n;i++){const x=src[i];sum+=x*x;peak=Math.max(peak,Math.abs(x));}
+    }
+    this.acc+=sum;this.samples+=n;this.peak=Math.max(peak,this.peak);this.blocks++;
+    if(start!==null){this.maxUs=Math.max(this.maxUs,(performance.now()-start)*1000);}
+    if(this.blocks>=Math.max(1,Math.round(sampleRate/n))){
+      this.port.postMessage({type:'telemetry',rms:Math.sqrt(this.acc/Math.max(1,this.samples)),peak:this.peak,quantum:n,blocks:this.blocks,maxUs:start===null?null:this.maxUs});
+      this.acc=0;this.samples=0;this.blocks=0;this.peak=0;this.maxUs=0;
+    }
+    return true;
+  }
+}
+registerProcessor('lab-dsp',LabDSP);
+`;
+const log=(msg,bad=false)=>{const now=new Date().toLocaleTimeString();$('logs').textContent=`${now} · ${msg}`;$('logs').className=bad?'tiny bad':'tiny';};
+let session=null,results=[];try{const stored=JSON.parse(localStorage.getItem(STORAGE)||'[]');if(Array.isArray(stored))results=stored;}catch{}
+let chartRms=[];const persist=()=>{try{localStorage.setItem(STORAGE,JSON.stringify(results));}catch(e){log('Local storage blocked; export JSON to preserve results.',true);}};
+let metricsTimer=null;let currentGain=0;
+const pathNotes={direct:'Source → destination. The smallest browser graph; no custom processing.',native:'Source → native GainNode → destination. Browser-native DSP.', 'worklet-js':'Source → JS AudioWorklet → destination. Direct 128-frame processing, no custom queues.', 'worklet-wasm':'Source → WebAssembly AudioWorklet → destination. Real compiled WASM scalar gain DSP; one copy into WASM memory and one copy out per block.'};
+$('path').addEventListener('change',()=>{$('pathNote').textContent=pathNotes[$('path').value]});
+const fmt=(v,d=2)=>Number.isFinite(v)?v.toFixed(d):'—';
+const db=r=>r>0?20*Math.log10(r):-120;
+const ms=v=>Number.isFinite(v)?`${v.toFixed(2)} ms`:'—';
+const getPayload=()=>({schema:'audio-latency-lab/1',version:VERSION,generatedAt:new Date().toISOString(),userAgent:navigator.userAgent,secureContext:isSecureContext,origin:location.origin,definitions:{baseLatency:'AudioContext.baseLatency * 1000; browser output pipeline estimate',outputLatency:'AudioContext.outputLatency * 1000, when exposed',outputPathSum:'baseLatency + outputLatency, output only, not microphone round trip',captureLatency:'MediaStreamTrack.getSettings().latency * 1000, if exposed; may not represent total input delay',physicalLatency:'Externally measured mic-to-output latency supplied by tester',maxDSPus:'Maximum observed per-block processor wall time if performance.now is available in worklet'},runs:results});
+function bytesWasm(){const str=atob(WASM_BASE64);return Uint8Array.from(str,c=>c.charCodeAt(0));}
+const support=()=>{ $('secureTag').textContent='Secure context: '+(isSecureContext?'yes':'NO');$('workletTag').textContent='AudioWorklet: '+(!!window.AudioWorkletNode?'available':'unavailable');$('wasmTag').textContent='WASM: '+(typeof WebAssembly==='object'?'embedded module ready':'unsupported');$('sinkSupport').textContent=typeof AudioContext?.prototype?.setSinkId==='function'?'Output device routing supported (browser and permission dependent).':'Output switching unavailable: select output through system settings.';};
+support();
+async function getDevices(){
+ if(!navigator.mediaDevices?.enumerateDevices)return;
+ const entries=await navigator.mediaDevices.enumerateDevices();
+ for(const [id,kind] of [['inputDevice','audioinput'],['outputDevice','audiooutput']]){
+   const s=$(id),prev=s.value;
+   s.replaceChildren(new Option('System default',''));
+   entries.filter(e=>e.kind===kind).forEach((e,i)=>s.add(new Option(e.label||`${kind==='audioinput'?'Microphone':'Output'} ${i+1}`,e.deviceId)));
+   if([...s.options].some(o=>o.value===prev))s.value=prev;
+ }
+}
+$('permissions').onclick=async()=>{try{const stream=await navigator.mediaDevices.getUserMedia({audio:true});await getDevices();stream.getTracks().forEach(t=>t.stop());log('Microphone permission granted; devices refreshed.');}catch(e){log(`Permission/device error: ${e.message}`,true);}};
+navigator.mediaDevices?.addEventListener?.('devicechange',()=>getDevices().catch(()=>{}));
+getDevices().catch(()=>{});
+function settingsRequest(){
+ const c={echoCancellation:$('echo').checked,noiseSuppression:$('noise').checked,autoGainControl:$('agc').checked};
+ if($('mono').checked)c.channelCount={ideal:1};
+ if($('captureLatency').checked && navigator.mediaDevices.getSupportedConstraints?.().latency)c.latency={ideal:0};
+ if($('inputDevice').value)c.deviceId={exact:$('inputDevice').value};
+ return c;
+}
+function updateStatus(text,on=false){$('status').textContent=text;$('statusDot').classList.toggle('on',on);}
+function setButtons(active){$('start').disabled=active;$('stop').disabled=!active;$('record').disabled=!active;for(const id of ['inputDevice','outputDevice','path','echo','noise','agc','mono','captureLatency','latencyHint'])$(id).disabled=active;}
+function statsFor(ctx){const s=ctx?.playbackStats;if(!s)return null;const out={};for(const k of ['underrunCount','underrunDuration','averageLatency','minimumLatency','maximumLatency']){try{if(typeof s[k]==='number')out[k]=s[k];}catch{}}return Object.keys(out).length?out:null;}
+function snapshot(){
+ if(!session){$('diagnostics').textContent='No active audio session.';return null;}
+ const {ctx,stream,source,processor,path,inputLabel,outputLabel,hint}=session;
+ const track=stream.getAudioTracks()[0];const settings=track.getSettings();
+ const base=Number.isFinite(ctx.baseLatency)?ctx.baseLatency*1000:null;
+ const output=Number.isFinite(ctx.outputLatency)?ctx.outputLatency*1000:null;
+ const capture=Number.isFinite(settings.latency)?settings.latency*1000:null;
+ const s={at:new Date().toISOString(),path,devices:{input:inputLabel,output:outputLabel,requestedInputId:$('inputDevice').value||null,requestedOutputId:$('outputDevice').value||null,reportedTrackDeviceId:settings.deviceId||null},audio:{state:ctx.state,contextSampleRate:ctx.sampleRate,latencyHint:hint,baseLatencyMs:base,outputLatencyMs:output,estimatedOutputPathMs:base!==null&&output!==null?base+output:null,captureSettingLatencyMs:capture,trackSettings:settings,playbackStats:statsFor(ctx),quantum:session.quantum,workletMaxDSPus:session.maxUs??null},captureConstraints:settingsRequest(),wasmActive:session.wasmReady===true,client:{userAgent:navigator.userAgent,platform:navigator.platform,visibility:document.visibilityState}};
+ $('base').textContent=ms(base);$('output').textContent=ms(output);$('sum').textContent=ms(s.audio.estimatedOutputPathMs);$('sample').textContent=ctx.sampleRate+' Hz';$('capture').textContent=ms(capture);$('quantum').textContent=Number.isFinite(session.quantum)?`${(session.quantum/ctx.sampleRate*1000).toFixed(2)} ms`:'—';$('rms').textContent=session.lastRms==null?'—':`${fmt(db(session.lastRms),1)} dBFS`;$('state').textContent=ctx.state+(s.audio.playbackStats?.underrunCount!=null?` / ${s.audio.playbackStats.underrunCount}`:'');
+ $('diagnostics').textContent=JSON.stringify(s,null,2);return s;
+}
+async function start(){
+ if(session)return;
+ if(!navigator.mediaDevices?.getUserMedia)throw new Error('Microphone API not available. Use HTTPS or localhost.');
+ let stream=null,ctx=null,url=null;
+ try{
+  const requested=settingsRequest();stream=await navigator.mediaDevices.getUserMedia({audio:requested});
+  const hint=$('latencyHint').value;
+  ctx=new AudioContext({latencyHint:hint==='0.005'?0.005:hint});
+  if($('outputDevice').value){if(typeof ctx.setSinkId==='function')await ctx.setSinkId($('outputDevice').value);else throw new Error('This browser cannot select an audio output. Choose system default or use system sound settings.');}
+  const source=ctx.createMediaStreamSource(stream),path=$('path').value;
+  const inputOption=$('inputDevice').selectedOptions[0];const outputOption=$('outputDevice').selectedOptions[0];
+  const inputLabel=stream.getAudioTracks()[0].label||inputOption?.text||'System default';
+  const outputLabel=outputOption?.text||'System default';
+  // Always start muted. A final native gain stage protects all processing routes.
+  const master=ctx.createGain();master.gain.value=0;
+  let processor=null,worklet=null,nativeDSP=null;
+  if(path==='direct'){source.connect(master);}
+  else if(path==='native'){nativeDSP=ctx.createGain();nativeDSP.gain.value=1;source.connect(nativeDSP);nativeDSP.connect(master);}
+  else{
+   if(!ctx.audioWorklet || !window.AudioWorkletNode)throw new Error('AudioWorklet unsupported in this browser.');
+   url=URL.createObjectURL(new Blob([workletCode],{type:'text/javascript'}));
+   await ctx.audioWorklet.addModule(url);URL.revokeObjectURL(url);url=null;
+   worklet=new AudioWorkletNode(ctx,'lab-dsp',{numberOfInputs:1,numberOfOutputs:1,outputChannelCount:[1],processorOptions:{kind:path==='worklet-wasm'?'wasm':'js'}});
+   worklet.port.onmessage=e=>{
+    const d=e.data;if(!session)return;
+    if(d.type==='telemetry'){
+      session.lastRms=d.rms;session.quantum=d.quantum;
+      if(d.maxUs!=null)session.maxUs=Math.max(session.maxUs??0,d.maxUs); // null = no timer in this worklet (Chrome)
+      chartRms.push({t:Date.now(),db:db(d.rms)});if(chartRms.length>180)chartRms.shift();drawSignal();
+    }else if(d.type==='ready')session.wasmReady=true;
+    else if(d.type==='error'){log('WASM error: '+d.message,true);}
+   };
+   source.connect(worklet);worklet.connect(master);processor=worklet;
+  }
+  master.connect(ctx.destination);
+  await ctx.resume();
+  session={stream,ctx,source,processor,master,path,inputLabel,outputLabel,hint,wasmReady:false,lastRms:null,quantum:null,maxUs:null};
+  if(path==='worklet-wasm'){
+   // The module is real compiled WebAssembly. Transfer buffer once before monitoring is enabled.
+   const bytes=bytesWasm();processor.port.postMessage({type:'wasm',bytes:bytes.buffer},[bytes.buffer]);
+  }
+  currentGain=0;$('gain').value=0;$('gainValue').textContent='0%';chartRms=[];
+  setButtons(true);updateStatus(`Running · ${path} · ${inputLabel} → ${outputLabel} · MUTED`,true);
+  await getDevices().catch(()=>{});
+  snapshot();metricsTimer=setInterval(snapshot,1000);
+  ctx.onstatechange=()=>{if(session?.ctx===ctx){updateStatus(`Audio state: ${ctx.state} · ${path}`,ctx.state==='running');snapshot();}};
+  stream.getAudioTracks()[0].onended=()=>{log('Microphone track ended.',true);stop();};
+  log('Monitoring graph running, muted. Use headphones and raise volume intentionally.');
+ }catch(e){if(url)URL.revokeObjectURL(url);stream?.getTracks().forEach(t=>t.stop());if(ctx)await ctx.close().catch(()=>{});throw e;}
+}
+async function stop(){if(!session)return;const s=session;session=null;clearInterval(metricsTimer);metricsTimer=null;try{s.master.gain.value=0;s.source.disconnect();s.processor?.disconnect();s.master.disconnect();s.stream.getTracks().forEach(t=>t.stop());await s.ctx.close();}catch{}setButtons(false);$('gain').value=0;$('gainValue').textContent='0%';updateStatus('Stopped · ready for next hardware or path test');log('Graph stopped.');}
+$('start').onclick=()=>start().catch(e=>log('Start failed: '+e.message,true));$('stop').onclick=stop;
+$('gain').oninput=()=>{currentGain=Number($('gain').value)/100;$('gainValue').textContent=Math.round(currentGain*100)+'%';if(session){session.master.gain.setTargetAtTime(currentGain,session.ctx.currentTime,0.005);}};
+$('refresh').onclick=()=>snapshot();$('copy').onclick=async()=>{try{await navigator.clipboard.writeText($('diagnostics').textContent);log('Snapshot copied.');}catch(e){log('Clipboard unavailable: '+e.message,true);}};
+function runLabel(r){return `${new Date(r.at).toLocaleTimeString()} · ${r.inputLabel.slice(0,22)} · ${r.path}`;}
+function drawTable(){
+ const body=$('results');body.replaceChildren();$('calRun').replaceChildren(new Option('Choose run',''));
+ if(!results.length){const tr=body.insertRow();const td=tr.insertCell();td.colSpan=14;td.textContent='No runs yet';td.className='muted';}
+ for(const r of results){
+   const tr=body.insertRow();const cells=[new Date(r.at).toLocaleString(),r.inputLabel,r.outputLabel,r.path,r.sampleRate,fmt(r.baseLatencyMs),fmt(r.outputLatencyMs),fmt(r.estimatedOutputPathMs),fmt(r.captureSettingLatencyMs),fmt(r.meanRmsDbfs,1),fmt(r.maxDSPus,1),r.underrunDelta==null?'—':r.underrunDelta,fmt(r.physicalLatencyMs)];
+   for(const c of cells)tr.insertCell().textContent=String(c);
+   const remove=tr.insertCell();const btn=document.createElement('button');btn.textContent='×';btn.title='Remove run';btn.onclick=()=>{results=results.filter(x=>x.id!==r.id);persist();redraw();};remove.append(btn);
+   $('calRun').add(new Option(runLabel(r),r.id));
+ }
+}
+const colors=['#7cf29a','#6ab7ff','#ffb347','#ff5e7a'];
+function prepCanvas(id){const canvas=$(id),rect=canvas.getBoundingClientRect(),dpr=Math.min(devicePixelRatio||1,2);const w=Math.max(250,rect.width),h=250;canvas.width=Math.round(w*dpr);canvas.height=Math.round(h*dpr);const c=canvas.getContext('2d');c.setTransform(dpr,0,0,dpr,0,0);c.clearRect(0,0,w,h);c.font='12px system-ui';return{c,w,h};}
+function drawLatency(){const {c,w,h}=prepCanvas('latencyChart');const data=results.filter(r=>r.estimatedOutputPathMs!=null).slice(-14);const L=40,R=10,T=12,B=78;const plotW=w-L-R,plotH=h-T-B;
+ c.strokeStyle='#2a313b';c.fillStyle='#8a94a3';c.lineWidth=1;
+ if(!data.length){c.fillText('Capture benchmark runs to populate this chart.',15,110);return;}
+ const max=Math.max(5,...data.map(r=>r.estimatedOutputPathMs))*1.18;
+ for(let j=0;j<=4;j++){const y=T+plotH-j*plotH/4;c.beginPath();c.moveTo(L,y);c.lineTo(w-R,y);c.stroke();c.fillText((max*j/4).toFixed(1),2,y+4);}
+ const slot=plotW/data.length,bw=Math.max(5,Math.min(35,slot*.68));
+ data.forEach((r,i)=>{const x=L+slot*i+(slot-bw)/2,barH=plotH*r.estimatedOutputPathMs/max;c.fillStyle=colors[['direct','native','worklet-js','worklet-wasm'].indexOf(r.path)]||colors[0];c.fillRect(x,T+plotH-barH,bw,barH);c.save();c.translate(x+bw/2,T+plotH+7);c.rotate(-Math.PI/3);c.textAlign='right';c.fillStyle='#8a94a3';c.font='10px system-ui';c.fillText(`${r.path} / ${(r.inputLabel||'').slice(0,10)}`,0,0);c.restore();});
+}
+function drawSignal(){const {c,w,h}=prepCanvas('signalChart');const data=chartRms;const L=39,R=8,T=12,B=26,plotW=w-L-R,plotH=h-T-B;
+ c.strokeStyle='#2a313b';c.fillStyle='#8a94a3';
+ for(let j=0;j<=4;j++){const val=-120+j*30,y=T+plotH-j*plotH/4;c.beginPath();c.moveTo(L,y);c.lineTo(w-R,y);c.stroke();c.fillText(String(val),4,y+3);}
+ if(!data.length){c.fillText('AudioWorklet input telemetry appears here.',55,110);return;}
+ c.beginPath();c.strokeStyle='#7cf29a';c.lineWidth=2;
+ data.forEach((d,i)=>{const x=L+(data.length===1?0:i/(data.length-1))*plotW,y=T+plotH-(Math.max(-120,Math.min(0,d.db))+120)/120*plotH;if(i)c.lineTo(x,y);else c.moveTo(x,y);});c.stroke();c.fillStyle='#8a94a3';c.fillText(`${data.length} samples · one per ~second`,L,T+plotH+19);
+}
+function redraw(){drawTable();drawLatency();drawSignal();}
+window.addEventListener('resize',redraw);
+$('record').onclick=async()=>{
+ if(!session)return;
+ const startSession=session,btn=$('record');btn.disabled=true;
+ const initial=snapshot(),initialUnderruns=initial?.audio?.playbackStats?.underrunCount??null;
+ const values=[];const startTime=performance.now();startSession.maxUs=null; // per run, not per session
+ log('Benchmarking 8 seconds; leave the microphone input stable.');
+ const ticker=setInterval(()=>{if(session===startSession && Number.isFinite(session.lastRms))values.push(db(session.lastRms));},500);
+ await new Promise(resolve=>setTimeout(resolve,8000));clearInterval(ticker);
+ if(session!==startSession){log('Benchmark aborted: audio graph stopped.',true);return;}
+ const final=snapshot(),finalUnderruns=final.audio.playbackStats?.underrunCount??null;
+ const r={id:crypto.randomUUID?.()||String(Date.now())+'-'+Math.random(),at:new Date().toISOString(),durationMs:Math.round(performance.now()-startTime),path:session.path,inputLabel:session.inputLabel,outputLabel:session.outputLabel,requestedInputDeviceId:$('inputDevice').value||null,requestedOutputDeviceId:$('outputDevice').value||null,sampleRate:final.audio.contextSampleRate,baseLatencyMs:final.audio.baseLatencyMs,outputLatencyMs:final.audio.outputLatencyMs,estimatedOutputPathMs:final.audio.estimatedOutputPathMs,captureSettingLatencyMs:final.audio.captureSettingLatencyMs,meanRmsDbfs:values.length?values.reduce((a,b)=>a+b,0)/values.length:null,workletQuantumFrames:session.quantum,maxDSPus:session.path.startsWith('worklet')?session.maxUs??null:null,wasmActive:session.wasmReady,underrunDelta:initialUnderruns!=null&&finalUnderruns!=null?finalUnderruns-initialUnderruns:null,physicalLatencyMs:null,trackSettings:final.audio.trackSettings,captureConstraints:final.captureConstraints,latencyHint:session.hint,userAgent:navigator.userAgent,initialDiagnostics:initial,finalDiagnostics:final};
+ results.push(r);persist();redraw();btn.disabled=false;log('8-second benchmark saved.');
+};
+$('saveCal').onclick=()=>{const r=results.find(x=>x.id===$('calRun').value);const value=$('physicalMs').value;if(!r || value==='' || !Number.isFinite(Number(value)) || Number(value)<0){log('Choose a run and enter a nonnegative millisecond measurement.',true);return;}r.physicalLatencyMs=Number(value);persist();redraw();$('calRun').value=r.id;log('Physical measurement saved.');};
+$('calRun').onchange=()=>{const r=results.find(x=>x.id===$('calRun').value);$('physicalMs').value=r?.physicalLatencyMs??'';};
+$('export').onclick=()=>{const json=JSON.stringify(getPayload(),null,2),blob=new Blob([json],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=`audio-latency-lab-${new Date().toISOString().replace(/[:.]/g,'-')}.json`;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),2000);log(`Exported ${results.length} runs to JSON.`);};
+$('clear').onclick=()=>{if(!confirm('Delete all locally saved benchmark runs? Export JSON first if needed.'))return;results=[];persist();redraw();log('Results cleared.');};
+$('pulse').onclick=async()=>{
+ let ctx=session?.ctx||null,temporary=!ctx;
+ try{
+  if(!ctx)ctx=new AudioContext({latencyHint:'interactive'});await ctx.resume();
+  // Reference chirps deliberately do NOT enter the mic-monitoring signal path.
+  const t0=ctx.currentTime+0.15;for(let k=0;k<3;k++){
+   const osc=ctx.createOscillator(),gain=ctx.createGain(),t=t0+k*.65;
+   osc.type='sine';osc.frequency.setValueAtTime(500,t);osc.frequency.exponentialRampToValueAtTime(2800,t+.08);
+   gain.gain.setValueAtTime(0.0001,t);gain.gain.exponentialRampToValueAtTime(0.08,t+.01);gain.gain.exponentialRampToValueAtTime(0.0001,t+.085);
+   osc.connect(gain);gain.connect(ctx.destination);osc.start(t);osc.stop(t+.10);
+  }
+  log('Played 3 short low-level chirps. Not an automatic latency measurement.');
+  if(temporary)setTimeout(()=>ctx.close().catch(()=>{}),2500);
+ }catch(e){log('Chirp failed: '+e.message,true);if(temporary && ctx)ctx.close().catch(()=>{});}
+};
+redraw();
+</script></body></html>
