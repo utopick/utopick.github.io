@@ -2352,6 +2352,13 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
         }
       }
       // opens the chosen input raw (or with the browser's processing when asked), and goes back to the default one if it is unplugged
+      // iPhone and iPad (WebKit) open the built-in microphone whatever was chosen: compare what was asked with what was opened
+      const msOther = (st) => !!(MS.dev && st && st.deviceId && st.deviceId !== MS.dev);
+      const msOtherTxt = "The browser opened a different input than the one chosen (on iPhone and iPad it is always the built-in microphone, and the sound moves to the device while listening: an Apple limitation)";
+      const msCheck = (s) => {
+        if (msOther(s.getAudioTracks()[0] && s.getAudioTracks()[0].getSettings())) toast(msOtherTxt, 6000);
+        return s;
+      };
       const msOpen = (proc = MC.proc) =>
         navigator.mediaDevices
           .getUserMedia({ audio: { echoCancellation: proc, noiseSuppression: proc, autoGainControl: proc, channelCount: { ideal: 2 }, ...(MS.dev ? { deviceId: { exact: MS.dev } } : {}) }, video: false })
@@ -2365,7 +2372,8 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
               return msOpen(proc);
             }
             throw e;
-          });
+          })
+          .then(msCheck);
       // one channel of the input, or all of it
       function msTap(c, src) {
         if (MS.ch === "mix" || (src.channelCount || 1) < 2) return src;
@@ -2384,6 +2392,7 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
           const c = await getCtx();
           MIC.stream = await msOpen();
           await c.resume().catch(() => {}); // the permission prompt can suspend the context
+          c.onstatechange = () => MIC.on && c.state !== "running" && c.state !== "closed" && micAway(); // iOS: "interrupted" after a call or sleep
           // input -> channel -> high-pass -> gain: MIC.src is the end of this chain, so the recording, autotune and the sampler all get the same cleaned voice
           MIC.hp = c.createBiquadFilter();
           MIC.hp.type = "highpass";
@@ -2402,6 +2411,13 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
           micError(e.name || "UNKNOWN");
           return false;
         }
+      }
+      // the system took the microphone (sleep, a call, another app): stop cleanly and say how to resume, instead of a stuck input with a growing delay
+      function micAway() {
+        if (!MIC.on) return;
+        if (REC.on) recStop();
+        micStop();
+        toast("The microphone was paused. Start the exercise or the recording again to resume", 5000);
       }
       function micStop() {
         if (REC.on || (AT && AT.live)) return; // a recording, or live autotune, keeps the mic
@@ -2461,6 +2477,7 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
           yn = (v) => (v === false ? "off" : v === true ? "ON" : "?");
         return [
           ["◉", "Input: " + (rig.track.label || "?")],
+          ...(msOther(st) ? [["✘", msOtherTxt]] : []),
           [st.channelCount >= 2 ? "✔" : "·", `Channels: ${st.channelCount || "?"} · ${Math.round(rig.c.sampleRate)} Hz · reported input latency ${st.latency != null ? Math.round(st.latency * 1000) + " ms" : "?"}`],
           ["i", `Processing now: echo cancel ${yn(st.echoCancellation)}, noise reduction ${yn(st.noiseSuppression)}, auto gain ${yn(st.autoGainControl)}`],
         ];
@@ -5384,7 +5401,11 @@ registerProcessor("autotune", AutoTune);
       });
       // stop everything when the app goes to the background
       document.addEventListener("visibilitychange", () => {
-        if (!document.hidden) return;
+        if (!document.hidden) {
+          if (MIC.away) ((MIC.away = false), toast("The microphone was paused while the app was away. Start again to resume", 5000));
+          return;
+        }
+        if (MIC.on) MIC.away = true;
         if (REC.on && REC.kind === "session") recStop();
         warmStop();
         songStop();
@@ -5998,7 +6019,7 @@ registerProcessor("autotune", AutoTune);
               "## The bottom bar",
               "- **FILES**: open a song, **import** a recording (any audio file), and how much space the app uses.",
               "- **OPTIONS**: **note names** in letters (**A B C**) or solfège (**Do Re Mi**), shared with TRACK.Pocket and TUNE.Pocket; **BACKING IN RECORDINGS** (on: warm-ups and song takes record the piano or the song with your voice, like a performance; off: only your voice); **OCTAVE-FREE** for the pitch test.",
-              "- **OPTIONS → Microphone**: choose the input (a USB interface works too) and its channel, and tune the **gain**, the **gate** (ignores room noise), a **high-pass** (cuts rumble and pops) and your **range** (limits the pitch detector to your voice). **LIVE** shows the level and the note with those settings. **TESTS** measures the noise, your level, pops, range and whether the browser's processing helps, and **AUTO SETUP** runs them all and sets everything. Each input keeps its own settings.",
+              "- **OPTIONS → Microphone**: choose the input (a USB interface works too) and its channel, and tune the **gain**, the **gate** (ignores room noise), a **high-pass** (cuts rumble and pops) and your **range** (limits the pitch detector to your voice). **LIVE** shows the level and the note with those settings. **TESTS** measures the noise, your level, pops, range and whether the browser's processing helps, and **AUTO SETUP** runs them all and sets everything. Each input keeps its own settings. **On iPhone and iPad** the browser (every iOS browser uses Apple's engine) always listens to the built-in microphone, whatever you choose, and moves the sound to the device itself while listening, with a delay of about 80 to 130 ms: an Apple limitation, shown as a warning. Chrome or Firefox on a computer, or Firefox on Android, do better. After sleep or a call the microphone is paused: start again to resume.",
               "- **OPTIONS → Install**: adds SING.Pocket to your home screen or apps, with its own window and working offline. The **INSTALL** button (here and in the welcome note) says **INSTALLED** when you already run it as an app; on iPhone it shows the Safari ▸ Share ▸ Add to Home Screen steps.",
               "- **THEME**: the six looks shared with TRACK.Pocket. On wide screens the backdrop is animated and moves with the song, the piano or your voice.",
               "- **HELP**: this manual.",
@@ -6012,7 +6033,7 @@ registerProcessor("autotune", AutoTune);
               "## La barra inferior",
               "- **FILES**: abrir una canción, **importar** una grabación (cualquier archivo de audio), y cuánto espacio usa la app.",
               "- **OPTIONS**: **nombres de las notas** en letras (**A B C**) o solfeo (**Do Re Mi**), compartido con TRACK.Pocket y TUNE.Pocket; **BACKING IN RECORDINGS** (activado: los calentamientos y tomas de canción graban el piano o la canción junto a tu voz, como una actuación; desactivado: solo tu voz); **OCTAVE-FREE** para la prueba de afinación.",
-              "- **OPTIONS → Microphone**: elige la entrada (una interfaz USB también vale) y su canal, y ajusta la **ganancia**, la **puerta** (ignora el ruido de la sala), un **filtro de graves** (quita retumbos y golpes de aire) y tu **rango** (limita el detector de tono a tu voz). **LIVE** muestra el nivel y la nota con esos ajustes. **TESTS** mide el ruido, tu nivel, los golpes de aire, el rango y si el procesado del navegador ayuda, y **AUTO SETUP** los hace todos y lo configura. Cada entrada guarda sus ajustes.",
+              "- **OPTIONS → Microphone**: elige la entrada (una interfaz USB también vale) y su canal, y ajusta la **ganancia**, la **puerta** (ignora el ruido de la sala), un **filtro de graves** (quita retumbos y golpes de aire) y tu **rango** (limita el detector de tono a tu voz). **LIVE** muestra el nivel y la nota con esos ajustes. **TESTS** mide el ruido, tu nivel, los golpes de aire, el rango y si el procesado del navegador ayuda, y **AUTO SETUP** los hace todos y lo configura. Cada entrada guarda sus ajustes. **En iPhone y iPad** el navegador (todos los de iOS usan el motor de Apple) siempre escucha el micrófono integrado, elijas lo que elijas, y pasa el sonido al propio dispositivo mientras escucha, con un retardo de unos 80 a 130 ms: una limitación de Apple, que se muestra como aviso. Chrome o Firefox en un ordenador, o Firefox en Android, funcionan mejor. Tras dormir o una llamada el micrófono se pausa: empieza de nuevo para reanudar.",
               "- **OPTIONS → Install**: añade SING.Pocket a tu pantalla de inicio o a tus aplicaciones, con su propia ventana y funcionando sin conexión. El botón **INSTALL** (aquí y en la nota de bienvenida) dice **INSTALLED** si ya la usas como app; en iPhone muestra los pasos Safari ▸ Compartir ▸ Añadir a pantalla de inicio.",
               "- **THEME**: los seis aspectos que comparte con TRACK.Pocket. En pantallas anchas el fondo está animado y se mueve con la canción, el piano o tu voz.",
               "- **HELP**: este manual.",
@@ -8924,5 +8945,5 @@ registerProcessor("autotune", AutoTune);
       } catch {}
       if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
     </script>
-  <div style="position:fixed;left:4px;bottom:2px;z-index:99;font:700 9px monospace;opacity:.7;pointer-events:none;color:#ff5e7a">TEST BUILD · mic-setup · 1dd59f0</div></body>
+  <div style="position:fixed;left:4px;bottom:2px;z-index:99;font:700 9px monospace;opacity:.7;pointer-events:none;color:#ff5e7a">TEST BUILD · mic-setup · ef96f1f</div></body>
 </html>
