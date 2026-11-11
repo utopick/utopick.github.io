@@ -27,6 +27,21 @@ Sync exists only in TRACK for now, because it is the only app where devices make
 - **TUNE:** jam in a live loop session with other instruments. The looper of one device feeds the session of the others.
 - The APP QR button follows sync, so it appears in TUNE and SING when they get sync.
 
+## Sharing by QR (and by link)
+
+The pairing by QR opens a way to share small things with no server: a link whose part after the `#` carries the data, shown as a QR that the other device scans with its normal camera. Candidates, all small enough for one QR (about 130 bytes of data), or a few QRs in a row for a bit more:
+- **SING:** a custom vocal exercise, a warm-up set, a song's lyrics with timing.
+- **TRACK:** a pattern, a short song seed for the Variator, a drum kit choice.
+- **TUNE:** a custom tuning, a scale, a chord progression for the JAM band.
+- **Scores** and other short text-like data. Samples and recordings stay for sync, files and links, since they are far too big.
+
+Everything that arrives by a link or a QR is untrusted data, the same as an imported file. The rules for every kind of share:
+- A hard size limit before anything is decoded, and a strict check of every field (types, ranges, lengths), reusing the file checks (`vetSong` and the like).
+- Names and text are escaped, never put into HTML as they come.
+- Nothing is applied until the person taps a clear button that says what it will change, and what it replaces is kept (as with *Before sync*).
+- The link is cleared from the address bar once read, so a reload does not apply it again.
+- Data that could start something on its own (sync invitations) carries a one-time secret and the answer carries a proof of it.
+
 ## TUNE: a PEDAL tab
 
 A digital pedalboard in TUNE: a chain of effects for the microphone or an instrument, with the same look as the rest of the app. Together with the live loop session this makes an old phone a pedalboard and looper for a band.
