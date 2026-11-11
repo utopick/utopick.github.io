@@ -60,7 +60,7 @@ ol{margin:6px 0;padding-left:20px;color:var(--dim)}li{margin:4px 0}
 <section class="panel"><h2>1 · Input and output</h2>
 <div class="buttons"><button id="permissions">ALLOW MIC · REFRESH</button></div>
 <label class="field"><span>Microphone / input device</span><select id="inputDevice"><option value="">System default</option></select></label>
-<label class="field"><span>Input channel (a 2-input interface like the Scarlett Solo: 1 = mic, 2 = instrument)</span><select id="inChannel"><option value="mix">Mix of all channels</option><option value="0">1 · left</option><option value="1">2 · right</option></select></label>
+<label class="field"><span>Input channel (2-input interfaces: on a Scarlett Solo 4th Gen, 1 = instrument jack, 2 = mic)</span><select id="inChannel"><option value="mix">Mix of all channels</option><option value="0">1 · left</option><option value="1">2 · right</option></select></label>
 <label class="field"><span>Output device (when the browser allows it)</span><select id="outputDevice"><option value="">System default</option></select></label>
 <div class="hint" id="sinkSupport">Checking output selection support…</div>
 <h3>Capture</h3>
@@ -92,7 +92,7 @@ ol{margin:6px 0;padding-left:20px;color:var(--dim)}li{margin:4px 0}
 </section>
 
 <section class="panel" id="pedalPanel"><h2>3 · Pedals</h2>
-<p>Choose <strong>Pedalboard</strong> as the processing path, start, put the headphones on and raise the monitor volume. Guitar in the instrument jack: pick its input channel (2 on a Scarlett Solo). Knobs work while playing.</p>
+<p>Choose <strong>Pedalboard</strong> as the processing path, start, put the headphones on and raise the monitor volume. Guitar in the instrument jack: pick its input channel (1 on a Scarlett Solo 4th Gen). Knobs work while playing.</p>
 <div class="pedals">
 <div class="pedal"><header><h3>DRIVE</h3><span class="grow"></span><button id="drvOn" class="on">ON</button></header>
 <label class="knob">Gain <b></b><input type="range" id="drvGain" min="1" max="60" step="1" value="12" data-unit="×"></label>
