@@ -23942,7 +23942,8 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
           progs = st.prog[minor ? "min" : "maj"],
           pv = sr.pick(progs),
           pc = progs.length > 1 ? sr.pick(progs.filter((p) => p !== pv)) : pv,
-          pb = sr.pick(progs.filter((p) => p !== pv && p !== pc).concat(minor ? ["VI VII i i", "iv v VI VII"] : ["IV V iii vi", "vi V IV V"]).filter((p) => VAR.style !== "metal" || /5/.test(p))),
+          pbs = progs.filter((p) => p !== pv && p !== pc).concat(minor ? ["VI VII i i", "iv v VI VII"] : ["IV V iii vi", "vi V IV V"]).filter((p) => VAR.style !== "metal" || /5/.test(p)),
+          pb = sr.pick(pbs.length ? pbs : progs), // metal in a major key has only two power-chord progressions: with none left over the bridge reuses one
           bpm = VAR.bpm || sr.int(st.bpm[0], st.bpm[1]),
           L = 8 + Math.round(K.len * 4),
           insIdx = st.ins.map((n, i) => (VAR.ins[i + 1] != null ? VAR.ins[i + 1] : instByName(n))).concat([DRUM_I, VAR.ins[7] != null ? VAR.ins[7] : instByName(V_COUNTER[VAR.style])]);
@@ -24378,7 +24379,12 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
         saveNow(); // the user's song is safe before autosave pauses
         varAway = { song, pk: S.pk, pat: S.pat, ordSel: S.ordSel, swing: $("#swing").value, col: S.col };
         VAR.low = "pats";
-        song = varBuild();
+        try {
+          song = varBuild();
+        } catch (e) {
+          varAway = null; // the user's song stays where it is, not a half-entered Variator
+          throw e;
+        }
         S.pk = "song";
         S.pat = 0;
         S.ordSel = 0;
@@ -26466,5 +26472,5 @@ ${syN() ? `<button data-ve="back">BACK TO OUR SONG<small>ends the Variator on al
           }).catch(() => {});
       })();
     </script>
-  <div style="position:fixed;left:4px;bottom:2px;z-index:99;font:700 9px monospace;opacity:.7;pointer-events:none;color:#ff5e7a">TEST BUILD · beta · 88400a4</div></body>
+  <div style="position:fixed;left:4px;bottom:2px;z-index:99;font:700 9px monospace;opacity:.7;pointer-events:none;color:#ff5e7a">TEST BUILD · beta · 66e881d</div></body>
 </html>
