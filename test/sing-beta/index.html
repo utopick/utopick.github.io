@@ -15,8 +15,9 @@
               vox sampler, plane game, history), backdrop, help, boot
 
   Storage
+    localStorage  sing.mic  { dev, ch, cfg: { <input id or "default">: { gain, gate, hp, lo, hi, proc } } }
     localStorage  sing.theme, sing.lang, sing.welcome, sing.state { view, voice, ex, bpm, updown, listen, key,
-                  tempo, octFree, backing, notes, song, at, range, ranges, kar, vx, game, gameBest }
+                  tempo, octFree, backing, notes, song, at, range, ranges, airs, kar, vx, game, gameBest }
                   sing.log      the practice history [{ d, k, s, sc, n }]
     IndexedDB     "sing-pocket": songs { id, name, artist, title, blob, lyrics, lyrOff, ref, refHop, guide }
                                  takes { id, kind, name, date, blob, mime, dur, song, key, tempo, pitch, score, segs }
@@ -982,6 +983,53 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
       #atLane {
         min-height: 150px;
       }
+      #aiLane {
+        min-height: 90px;
+      }
+      #aiWvLane {
+        min-height: 70px;
+        flex: none;
+      }
+      #air .rgNote,
+      #air .rgRes,
+      #air .hint {
+        flex: none;
+      }
+      #air .hint {
+        padding: 0 4px;
+        min-height: 3.6em;
+      }
+      #aiSvg {
+        flex: 1 1 0;
+        min-height: 120px;
+        width: 100%;
+      }
+      #aiSvg path,
+      #aiSvg rect {
+        fill: none;
+        stroke: var(--text);
+        stroke-width: 1.4;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+      #aiSvg .tg {
+        stroke: var(--acc);
+        stroke-width: 2.2;
+      }
+      #aiSvg .fl {
+        stroke: var(--acc2);
+        stroke-dasharray: 3 3;
+        stroke-width: 1.6;
+      }
+      #aiSvg .ft {
+        stroke: var(--dim);
+        stroke-width: 0.8;
+        stroke-dasharray: 1 2;
+      }
+      #aiSvg text {
+        fill: var(--dim);
+        font: 700 6.5px var(--mono);
+      }
       #at .hint {
         flex: none;
         padding: 0 4px;
@@ -1471,6 +1519,8 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
           <svg class="ic" viewBox="0 0 24 24"><path d="M9 18V5l11-2v13" /><circle cx="6" cy="18" r="3" /><circle cx="17" cy="16" r="3" /></svg></button
         ><button data-v="range" title="Range finder">
           <svg class="ic" viewBox="0 0 24 24"><path d="M12 3v18M8 7l4-4 4 4M8 17l4 4 4-4" /><path d="M4 12h3M17 12h3" /></svg></button
+        ><button data-v="air" title="Air: how clean or breathy your tone is, and the mouth and throat shapes">
+          <svg class="ic" viewBox="0 0 24 24"><path d="M3 9h10a3 3 0 1 0-3-3M3 14h14a3 3 0 1 1-3 3M3 19h6" /></svg></button
         ><button data-v="at" title="Autotune: live, and tuned copies of recordings">
           <svg class="ic" viewBox="0 0 24 24"><path d="M3 17h4v-4h4V9h4v4h6" /><circle cx="19" cy="6" r="2" /></svg></button
         ><button data-v="vox" title="Sampler: vocal samples">
@@ -1560,6 +1610,21 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
         <div class="prow rib">
           <button id="rgGo"></button><button id="rgMine"></button><button id="rgType"></button><button id="rgWarm"></button><button id="rgGame"></button>
         </div>
+      </section>
+
+      <!-- AIR: the share of clean and breathy tone, live and as a summary; the mouth and throat shapes beside it -->
+      <section id="air">
+        <div class="prow">
+          <div class="dd inf"><span id="aiNow"></span></div>
+        </div>
+        <div class="lane" id="aiWvLane" title="The sound you sang, coloured like the trace below: clean, mixed or airy"><canvas id="aiWv"></canvas></div>
+        <div class="lane" id="aiLane"><canvas id="aiCv"></canvas></div>
+        <div class="rgNote"><b id="aiNote">—</b><i><b id="aiBar"></b></i></div>
+        <div class="rgRes" id="aiRes"></div>
+        <svg id="aiSvg" viewBox="0 0 200 200" role="img" aria-label="Side view of the mouth and throat"></svg>
+        <div class="hint" id="aiTip"></div>
+        <div class="prow rib" id="aiShapes"></div>
+        <div class="prow rib"><button id="aiGo"></button></div>
       </section>
 
       <!-- AUTOTUNE: the key and style, LIVE through headphones with its trace, and tuned copies of recordings -->
@@ -1684,6 +1749,32 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
             A MIDI keyboard plays reference notes to sing to (<b>SOUND</b> turns them off, for keyboards with their own speakers); in SAMPLER it plays the selected pad at the key's pitch;
             in the exercise editor it writes or records the notes. <b>ASSIGN</b> ties pads, buttons and knobs to the
             sampler pads, START of the warm-up and the plane, and the next exercise. Chrome, Edge or Firefox; not Safari.
+          </div>
+          <h3 style="margin-top: 12px">Microphone</h3>
+          <div class="row"><select id="msDev" title="Which microphone or audio input to sing into" style="flex: 1"></select></div>
+          <div class="row">
+            <select id="msCh" title="Which channel of the input to use" style="flex: 1"><option value="mix">Both channels</option><option value="L">Left (input 1)</option><option value="R">Right (input 2)</option></select>
+            <select id="msProc" title="The browser's own echo cancelling, noise reduction and auto gain" style="flex: 1"><option value="0">Raw (recommended)</option><option value="1">Browser processing</option></select>
+          </div>
+          <div class="row msr"><span>GAIN</span><input id="msGain" type="range" min="-12" max="18" step="0.5" title="Boost or cut what the app hears (not the system volume)" /><b id="msGainV"></b></div>
+          <div class="row msr"><span>GATE</span><input id="msGate" type="range" min="-60" max="-20" step="1" title="Sounds quieter than this are ignored (room noise)" /><b id="msGateV"></b></div>
+          <div class="row">
+            <select id="msHp" title="Cuts rumble and breath pops below this pitch" style="flex: 1"><option value="0">High-pass off</option><option value="60">High-pass 60 Hz</option><option value="80">High-pass 80 Hz</option><option value="100">High-pass 100 Hz</option><option value="150">High-pass 150 Hz</option><option value="200">High-pass 200 Hz</option></select>
+            <select id="msLo" title="The lowest note your voice reaches" style="flex: 1"></select><select id="msHi" title="The highest note your voice reaches" style="flex: 1"></select>
+          </div>
+          <div class="row">
+            <button id="msLive" title="Open the microphone with these settings and watch the level and the note" style="flex: 1">LIVE</button>
+            <button id="msTests" title="Guided tests (noise, level, pops, range, processing) and AUTO SETUP" style="flex: 1">TESTS</button>
+            <button id="msReset" title="Back to the default settings for this microphone" style="flex: 1">RESET</button>
+          </div>
+          <div id="msBox" hidden>
+            <div style="height: 14px; border: 1px solid var(--line); border-radius: 7px; overflow: hidden"><i id="msLvl" style="display: block; height: 100%; width: 0; background: var(--acc)"></i></div>
+            <div id="msNote" style="font: 900 28px/1.3 var(--mono); text-align: center">--</div>
+          </div>
+          <div class="hint">
+            Pick the input, then LIVE to watch it. <b>TESTS</b> measures the noise, your level, breath pops, your range and whether the browser's
+            processing helps, and <b>AUTO SETUP</b> does all of it and sets gain, gate, high-pass and range for this microphone. The settings are kept per input.
+            The range limits the pitch detector to your voice, which avoids octave jumps.
           </div>
           <h3 style="margin-top: 12px">Pitch test</h3>
           <div class="row">
@@ -2218,6 +2309,7 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
         range: null, // [low, high] MIDI from the range finder
         kar: false, // karaoke: the song's centre (the voice) taken out
         ranges: [], // the range measures, [{ d, lo, hi }], the last 12
+        airs: [], // the air measures, [{ d, c, m, a }] percent of clean, mixed and airy tone, the last 12
         vx: { count: true, mon: true }, // vox: a count-in before recording; mon = hear the sample while recording a layer over it
         game: { lvl: "easy", ex: "five", cue: "phrase" }, // plane: level, the exercise the hoops follow, the cue before each round (as wcue)
         gameBest: {}, // plane: best score per level
@@ -2249,8 +2341,8 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
         cueNext = (c) => CUES[(CUES.indexOf(c) + 1) % CUES.length];
       function saveState() {
         try {
-          const { view, voice, ex, bpm, updown, listen, key, tempo, octFree, backing, notes, wcue, cex, song, at, range, kar, ranges, vx, game, gameBest } = S;
-          localStorage.setItem("sing-test.state", JSON.stringify({ view, voice, ex, bpm, updown, listen, key, tempo, octFree, backing, notes, wcue, cex, song, at, range, kar, ranges, vx, game, gameBest }));
+          const { view, voice, ex, bpm, updown, listen, key, tempo, octFree, backing, notes, wcue, cex, song, at, range, kar, ranges, airs, vx, game, gameBest } = S;
+          localStorage.setItem("sing-test.state", JSON.stringify({ view, voice, ex, bpm, updown, listen, key, tempo, octFree, backing, notes, wcue, cex, song, at, range, kar, ranges, airs, vx, game, gameBest }));
         } catch {}
       }
       let dbP;
@@ -2311,18 +2403,87 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
         }
       }
 
+      // ---- microphone settings, kept per input device: the app's gain, gate, high-pass and voice range, and the browser's processing
+      const MS = (() => {
+        let o = {};
+        try {
+          o = JSON.parse(localStorage.getItem("sing-test.mic")) || {};
+        } catch {}
+        return { dev: typeof o.dev === "string" ? o.dev : "", ch: ["mix", "L", "R"].includes(o.ch) ? o.ch : "mix", cfg: o.cfg && typeof o.cfg === "object" ? o.cfg : {} };
+      })();
+      const MD = { gain: 1, gate: 0.008, hp: 0, lo: 36, hi: 88, proc: false }; // C2 to E6, as the detector always did
+      const clampN = (v, a, b, d) => (Number.isFinite(+v) ? Math.min(b, Math.max(a, +v)) : d);
+      const msCfg = () => {
+        const c = MS.cfg[MS.dev || "default"] || {};
+        return { gain: clampN(c.gain, 0.1, 16, MD.gain), gate: clampN(c.gate, 0.001, 0.1, MD.gate), hp: [0, 60, 80, 100, 150, 200].includes(c.hp) ? c.hp : 0, lo: Math.round(clampN(c.lo, 21, 70, MD.lo)), hi: Math.round(clampN(c.hi, 55, 100, MD.hi)), proc: c.proc === true };
+      };
+      let MC = msCfg();
+      const msSave = () => localStorage.setItem("sing-test.mic", JSON.stringify(MS));
+      function msSet(o) {
+        MS.cfg[MS.dev || "default"] = { ...msCfg(), ...o };
+        MC = msCfg();
+        msSave();
+        msApply();
+        msFace();
+      }
+      // the app's gain and high-pass follow the sliders while the microphone is open
+      function msApply() {
+        if (MIC.gn && ctx) {
+          MIC.gn.gain.setTargetAtTime(MC.gain, ctx.currentTime, 0.02);
+          MIC.hp.frequency.setTargetAtTime(MC.hp || 5, ctx.currentTime, 0.02);
+        }
+      }
+      // opens the chosen input raw (or with the browser's processing when asked), and goes back to the default one if it is unplugged
+      // iPhone and iPad (WebKit) open the built-in microphone whatever was chosen: compare what was asked with what was opened
+      const msOther = (st) => !!(MS.dev && st && st.deviceId && st.deviceId !== MS.dev);
+      const msOtherTxt = "The browser opened a different input than the one chosen (on iPhone and iPad it is always the built-in microphone, and the sound moves to the device while listening: an Apple limitation)";
+      const msCheck = (s) => {
+        if (msOther(s.getAudioTracks()[0] && s.getAudioTracks()[0].getSettings())) toast(msOtherTxt, 6000);
+        return s;
+      };
+      const msOpen = (proc = MC.proc) =>
+        navigator.mediaDevices
+          .getUserMedia({ audio: { echoCancellation: proc, noiseSuppression: proc, autoGainControl: proc, channelCount: { ideal: 2 }, ...(MS.dev ? { deviceId: { exact: MS.dev } } : {}) }, video: false })
+          .catch((e) => {
+            if (MS.dev && (e.name === "OverconstrainedError" || e.name === "NotFoundError")) {
+              MS.dev = "";
+              MC = msCfg();
+              msSave();
+              msFace();
+              toast("That input is not connected. Using the default one.");
+              return msOpen(proc);
+            }
+            throw e;
+          })
+          .then(msCheck);
+      // one channel of the input, or all of it
+      function msTap(c, src) {
+        if (MS.ch === "mix" || (src.channelCount || 1) < 2) return src;
+        const sp = c.createChannelSplitter(2),
+          g = c.createGain();
+        src.connect(sp);
+        sp.connect(g, MS.ch === "R" ? 1 : 0);
+        return g;
+      }
+
       const MIC = { on: false, stream: null, src: null, an: null, buf: new Float32Array(4096) };
       async function micStart() {
         if (MIC.on) return true;
         if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return micError("NO_API"), false;
         try {
           const c = await getCtx();
-          MIC.stream = await navigator.mediaDevices.getUserMedia({
-            audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false },
-            video: false,
-          });
+          MIC.stream = await msOpen();
           await c.resume().catch(() => {}); // the permission prompt can suspend the context
-          MIC.src = c.createMediaStreamSource(MIC.stream);
+          c.onstatechange = () => MIC.on && c.state !== "running" && c.state !== "closed" && micAway(); // iOS: "interrupted" after a call or sleep
+          // input -> channel -> high-pass -> gain: MIC.src is the end of this chain, so the recording, autotune and the sampler all get the same cleaned voice
+          MIC.hp = c.createBiquadFilter();
+          MIC.hp.type = "highpass";
+          MIC.hp.Q.value = 0.707;
+          MIC.gn = c.createGain();
+          msTap(c, c.createMediaStreamSource(MIC.stream)).connect(MIC.hp);
+          MIC.hp.connect(MIC.gn);
+          MIC.src = MIC.gn;
+          msApply();
           MIC.an = c.createAnalyser();
           MIC.an.fftSize = 4096;
           MIC.src.connect(MIC.an);
@@ -2333,11 +2494,18 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
           return false;
         }
       }
+      // the system took the microphone (sleep, a call, another app): stop cleanly and say how to resume, instead of a stuck input with a growing delay
+      function micAway() {
+        if (!MIC.on) return;
+        if (REC.on) recStop();
+        micStop();
+        toast("The microphone was paused. Start the exercise or the recording again to resume", 5000);
+      }
       function micStop() {
         if (REC.on || (AT && AT.live)) return; // a recording, or live autotune, keeps the mic
         MIC.on = false;
         if (MIC.stream) MIC.stream.getTracks().forEach((t) => t.stop());
-        MIC.stream = MIC.src = MIC.an = null;
+        MIC.stream = MIC.src = MIC.an = MIC.hp = MIC.gn = null;
       }
       function micError(code) {
         const m = {
@@ -2348,12 +2516,354 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
         };
         toast(m[code] || "Could not open the microphone (" + code + ")", 3500);
       }
+      // ---- MIC TESTS: guided checks like the MIDI TEST, a report to copy, and AUTO SETUP that sets the parameters from them
+      const AR = { rows: {}, res: {}, busy: false },
+        arCh = ["left", "right"],
+        arSleep = (ms) => new Promise((r) => setTimeout(r, ms)),
+        arDb = (x) => (x > 1e-6 ? Math.round(20 * Math.log10(x)) : -120),
+        rmsOf = (b) => Math.sqrt(b.reduce((a, v) => a + v * v, 0) / b.length),
+        pkOf = (b) => b.reduce((a, v) => Math.max(a, Math.abs(v)), 0);
+      async function arRig(proc) {
+        const c = await getCtx(),
+          stream = await msOpen(proc);
+        c.resume().catch(() => {});
+        const src = c.createMediaStreamSource(stream),
+          sp = c.createChannelSplitter(2),
+          lp = c.createBiquadFilter(),
+          an = [0, 1, 2].map(() => {
+            const a = c.createAnalyser();
+            a.fftSize = 4096;
+            return a;
+          });
+        lp.type = "lowpass";
+        lp.frequency.value = 120;
+        src.connect(sp);
+        sp.connect(an[0], 0);
+        sp.connect(an[1], 1);
+        sp.connect(lp, MS.ch === "R" ? 1 : 0);
+        lp.connect(an[2]);
+        return { c, an, track: stream.getAudioTracks()[0], close: () => stream.getTracks().forEach((t) => t.stop()), bufs: [0, 1, 2].map(() => new Float32Array(4096)) };
+      }
+      // calls onWin with the three buffers (left, right, the low band of the chosen channel) every 60 ms
+      async function arRun(rig, ms, tick, onWin) {
+        const t0 = performance.now();
+        while (performance.now() - t0 < ms) {
+          await arSleep(60);
+          tick(Math.ceil((ms - (performance.now() - t0)) / 1000));
+          rig.an.forEach((a, k) => a.getFloatTimeDomainData(rig.bufs[k]));
+          onWin(rig.bufs);
+        }
+      }
+      const arInfo = (rig) => {
+        const st = rig.track.getSettings(),
+          yn = (v) => (v === false ? "off" : v === true ? "ON" : "?");
+        return [
+          ["◉", "Input: " + (rig.track.label || "?")],
+          ...(msOther(st) ? [["✘", msOtherTxt]] : []),
+          [st.channelCount >= 2 ? "✔" : "·", `Channels: ${st.channelCount || "?"} · ${Math.round(rig.c.sampleRate)} Hz · reported input latency ${st.latency != null ? Math.round(st.latency * 1000) + " ms" : "?"}`],
+          ["i", `Processing now: echo cancel ${yn(st.echoCancellation)}, noise reduction ${yn(st.noiseSuppression)}, auto gain ${yn(st.autoGainControl)}`],
+        ];
+      };
+      const arLead = async (say, t) => (say(t), arSleep(1500));
+      async function arNoise(say) {
+        const rig = await arRig(),
+          o = { rms: [0, 0], dc: [0, 0], low: 0, n: 0 };
+        try {
+          await arLead(say, "Silence: stay quiet and keep the room quiet");
+          await arRun(rig, 2000, (n) => say("Silence: stay quiet · " + n), (b) => {
+            o.n++;
+            [0, 1].forEach((k) => {
+              o.rms[k] += rmsOf(b[k]);
+              o.dc[k] += Math.abs(b[k].reduce((a, v) => a + v, 0) / b[k].length);
+            });
+            o.low += rmsOf(b[2]);
+          });
+          o.rms = o.rms.map((v) => v / o.n);
+          o.dc = o.dc.map((v) => v / o.n);
+          o.low /= o.n;
+          AR.res.noise = o;
+          AR.rows.noise = [
+            ...arInfo(rig),
+            ...[0, 1].map((k) => {
+              const d = arDb(o.rms[k]);
+              return [d <= -60 ? "✔" : d <= -45 ? "·" : "✘", `Noise floor ${arCh[k]}: ${d} dBFS` + (d <= -60 ? " (quiet)" : d <= -45 ? " (some noise)" : " (noisy: a quieter room or a closer mic)") + (o.dc[k] > 0.02 ? ` · DC offset ${arDb(o.dc[k])} dB` : "")];
+            }),
+            [o.low > 0.01 ? "·" : "✔", `Rumble below 120 Hz: ${arDb(o.low)} dBFS` + (o.low > 0.01 ? " (a high-pass will help)" : "")],
+          ];
+        } finally {
+          rig.close();
+        }
+      }
+      async function arVoice(say) {
+        const rig = await arRig(),
+          nz = AR.res.noise ? AR.res.noise.rms : [0.002, 0.002],
+          o = { rms: [0, 0], pk: [0, 0], v: [0, 0], n: 0 };
+        try {
+          await arLead(say, "Voice: sing a steady, loud 'aaah' at your normal distance");
+          await arRun(rig, 5000, (n) => say("Voice: keep singing 'aaah' · " + n), (b) => {
+            o.n++;
+            [0, 1].forEach((k) => {
+              const r = rmsOf(b[k]);
+              o.pk[k] = Math.max(o.pk[k], pkOf(b[k]));
+              if (r > Math.max(0.006, nz[k] * 4)) (o.rms[k] += r), o.v[k]++;
+            });
+          });
+          const k = o.v[1] > o.v[0] ? 1 : 0;
+          if (o.v[k] < 5) {
+            AR.res.voice = null;
+            AR.rows.voice = [["✘", "Voice: almost nothing heard. Is the right microphone chosen, and is it unmuted?"]];
+            return;
+          }
+          const rms = o.rms[k] / o.v[k],
+            pk = o.pk[k];
+          AR.res.voice = { ch: k, rms, pk };
+          AR.rows.voice = [
+            ["✔", `Voice on the ${arCh[k]} channel: average ${arDb(rms)} dBFS, peak ${arDb(pk)} dBFS`],
+            [pk >= 0.99 ? "✘" : arDb(pk) < -24 ? "·" : "✔", pk >= 0.99 ? "Clipping: lower the microphone volume in the system, or sing further from it" : arDb(pk) < -24 ? "Quiet: AUTO SETUP will add gain" : "Good level"],
+          ];
+        } finally {
+          rig.close();
+        }
+      }
+      async function arPops(say) {
+        const rig = await arRig(),
+          o = { low: 0, pk: 0 };
+        try {
+          await arLead(say, "Pops: say 'pa pa pa pa' close to the microphone, like a plosive");
+          await arRun(rig, 4000, (n) => say("Pops: keep saying 'pa pa pa' · " + n), (b) => ((o.low = Math.max(o.low, pkOf(b[2]))), (o.pk = Math.max(o.pk, pkOf(b[0]), pkOf(b[1])))));
+          AR.res.pops = o;
+          AR.rows.pops = [[o.low > 0.25 ? "·" : "✔", `Low-frequency bursts: ${arDb(o.low)} dBFS (loudest below 120 Hz) against ${arDb(o.pk)} dBFS overall` + (o.low > 0.25 ? ". Strong pops: a higher high-pass helps, or sing a bit to the side of the mic" : ". Few pops")]];
+        } finally {
+          rig.close();
+        }
+      }
+      // the lowest and highest steady notes: a note counts when it stays within a semitone for 300 ms
+      async function arRange(say) {
+        const rig = await arRig(),
+          nz = AR.res.noise ? Math.max(...AR.res.noise.rms) : 0.002,
+          stable = [];
+        let run = [];
+        const end = () => (run.length >= 5 && stable.push(run.slice().sort((a, b) => a - b)[run.length >> 1]), (run = []));
+        try {
+          await arLead(say, "Range: sing a note, slide down to your lowest, then up to your highest");
+          await arRun(rig, 12000, (n) => say("Range: lowest note, then highest note · " + n), (b) => {
+            const k = rmsOf(b[1]) > rmsOf(b[0]) ? 1 : 0,
+              d = detectPitch(b[k], rig.c.sampleRate, 40, 1800, b[k].length, Math.max(0.005, nz * 3)),
+              m = d.hz > 0 ? hzToMidi(d.hz) : NaN;
+            if (!(m >= 0)) return end();
+            if (run.length && Math.abs(m - run[run.length - 1]) > 1) end();
+            run.push(m);
+          });
+          end();
+          if (stable.length < 2) {
+            AR.res.range = null;
+            AR.rows.range = [["✘", "Range: too few steady notes heard. Hold each note a little longer, closer to the microphone"]];
+            return;
+          }
+          const lo = Math.min(...stable),
+            hi = Math.max(...stable);
+          AR.res.range = { lo, hi };
+          AR.rows.range = [["✔", `Your range: ${noteName(Math.round(lo))} (${midiToHz(lo).toFixed(0)} Hz) to ${noteName(Math.round(hi))} (${midiToHz(hi).toFixed(0)} Hz), ${((hi - lo) / 12).toFixed(1)} octaves`]];
+        } finally {
+          rig.close();
+        }
+      }
+      // the same steady note twice, raw and with the browser's processing: which gives the steadier pitch?
+      async function arProc(say) {
+        const nz = AR.res.noise ? Math.max(...AR.res.noise.rms) : 0.002,
+          sc = {};
+        for (const proc of [false, true]) {
+          const rig = await arRig(proc),
+            hz = [];
+          let n = 0;
+          try {
+            await arLead(say, `Processing ${proc ? "ON" : "OFF"}: sing one steady note`);
+            await arRun(rig, 4000, (t) => say(`Processing ${proc ? "ON" : "OFF"}: sing one steady note · ${t}`), (b) => {
+              n++;
+              const k = rmsOf(b[1]) > rmsOf(b[0]) ? 1 : 0,
+                d = detectPitch(b[k], rig.c.sampleRate, 60, 1400, b[k].length, Math.max(0.005, nz * 3));
+              if (d.hz > 0) hz.push(d.hz);
+            });
+          } finally {
+            rig.close();
+          }
+          if (hz.length < 5) sc[proc] = 0;
+          else {
+            const med = hz.slice().sort((a, b) => a - b)[hz.length >> 1],
+              dev = hz.map((h) => Math.abs(1200 * Math.log2(h / med))).sort((a, b) => a - b)[hz.length >> 1];
+            sc[proc] = (hz.length / n) / (1 + dev / 20);
+          }
+        }
+        AR.res.proc = sc;
+        const on = sc.true > sc.false * 1.15 && sc.true > 0.2;
+        AR.rows.proc = [[sc.false || sc.true ? "✔" : "✘", `Steadiness score: raw ${sc.false.toFixed(2)}, browser processing ${sc.true.toFixed(2)}. ` + (sc.false || sc.true ? (on ? "Processing helps this microphone" : "Raw is as good or better") : "Not enough notes heard")]];
+      }
+      // what the results suggest; each parameter is only set when its test was run
+      function arPlan() {
+        const R = AR.res,
+          cfg = {},
+          why = [],
+          k = R.voice ? R.voice.ch : 0,
+          nz = R.noise ? R.noise.rms[k] : 0.002;
+        let g = MC.gain;
+        if (R.voice) {
+          g = Math.min(8, Math.max(0.5, 0.5 / R.voice.pk)); // the loudest note lands near half scale
+          cfg.gain = Math.round(Math.pow(10, Math.round(20 * Math.log10(g) * 2) / 2 / 20) * 100) / 100;
+          g = cfg.gain;
+          why.push(`gain ${(20 * Math.log10(g)).toFixed(1)} dB`);
+        }
+        if (R.noise || R.voice) {
+          let gt = Math.min(0.03, Math.max(0.004, 3 * nz * g));
+          if (R.voice) gt = Math.min(gt, 0.3 * R.voice.rms * g);
+          cfg.gate = Math.max(0.002, +gt.toFixed(4));
+          why.push(`gate ${arDb(cfg.gate)} dB`);
+        }
+        if (R.noise || R.pops) {
+          cfg.hp = R.pops && R.pops.low > 0.25 ? 120 : R.noise && R.noise.low > 0.01 ? 100 : 80;
+          cfg.hp = [60, 80, 100, 150, 200].reduce((a, b) => (Math.abs(b - cfg.hp) < Math.abs(a - cfg.hp) ? b : a));
+          why.push(`high-pass ${cfg.hp} Hz`);
+        }
+        if (R.range) {
+          cfg.lo = Math.max(21, Math.floor(R.range.lo - 3));
+          cfg.hi = Math.min(100, Math.max(cfg.lo + 24, Math.ceil(R.range.hi + 3)));
+          why.push(`range ${noteName(cfg.lo)} to ${noteName(cfg.hi)}`);
+        }
+        if (R.proc) {
+          cfg.proc = R.proc.true > R.proc.false * 1.15 && R.proc.true > 0.2;
+          why.push("processing " + (cfg.proc ? "on" : "off"));
+        }
+        return { cfg, why };
+      }
+      const AR_STEPS = { noise: ["1 SILENCE", arNoise, "Silence"], voice: ["2 VOICE", arVoice, "Voice"], pops: ["3 POPS", arPops, "Pops"], range: ["4 RANGE", arRange, "Range"], proc: ["5 PROCESS", arProc, "Processing"] };
+      function arRows() {
+        const rows = Object.entries(AR_STEPS).flatMap(([k, v]) => AR.rows[k] || [["·", v[2] + ": not run yet"]]);
+        if (AR.applied) rows.push(["◉", "Set for this microphone: " + AR.applied]);
+        return rows;
+      }
+      function arApply() {
+        const { cfg, why } = arPlan();
+        if (!why.length) return toast("Run a test first");
+        msSet(cfg);
+        AR.applied = why.join(", ");
+        toast("Settings applied");
+      }
+      function arFace() {
+        let el = document.getElementById("miLearn");
+        if (!el) {
+          el = document.createElement("div");
+          el.id = "miLearn";
+          document.body.appendChild(el);
+          el.innerHTML = `<div class="mlBox mtBox"><i>MICROPHONE TESTS</i><p id="arSay"></p><ul></ul><div class="mlB">${Object.entries(AR_STEPS).map(([k, v]) => `<button data-ar="${k}" title="Run this test">${v[0]}</button>`).join("")}<button data-ar="auto" class="on" title="Run all the tests, then set the parameters from them">AUTO SETUP</button><button data-ar="apply" title="Set the parameters from the tests already run">APPLY</button><button data-ar="copy" title="Copy the report as text">COPY REPORT</button><button data-ar="done">DONE</button></div></div>`;
+          el.onclick = async (e) => {
+            const b = e.target.closest("[data-ar]");
+            if (!b || (AR.busy && b.dataset.ar !== "done")) return;
+            const k = b.dataset.ar,
+              say = (t) => (el.querySelector("#arSay").textContent = t);
+            if (k === "done") return el.remove();
+            if (k === "apply") return arApply(), arFace();
+            if (k === "copy") {
+              const t = ["SING.Pocket microphone report", navigator.userAgent, `input: ${MS.dev ? "chosen device" : "default"}, channel ${MS.ch}`, "settings: " + JSON.stringify(MC), ...arRows().map(([a, x]) => a + " " + x)].join("\n");
+              return (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(() => toast("Report copied: paste it in a message"), () => toast("Could not copy here"));
+            }
+            AR.busy = true;
+            el.classList.add("busy");
+            if (MIC.on && !REC.on) micStop();
+            if (LV.on) await msLiveStop();
+            try {
+              for (const key of k === "auto" ? Object.keys(AR_STEPS) : [k]) {
+                try {
+                  await AR_STEPS[key][1](say);
+                } catch (err) {
+                  AR.rows[key] = [["✘", AR_STEPS[key][2] + " failed: " + (err.name || err.message || "unknown")]];
+                  AR.res[key] = null;
+                }
+                el.querySelector("ul").innerHTML = arList();
+              }
+              if (k === "auto") arApply();
+              say("Done.");
+            } finally {
+              AR.busy = false;
+              el.classList.remove("busy");
+              arFace();
+            }
+          };
+        }
+        el.querySelector("ul").innerHTML = arList();
+      }
+      const arList = () => arRows().map(([a, b]) => `<li class="${a === "✔" ? "ok" : a === "i" ? "inf" : ""}"><b>${a}</b>${esc(b)}</li>`).join("");
+      // LIVE: the real chain with the current settings
+      const LV = { on: false, raf: 0 };
+      async function msLiveStop() {
+        LV.on = false;
+        cancelAnimationFrame(LV.raf);
+        $("#msLive").classList.remove("on");
+        $("#msLive").textContent = "LIVE";
+        micStop();
+      }
+      async function msLive() {
+        if (LV.on) return msLiveStop();
+        if (!(await micStart())) return;
+        LV.on = true;
+        $("#msLive").classList.add("on");
+        $("#msLive").textContent = "STOP";
+        $("#msBox").hidden = false;
+        msList();
+        const buf = new Float32Array(4096),
+          loop = () => {
+            if (!LV.on || !MIC.an) return;
+            MIC.an.getFloatTimeDomainData(buf);
+            const pk = pkOf(buf),
+              v = voiceNow();
+            $("#msLvl").style.width = Math.min(100, Math.round(Math.sqrt(pk) * 100)) + "%";
+            $("#msLvl").style.background = pk > 0.97 ? "var(--bad, #e55)" : "var(--acc)";
+            $("#msNote").textContent = v.m === v.m ? noteName(Math.round(v.m)) : pk > 0.97 ? "TOO LOUD" : "--";
+            LV.raf = requestAnimationFrame(loop);
+          };
+        loop();
+      }
+      async function msList() {
+        if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) return;
+        const ds = (await navigator.mediaDevices.enumerateDevices()).filter((d) => d.kind === "audioinput" && d.deviceId && d.deviceId !== "default");
+        $("#msDev").innerHTML = '<option value="">Default microphone</option>' + ds.map((d, i) => `<option value="${esc(d.deviceId)}">${esc(d.label || "Input " + (i + 1))}</option>`).join("");
+        msFace();
+      }
+      function msFace() {
+        $("#msDev").value = MS.dev;
+        if ($("#msDev").value !== MS.dev) $("#msDev").value = "";
+        $("#msCh").value = MS.ch;
+        $("#msProc").value = MC.proc ? "1" : "0";
+        $("#msGain").value = Math.round(20 * Math.log10(MC.gain) * 2) / 2;
+        $("#msGainV").textContent = (20 * Math.log10(MC.gain)).toFixed(1) + " dB";
+        $("#msGate").value = arDb(MC.gate);
+        $("#msGateV").textContent = arDb(MC.gate) + " dB";
+        $("#msHp").value = String(MC.hp);
+        $("#msLo").value = MC.lo;
+        $("#msHi").value = MC.hi;
+      }
+      {
+        const opts = Array.from({ length: 80 }, (_, i) => i + 21).map((m) => `<option value="${m}">${noteName(m)}</option>`).join("");
+        $("#msLo").innerHTML = $("#msHi").innerHTML = opts;
+        $("#msDev").onchange = () => ((MS.dev = $("#msDev").value), (MC = msCfg()), msSave(), msFace(), toast(MS.dev ? "Input chosen. Each input keeps its own settings." : "Default microphone"));
+        $("#msCh").onchange = () => ((MS.ch = $("#msCh").value), msSave());
+        $("#msProc").onchange = () => msSet({ proc: $("#msProc").value === "1" });
+        $("#msGain").oninput = () => msSet({ gain: Math.pow(10, +$("#msGain").value / 20) });
+        $("#msGate").oninput = () => msSet({ gate: Math.pow(10, +$("#msGate").value / 20) });
+        $("#msHp").onchange = () => msSet({ hp: +$("#msHp").value });
+        $("#msLo").onchange = () => msSet({ lo: +$("#msLo").value });
+        $("#msHi").onchange = () => msSet({ hi: +$("#msHi").value });
+        $("#msLive").onclick = msLive;
+        $("#msTests").onclick = arFace;
+        $("#msReset").onclick = () => (delete MS.cfg[MS.dev || "default"], (MC = msCfg()), msSave(), msApply(), msFace(), toast("Microphone settings reset"));
+        msFace();
+        msList();
+      }
+
       // autocorrelation pitch detector (as in TUNE.Pocket), limited to the lags a voice can have
-      function detectPitch(buf, sr, minHz = 65, maxHz = 1300, N = buf.length) {
+      function detectPitch(buf, sr, minHz = 65, maxHz = 1300, N = buf.length, gate = 0.008) {
         let rms = 0;
         for (let i = 0; i < N; i++) rms += buf[i] * buf[i];
         rms = Math.sqrt(rms / N);
-        if (rms < 0.008) return { hz: -1, rms, conf: 0 };
+        if (rms < gate) return { hz: -1, rms, conf: 0 };
         const minLag = Math.max(2, Math.floor(sr / maxHz)),
           maxLag = Math.min(N >> 1, Math.ceil(sr / minHz)),
           W = N - maxLag,
@@ -2389,7 +2899,7 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
       function voiceNow() {
         if (!MIC.on || !MIC.an) return { m: NaN, rms: 0 };
         MIC.an.getFloatTimeDomainData(MIC.buf);
-        const { hz, rms } = detectPitch(MIC.buf, ctx.sampleRate);
+        const { hz, rms } = detectPitch(MIC.buf, ctx.sampleRate, midiToHz(MC.lo), midiToHz(MC.hi), MIC.buf.length, MC.gate);
         if (hz <= 0) return (voiceSm = null), { m: NaN, rms };
         const m = hzToMidi(hz);
         voiceSm = voiceSm == null || Math.abs(m - voiceSm) > 0.7 ? m : voiceSm * 0.55 + m * 0.45;
@@ -4748,7 +5258,7 @@ registerProcessor("autotune", AutoTune);
       // ======================================================================
       // views, header, ribbons, the frame loop
       // ======================================================================
-      const WM = { warm: "WARM-UP", song: "SONG", range: "RANGE", at: "AUTOTUNE", vox: "SAMPLER", game: "PLANE", prog: "HISTORY", takes: "FILES" };
+      const WM = { warm: "WARM-UP", song: "SONG", range: "RANGE", air: "AIR", at: "AUTOTUNE", vox: "SAMPLER", game: "PLANE", prog: "HISTORY", takes: "FILES" };
       function showView(v) {
         if (!WM[v]) v = "warm";
         const prev = S.view;
@@ -4973,7 +5483,11 @@ registerProcessor("autotune", AutoTune);
       });
       // stop everything when the app goes to the background
       document.addEventListener("visibilitychange", () => {
-        if (!document.hidden) return;
+        if (!document.hidden) {
+          if (MIC.away) ((MIC.away = false), toast("The microphone was paused while the app was away. Start again to resume", 5000));
+          return;
+        }
+        if (MIC.on) MIC.away = true;
         if (REC.on && REC.kind === "session") recStop();
         warmStop();
         songStop();
@@ -5329,7 +5843,7 @@ registerProcessor("autotune", AutoTune);
       // help manual (EN / ES), same format as TRACK.Pocket: "## " heading, "- " list item, **bold**, *dim*
       // ======================================================================
       // The version of the app: change it here (and add its notes to the last help section, "What's new").
-      const APP_VERSION = "1.3.0";
+      const APP_VERSION = "1.4.0";
       const HELP = [
         {
           id: "start",
@@ -5468,6 +5982,28 @@ registerProcessor("autotune", AutoTune);
           },
         },
         {
+          id: "air",
+          t: { en: "Air", es: "Aire" },
+          b: {
+            en: [
+              "A clean tone has its energy in the **harmonics**; a breathy one has noise between them. This view listens for that noise and tells you how much of what you sang was **clean**, **mixed** or **airy**. It is for choosing your sound, and for finding the first step towards **mix voice**: a mix that is supported has little air in it.",
+              "- **START** (or **▶**), then sing a note or a phrase. The **waveform** on top shows your sound, each slice in the colour of what it was (clean, mixed or airy, as named on the trace below it): the last 8 seconds while you sing, and the whole take when you stop, so you can see where the air came in. The **trace** shows clean tone low and breath high. The big word is the tone now.",
+              "- **STOP**: the result is the share of the voiced time that was clean, mixed and airy, kept with the date. The next one is compared with the one before.",
+              "- Close to the microphone and in a quiet room: noise in the room counts as air. Vibrato smears the harmonics and can read as a little air.",
+              "- The **throat diagram** is a side view of the mouth (the lips are on the right): the **tongue** (in colour), the **soft palate**, the **larynx** and the air. Tap a shape to see where each part goes: **hum / ng**, **nay** (twang), **oo**, **ah** and the **yawn**. Try a shape, sing, and watch the trace.",
+              "It measures tone, not singing: a mix voice has no single sound that a microphone can tell, so use the numbers as a guide, together with your ear.",
+            ],
+            es: [
+              "Un tono limpio tiene su energía en los **armónicos**; uno con aire tiene ruido entre ellos. Esta vista escucha ese ruido y te dice qué parte de lo que cantaste fue **limpia**, **mixta** o **con aire**. Sirve para elegir tu sonido y como primer paso hacia la **voz mixta**: una mixta bien apoyada lleva poco aire.",
+              "- **START** (o **▶**), y canta una nota o una frase. La **forma de onda** de arriba muestra tu sonido, cada trozo del color de lo que fue (limpio, mixto o con aire, como se nombran en la traza de abajo): los últimos 8 segundos mientras cantas, y toda la toma al parar, para ver dónde entró el aire. La **traza** muestra el tono limpio abajo y el aire arriba. La palabra grande es el tono de ahora.",
+              "- **STOP**: el resultado es la parte del tiempo con voz que fue limpia, mixta y con aire, guardada con la fecha. El siguiente se compara con el anterior.",
+              "- Cerca del micrófono y en una sala tranquila: el ruido de la sala cuenta como aire. El vibrato difumina los armónicos y puede leerse como un poco de aire.",
+              "- El **diagrama de la garganta** es una vista lateral de la boca (los labios están a la derecha): la **lengua** (en color), el **paladar blando**, la **laringe** y el aire. Toca una forma para ver dónde va cada parte: **hum / ng**, **nay** (twang), **oo**, **ah** y el **bostezo**. Prueba una forma, canta y mira la traza.",
+              "Mide el tono, no el canto: la voz mixta no tiene un sonido único que un micrófono distinga, así que usa los números como guía, junto con tu oído.",
+            ],
+          },
+        },
+        {
           id: "at",
           t: { en: "Autotune", es: "Autotune" },
           b: {
@@ -5587,6 +6123,7 @@ registerProcessor("autotune", AutoTune);
               "## The bottom bar",
               "- **FILES**: open a song, **import** a recording (any audio file), and how much space the app uses.",
               "- **OPTIONS**: **note names** in letters (**A B C**) or solfège (**Do Re Mi**), shared with TRACK.Pocket and TUNE.Pocket; **BACKING IN RECORDINGS** (on: warm-ups and song takes record the piano or the song with your voice, like a performance; off: only your voice); **OCTAVE-FREE** for the pitch test.",
+              "- **OPTIONS → Microphone**: choose the input (a USB interface works too) and its channel, and tune the **gain**, the **gate** (ignores room noise), a **high-pass** (cuts rumble and pops) and your **range** (limits the pitch detector to your voice). **LIVE** shows the level and the note with those settings. **TESTS** measures the noise, your level, pops, range and whether the browser's processing helps, and **AUTO SETUP** runs them all and sets everything. Each input keeps its own settings. **On iPhone and iPad** the browser (every iOS browser uses Apple's engine) always listens to the built-in microphone, whatever you choose, and moves the sound to the device itself while listening, with a delay of about 80 to 130 ms: an Apple limitation, shown as a warning. Chrome or Firefox on a computer, or Firefox on Android, do better. After sleep or a call the microphone is paused: start again to resume.",
               "- **OPTIONS → Install**: adds SING.Pocket to your home screen or apps, with its own window and working offline. The **INSTALL** button (here and in the welcome note) says **INSTALLED** when you already run it as an app; on iPhone it shows the Safari ▸ Share ▸ Add to Home Screen steps.",
               "- **THEME**: the six looks shared with TRACK.Pocket. On wide screens the backdrop is animated and moves with the song, the piano or your voice.",
               "- **HELP**: this manual.",
@@ -5600,6 +6137,7 @@ registerProcessor("autotune", AutoTune);
               "## La barra inferior",
               "- **FILES**: abrir una canción, **importar** una grabación (cualquier archivo de audio), y cuánto espacio usa la app.",
               "- **OPTIONS**: **nombres de las notas** en letras (**A B C**) o solfeo (**Do Re Mi**), compartido con TRACK.Pocket y TUNE.Pocket; **BACKING IN RECORDINGS** (activado: los calentamientos y tomas de canción graban el piano o la canción junto a tu voz, como una actuación; desactivado: solo tu voz); **OCTAVE-FREE** para la prueba de afinación.",
+              "- **OPTIONS → Microphone**: elige la entrada (una interfaz USB también vale) y su canal, y ajusta la **ganancia**, la **puerta** (ignora el ruido de la sala), un **filtro de graves** (quita retumbos y golpes de aire) y tu **rango** (limita el detector de tono a tu voz). **LIVE** muestra el nivel y la nota con esos ajustes. **TESTS** mide el ruido, tu nivel, los golpes de aire, el rango y si el procesado del navegador ayuda, y **AUTO SETUP** los hace todos y lo configura. Cada entrada guarda sus ajustes. **En iPhone y iPad** el navegador (todos los de iOS usan el motor de Apple) siempre escucha el micrófono integrado, elijas lo que elijas, y pasa el sonido al propio dispositivo mientras escucha, con un retardo de unos 80 a 130 ms: una limitación de Apple, que se muestra como aviso. Chrome o Firefox en un ordenador, o Firefox en Android, funcionan mejor. Tras dormir o una llamada el micrófono se pausa: empieza de nuevo para reanudar.",
               "- **OPTIONS → Install**: añade SING.Pocket a tu pantalla de inicio o a tus aplicaciones, con su propia ventana y funcionando sin conexión. El botón **INSTALL** (aquí y en la nota de bienvenida) dice **INSTALLED** si ya la usas como app; en iPhone muestra los pasos Safari ▸ Compartir ▸ Añadir a pantalla de inicio.",
               "- **THEME**: los seis aspectos que comparte con TRACK.Pocket. En pantallas anchas el fondo está animado y se mueve con la canción, el piano o tu voz.",
               "- **HELP**: este manual.",
@@ -5630,7 +6168,10 @@ registerProcessor("autotune", AutoTune);
             t: { en: "What's new", es: "Novedades" },
             b: {
               en: [
+                "## Version 1.4.0",
+                "- **Air:** a new view (the wind icon) that listens to your tone and says how much of it is clean, mixed or airy, live and as a result you can compare over time, with a side-view diagram of the tongue, soft palate and larynx for five mouth shapes (hum, nay, oo, ah, yawn).",
                 "## Version 1.3.0",
+                "- **Microphone setup (OPTIONS):** pick the input, its channel, the gain, a gate, a high-pass and your range, per input. **TESTS** measures noise, level, pops, range and the browser processing, and **AUTO SETUP** sets everything from them. The recording, autotune and the sampler use the same cleaned input.",
                 "- **Sampler:** the play and loop marks on the pads are big enough to see now. While the sampler effects are open, the MIDI pads and keys play them.",
                 "- **Install it:** the app is now a web app (PWA). Add it to the Home Screen (iPhone: Safari ▸ Share; Android and desktop: Chrome ▸ Install app) and it opens like an app and works offline. The welcome note and **OPTIONS** have an **INSTALL** button that knows when the app is already installed. The Android APK is retired.",
                 "- **Exercises:** an imported exercise file is limited to 400 notes per exercise and 100 exercises.",
@@ -5640,7 +6181,10 @@ registerProcessor("autotune", AutoTune);
                 "Older versions: see *Releases* on GitHub.",
               ],
               es: [
+                "## Versión 1.4.0",
+                "- **Aire:** una vista nueva (el icono del viento) que escucha tu tono y dice qué parte es limpia, mixta o con aire, en directo y como resultado que puedes comparar con el tiempo, con un diagrama lateral de la lengua, el paladar blando y la laringe para cinco formas de la boca (hum, nay, oo, ah, bostezo).",
                 "## Versión 1.3.0",
+                "- **Configurar el micrófono (OPCIONES):** elige la entrada, su canal, la ganancia, una puerta, un filtro de graves y tu rango, por entrada. **TESTS** mide ruido, nivel, golpes de aire, rango y el procesado del navegador, y **AUTO SETUP** lo configura todo. La grabación, el autotune y el sampler usan la misma entrada ya limpia.",
                 "- **Sampler:** las marcas de reproducción y de bucle en los pads ahora se ven bien. Con los efectos del sampler abiertos, los pads y teclas MIDI los tocan.",
                 "- **Instálala:** la app ahora es una web app (PWA). Añádela a la pantalla de inicio (iPhone: Safari ▸ Compartir; Android y escritorio: Chrome ▸ Instalar app) y se abre como una app y funciona sin conexión. La nota de bienvenida y **OPTIONS** tienen un botón **INSTALL** que sabe si la app ya está instalada. El APK de Android se retira.",
                 "- **Ejercicios:** un archivo de ejercicios importado se limita a 400 notas por ejercicio y 100 ejercicios.",
@@ -6452,7 +6996,7 @@ registerProcessor("autotune", AutoTune);
         copy: IC('<rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V4H4v12h4"/>'),
       });
       const LINE = (g, x0, y0, x1, y1) => (g.beginPath(), g.moveTo(x0, y0), g.lineTo(x1, y1), g.stroke());
-      const micFree = () => !W.on && !P.on && !RG.on && !G.on && !VX.rec && !(AT && AT.live) && micStop();
+      const micFree = () => !W.on && !P.on && !RG.on && !AIR.on && !G.on && !VX.rec && !(AT && AT.live) && micStop();
 
       // ---- RANGE: hold the lowest comfortable note, then the highest; the chart puts it next to every voice type
       const RG = { on: false, step: 0, lo: 0, hi: 0, iv: 0, run: [], anchor: NaN, m: NaN, done: false };
@@ -8459,15 +9003,236 @@ registerProcessor("autotune", AutoTune);
             .join("") || '<div class="hint">Measure your range (the arrows view) to keep it here.</div>';
       }
 
+
+      // ---- AIR: how much of the voice is clean tone and how much is breath. A clean voice has silence between its harmonics;
+      // breath fills that gap with noise. So, for every 50 ms: the level of the gaps (halfway between the harmonics) against
+      // the level of the harmonics themselves, in dB. It does not depend on the volume or the microphone.
+      const AIR = { on: false, iv: 0, tr: [], fr: [], wv: [], fft: null, sm: 0.8, sh: 1 };
+      const AIR_CLEAN = -24, AIR_MIX = -15; // shortcut: limits set from synthetic voices, tune them with real singers if the labels feel off
+      function airDb(fft, hz, sr) {
+        const bw = sr / (2 * fft.length),
+          P = (i) => Math.pow(10, fft[i] / 10);
+        let pk = 0,
+          vl = 0,
+          n = 0;
+        for (let k = 1; k * hz < 3000; k++) {
+          if (k * hz < 300) continue; // the lowest harmonics swim with vibrato; the gaps above 300 Hz are what breath fills
+          const c = Math.round((k * hz) / bw),
+            v = Math.round(((k + 0.5) * hz) / bw);
+          let mp = 0,
+            mv = Infinity;
+          for (let i = c - 2; i <= c + 2; i++) mp = Math.max(mp, P(i));
+          for (let i = v - 1; i <= v + 1; i++) mv = Math.min(mv, P(i));
+          pk += mp;
+          vl += mv;
+          n++;
+        }
+        return n ? 10 * Math.log10(Math.max(vl, 1e-20) / pk) : NaN;
+      }
+      const airClass = (db) => (db < AIR_CLEAN ? 0 : db < AIR_MIX ? 1 : 2); // clean, mixed, airy
+      const AIR_NAME = ["CLEAN", "MIXED", "AIRY"];
+      async function airStart() {
+        warmStop();
+        songStop();
+        if (!(await micStart())) return airFace();
+        AIR.sm = MIC.an.smoothingTimeConstant;
+        MIC.an.smoothingTimeConstant = 0;
+        AIR.fft = new Float32Array(MIC.an.frequencyBinCount);
+        AIR.tr = [];
+        AIR.fr = [];
+        AIR.wv = [];
+        AIR.on = true;
+        $("#aiRes").innerHTML = "";
+        clearInterval(AIR.iv);
+        AIR.iv = setInterval(airTick, 50);
+        airFace();
+        playFace();
+      }
+      function airStop() {
+        clearInterval(AIR.iv);
+        if (!AIR.on) return;
+        AIR.on = false;
+        if (MIC.an) MIC.an.smoothingTimeConstant = AIR.sm;
+        const n = AIR.fr.length;
+        if (n >= 10) {
+          const c = [0, 0, 0];
+          AIR.fr.forEach((db) => c[airClass(db)]++);
+          const pc = c.map((x) => Math.round((x / n) * 100));
+          S.airs = [...(S.airs || []), { d: Date.now(), c: pc[0], m: pc[1], a: pc[2] }].slice(-12);
+          saveState();
+        } else AIR.short = true;
+        micFree();
+        airFace();
+      }
+      function airTick() {
+        if (!AIR.on || !MIC.an) return;
+        MIC.an.getFloatTimeDomainData(MIC.buf);
+        const { hz } = detectPitch(MIC.buf, ctx.sampleRate);
+        let db = NaN;
+        AIR.vc = hz > 0 ? (AIR.vc || 0) + 1 : 0;
+        if (AIR.vc > 3) {
+          MIC.an.getFloatFrequencyData(AIR.fft);
+          db = airDb(AIR.fft, hz, ctx.sampleRate);
+        }
+        let pk = 0;
+        for (let i = MIC.buf.length - 2400; i < MIC.buf.length; i++) pk = Math.max(pk, Math.abs(MIC.buf[i]));
+        AIR.wv.push({ a: pk, c: db === db ? airClass(db) : -1 }); // the loudness of this slice and what it was
+        if (AIR.wv.length > 6000) AIR.wv.shift();
+        AIR.tr.push(db);
+        if (AIR.tr.length > 160) AIR.tr.shift();
+        if (db === db) AIR.fr.push(db);
+        const v = AIR.tr.slice(-8).filter((x) => x === x);
+        if (!v.length) {
+          $("#aiNote").textContent = "—";
+          $("#aiBar").style.width = "0";
+        } else {
+          const m = v.sort((a, b) => a - b)[v.length >> 1];
+          $("#aiNote").textContent = AIR_NAME[airClass(m)];
+          $("#aiBar").style.width = clamp(((m + 36) / 36) * 100, 2, 100) + "%";
+        }
+        airDraw();
+      }
+      // the trace: the last 8 s; low is clean, high is breath
+      // the waveform: one bar per slice of sound, coloured by what it was; while singing the last 8 s, then the whole take
+      function airWave() {
+        const cv = $("#aiWv");
+        if (!cv.offsetParent) return;
+        const [g, w, h, d] = fitCanvas(cv),
+          C = [css("--ok"), css("--acc"), css("--acc2")],
+          N = 160,
+          src = AIR.on ? AIR.wv.slice(-N) : AIR.wv,
+          per = Math.max(1, src.length / N),
+          gain = AIR.on ? 2.5 : 0.95 / Math.max(0.02, ...src.map((x) => x.a));
+        g.clearRect(0, 0, w, h);
+        g.globalAlpha = 0.25;
+        g.fillStyle = css("--dim");
+        g.fillRect(0, h / 2, w, d);
+        g.globalAlpha = 1;
+        const bw = w / N;
+        for (let x = 0; x < N; x++) {
+          const i0 = Math.floor(x * per),
+            col = src.slice(i0, Math.max(i0 + 1, Math.floor((x + 1) * per))),
+            k = [0, 0, 0];
+          if (!col.length) continue;
+          col.forEach((f) => f.c >= 0 && k[f.c]++);
+          const c = k.some((n) => n) ? k.indexOf(Math.max(...k)) : -1,
+            a = clamp(Math.max(...col.map((f) => f.a)) * gain, 0.02, 1),
+            xx = AIR.on ? (N - Math.min(N, src.length) + x) * bw : x * bw;
+          g.fillStyle = c < 0 ? css("--dim") : C[c];
+          g.globalAlpha = c < 0 ? 0.35 : 0.95;
+          g.fillRect(xx, (h * (1 - a)) / 2, Math.max(1, bw - d), h * a);
+        }
+        g.globalAlpha = 1;
+      }
+      function airDraw() {
+        airWave();
+        const cv = $("#aiCv");
+        if (!cv.offsetParent) return;
+        const [g, w, h, d] = fitCanvas(cv),
+          LO = -40,
+          HI = 0,
+          y = (db) => h - clamp((db - LO) / (HI - LO), 0, 1) * (h - 8 * d) - 4 * d,
+          C = [css("--ok"), css("--acc"), css("--acc2")];
+        g.clearRect(0, 0, w, h);
+        [[LO, AIR_CLEAN, 0], [AIR_CLEAN, AIR_MIX, 1], [AIR_MIX, HI, 2]].forEach(([a, b, k]) => {
+          g.globalAlpha = 0.12;
+          g.fillStyle = C[k];
+          g.fillRect(0, y(b), w, y(a) - y(b));
+          g.globalAlpha = 0.8;
+          g.font = `800 ${8 * d}px ${css("--mono") || "monospace"}`;
+          g.textBaseline = "top";
+          g.fillText(AIR_NAME[k], 4 * d, y(b) + 3 * d);
+        });
+        g.globalAlpha = 1;
+        g.lineWidth = 2.5 * d;
+        g.lineJoin = "round";
+        const dx = w / 160;
+        for (let i = 1; i < AIR.tr.length; i++) {
+          const a = AIR.tr[i - 1],
+            b = AIR.tr[i];
+          if (a !== a || b !== b) continue;
+          g.strokeStyle = C[airClass(b)];
+          LINE(g, (160 - AIR.tr.length + i - 1) * dx, y(a), (160 - AIR.tr.length + i) * dx, y(b));
+        }
+      }
+      function airFace() {
+        const last = (S.airs || [])[(S.airs || []).length - 1],
+          prev = (S.airs || [])[(S.airs || []).length - 2];
+        $("#aiNow").innerHTML = last ? `<i>LAST MEASURE</i>${last.c}% clean · ${last.a}% airy` : `<i>AIR</i>NOT MEASURED`;
+        if (AIR.on) $("#aiRes").innerHTML = `<b>Sing a note or a phrase.</b> Hold an easy “ah” or sing a line of a song. Tap STOP for the result.`;
+        else if (AIR.short) {
+          AIR.short = false;
+          $("#aiRes").innerHTML = `Not enough voice to measure: sing for a few seconds, close to the microphone.`;
+        } else if (last)
+          $("#aiRes").innerHTML =
+            `Of the tone you sang, <b>${last.c}% was clean</b>, ${last.m}% mixed and <b>${last.a}% airy</b>.` +
+            (prev ? ` <span class="hint">The measure before: ${prev.c}% clean, ${prev.a}% airy.</span>` : "") +
+            ` <span class="hint">Airy tone is not wrong: it is a style. These numbers show how much of it you can choose.</span>`;
+        else $("#aiRes").innerHTML = `<b>Find out how airy your voice is.</b> Tap START and sing a note or a phrase: the trace shows clean tone low and breath high.`;
+        rib("aiGo", AIR.on ? "stop" : "mic", AIR.on ? "STOP" : "START", AIR.on);
+        $("#aiShapes").innerHTML = AIR_SH.map((x, i) => `<button data-i="${i}" title="${x.title}"><b>${ICONS.guide}</b><i>${x.n}</i></button>`).join("");
+        $$("#aiShapes button").forEach((b) => {
+          b.classList.toggle("on", +b.dataset.i === AIR.sh);
+          b.onclick = () => ((AIR.sh = +b.dataset.i), airFace());
+        });
+        airShape();
+      }
+      // the mouth and throat, from the side (facing right): lips, tongue, soft palate, larynx
+      const AIR_SH = [
+        { n: "HUM · NG", title: "Hum with the tongue against the soft palate", jaw: 0, lip: 0, tip: [134, 124], hump: [100, 84], vel: 0, lar: 168,
+          t: "<b>Hum, then “ng”.</b> Lips closed, teeth apart. The back of the tongue touches the soft palate, which hangs down: the sound goes out through the nose. Feel the buzz on the face. A clean hum is the base of a clean tone: no air leaks from the lips." },
+        { n: "NAY · TWANG", title: "A bright “nay”, like a cartoon witch", jaw: 0.3, lip: 0, tip: [136, 122], hump: [112, 90], vel: 1, lar: 160,
+          t: "<b>“Nay”, bright as a witch.</b> The tongue is high and forward, the soft palate lifts and the throat narrows a little. The narrowing keeps the folds together, so there is little air in the tone. A good way into mix voice, at a low volume." },
+        { n: "OO", title: "A round, closed “oo”", jaw: 0.35, lip: 1, tip: [122, 140], hump: [92, 100], vel: 1, lar: 172,
+          t: "<b>“Oo”, round.</b> The lips come forward and the larynx sinks a little, so the tone is dark and the throat long. Keep the jaw loose. If the “oo” turns airy, bring the lips a little closer without pushing." },
+        { n: "AH", title: "An open, relaxed “ah”", jaw: 1, lip: 0, tip: [128, 152], hump: [106, 150], vel: 1, lar: 168,
+          t: "<b>“Ah”, open.</b> The jaw drops, the tongue rests low and flat with its tip behind the lower teeth, the soft palate is up. Do not push the jaw forward. Hold it and watch the trace: it should stay low." },
+        { n: "YAWN-SIGH", title: "The yawn position: an open throat", jaw: 0.8, lip: 0, tip: [124, 154], hump: [100, 148], vel: 1, lar: 182,
+          t: "<b>The start of a yawn.</b> The larynx goes down and the soft palate goes up: the throat is as big as it gets. Sing from here on an easy sigh, then bring the sound to a normal “ah” without losing the space." },
+      ];
+      function airShape() {
+        const x = AIR_SH[AIR.sh],
+          ly = 102 + x.jaw * 26,
+          cy = 132 + x.jaw * 30,
+          lx = 150 + x.lip * 9,
+          vt = [74 + (1 - x.vel) * 12, 92 + (1 - x.vel) * 22],
+          [tx, ty] = x.tip,
+          [hx, hy] = x.hump,
+          L = x.lar,
+          P = (d, c = "") => `<path d="${d}"${c ? ` class="${c}"` : ""}/>`,
+          T = (txt, a, b, px, py) => `<text x="${a}" y="${b}">${txt}</text>` + P(`M${a + 2} ${b + 2}L${px} ${py}`, "ft");
+        $("#aiSvg").innerHTML = [
+          P(`M150 40Q172 68 160 86L${lx} 100`), // nose and upper lip
+          P(`M${lx} ${ly}Q${lx + 3} ${ly + 12} 140 ${cy}L104 ${cy + 22}L98 200`), // lower lip, chin, front of the neck
+          P(`M${lx - 6} 100Q122 80 92 86`), // hard palate
+          P(`M92 86Q80 86 ${vt[0]} ${vt[1]}`), // soft palate
+          P("M68 70V200"), // back wall of the throat
+          P("M152 74Q120 60 70 66", "ft"), // the nose
+          P(`M${tx} ${ty}Q${hx} ${hy} 80 ${L - 14}L90 ${L - 4}Q${(tx + 90) / 2} ${ty + 22} ${tx} ${ty}Z`, "tg"), // the tongue
+          `<rect x="76" y="${L}" width="20" height="24" rx="4"/>`, // larynx
+          P(`M80 ${L + 12}H92`),
+          P(`M78 ${L + 24}V200M94 ${L + 24}V200`),
+          P(`M84 ${L - 12}l6 12`),
+          P(`M82 ${L}V100Q82 ${(100 + ly) / 2} ${lx - 6} ${(100 + ly) / 2 + 1}`, "fl"), // the air
+          T("SOFT PALATE", 4, 50, vt[0] + 1, vt[1] - 1),
+          T("TONGUE", 4, 122, tx - 20, ty + 4),
+          T("LARYNX", 4, L + 10, 76, L + 12),
+        ].join("");
+        $("#aiTip").innerHTML = x.t;
+      }
+      $("#aiGo").onclick = () => (AIR.on ? airStop() : airStart());
+
       // ---- the tabs in the views, ▶ and the frame loop
       function tabsShow(v, prev) {
         if (prev !== v) {
           if (prev === "range") rangeStop();
+          if (prev === "air") airStop();
           if (prev === "game") gameStop(false);
           if (prev === "vox" && VX.rec) vxRecCancel();
         }
         $("#play").hidden = v === "prog";
         if (v === "range") rangeFace();
+        if (v === "air") airFace();
         if (v === "at") atTakesFill();
         if (v === "vox") vxFace();
         if (v === "game") gameFace();
@@ -8479,17 +9244,19 @@ registerProcessor("autotune", AutoTune);
         else if (v === "vox") vxFrame();
         else if (v === "game") gameFrame();
         else if (v === "range") rangeDraw();
+        else if (v === "air") airDraw();
         else return false;
         sessionFrame();
         return true;
       }
-      const tabBusy = () => (S.view === "at" && AT.live) || (S.view === "vox" && (!!VX.rec || VX.play.size > 0)) || (S.view === "game" && G.on);
+      const tabBusy = () => (S.view === "air" && AIR.on) || (S.view === "at" && AT.live) || (S.view === "vox" && (!!VX.rec || VX.play.size > 0)) || (S.view === "game" && G.on);
       function tabOn(v) {
-        return v === "range" ? RG.on : v === "at" ? AT.live : v === "vox" ? VX.play.size > 0 : v === "game" ? G.on : null;
+        return v === "range" ? RG.on : v === "air" ? AIR.on : v === "at" ? AT.live : v === "vox" ? VX.play.size > 0 : v === "game" ? G.on : null;
       }
       function tabPlay() {
         const v = S.view;
         if (v === "range") RG.on ? rangeStop() : rangeStart();
+        else if (v === "air") AIR.on ? airStop() : airStart();
         else if (v === "at") atToggle();
         else if (v === "vox") getCtx().then(vxAll);
         else if (v === "game") G.on ? gameStop(false) : gameStart();
@@ -8498,6 +9265,7 @@ registerProcessor("autotune", AutoTune);
       }
       function tabsStop() {
         rangeStop();
+        airStop();
         gameStop(false);
         vxRecCancel();
         if (VX.play.size) vxStopAll();
@@ -8519,5 +9287,5 @@ registerProcessor("autotune", AutoTune);
       } catch {}
       if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
     </script>
-  <div style="position:fixed;left:4px;bottom:2px;z-index:99;font:700 9px monospace;opacity:.7;pointer-events:none;color:#ff5e7a">TEST BUILD · sing-fixes · b8c52a8</div></body>
+  <div style="position:fixed;left:4px;bottom:2px;z-index:99;font:700 9px monospace;opacity:.7;pointer-events:none;color:#ff5e7a">TEST BUILD · beta · c824bc0</div></body>
 </html>

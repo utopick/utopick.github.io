@@ -10,11 +10,15 @@
     <script> (id midi-device)  the MIDI device panel (controller drawings, assign, learn): the same code in all three apps
     <script>  music theory and data, mic + pitch detection, one block per view, boot
 
+  IndexedDB "tune-pocket" (store "kv"): autosave = the looper's 16 loops as they are (16 bit PCM, with the tempo they belong to),
+    session:<name> = loops saved by name, meta = { name: { d, n, bars, bytes } } for the list in TUNINGS > FILES
+
   localStorage keys
     tune.theme      dark | light | demo | term | dungeon | dmg
     tune.lang       help language (en | es)                 tune.welcome    "1" once the first-visit dialog was closed
+    tune.audioIn    { dev: input device id ("" = default microphone), ch: mix | L | R, lat: ms, gains: { <device id or "default">: dB } }
     tune.state      { inst, tun, a4, view, auto, scl, jam, cof, met: { bpm, beats, sub, snd, accent, vol }, loop: { bars, sync, latch, grid, aq } }
-    customTunings   [{ name, instrument, strings: ["E2" | "82.41", ...] }]  (key kept from LFTuner so old tunings load)
+    tune.customTunings   [{ name, instrument, strings: ["E2" | "82.41", ...] }]  (was "tune-test.customTunings", kept for LFTuner: moved on first start)
 -->
 <html lang="en">
   <head>
@@ -1601,6 +1605,35 @@
         touch-action: pan-y;
         margin: 0 0 6px;
       }
+      .srow {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 6px;
+        padding: 8px 0;
+        border-top: 1px solid var(--line);
+      }
+      .srow b {
+        flex: 1 1 100%;
+        font: 800 14px var(--mono);
+      }
+      .srow i {
+        flex: 1 1 100%;
+        font-style: normal;
+        color: var(--dim);
+        font-size: 12px;
+      }
+      .srow button {
+        flex: 1;
+        min-height: 36px;
+      }
+      #sList:empty::before {
+        content: "No saved sessions yet. Record some loops and SAVE them here.";
+        display: block;
+        padding: 10px 0;
+        color: var(--dim);
+        font-size: 13px;
+      }
       #setTabs {
         margin: 0 0 0;
       }
@@ -2222,14 +2255,51 @@
             chord you hold is named and shown on your instrument. <b>ASSIGN</b> ties pads, buttons and knobs to the
             scale and JAM buttons, the JAM effects, the metronome and the tempo. Chrome, Edge or Firefox; not Safari.
           </div>
+          <h3 style="margin-top: 12px">Audio input</h3>
+          <div class="row"><select id="ainDev" title="Which input the tuner and the looper listen to" style="flex: 1"></select></div>
+          <div class="row">
+            <select id="ainCh" title="Which channel of the input to use" style="flex: 1"><option value="mix">Both channels</option><option value="L">Left (input 1)</option><option value="R">Right (input 2)</option></select>
+            <button id="ainTest" title="Open the input and watch its level and note live">LIVE</button><button id="ainTests" title="Guided tests: noise, level, channels and round-trip latency, with a report to copy">TESTS</button>
+          </div>
+          <div class="row"><label class="knob" title="Boost or cut what the tuner and the looper hear from this input. Kept per input; adds no delay."><i>GAIN</i><b id="ainGainTxt">0 dB</b><input id="ainGain" type="range" min="-12" max="24" step="0.5" value="0" /></label></div>
+          <div id="ainBox" hidden>
+            <div id="ainMeter" style="height: 14px; border: 1px solid var(--line); border-radius: 7px; overflow: hidden"><i id="ainLvl" style="display: block; height: 100%; width: 0; background: var(--acc)"></i></div>
+            <div id="ainNote" style="font: 900 28px/1.3 var(--mono); text-align: center">--</div>
+            <pre id="ainInfo" class="hint" style="white-space: pre-wrap; margin: 0"></pre>
+          </div>
+          <div class="hint">
+            Plug a guitar or any instrument into a USB audio interface (or the phone's adapter) and pick it here. The tuner and the looper
+            then listen to it directly, with no echo cancelling, noise reduction or gain control, instead of the microphone. GAIN lifts a quiet input (a phone
+            microphone in Firefox, a guitar cable) and is kept per input. LIVE shows the level, the note
+            and what the browser really gave. TESTS runs guided checks (noise, level, channels, latency) and gives a report to copy.
+          </div>
           <h3 style="margin-top: 12px">Install as an app</h3>
           <div class="row">
             <button id="instBtn" style="flex: 1" title="Install the app: its own window on your home screen or computer, and it works offline"></button>
           </div>
           <div class="hint" id="instHint"></div>
         </div>
+        <div class="card fpanel" data-fp="files" hidden>
+          <h3>Loop sessions</h3>
+          <div class="row">
+            <input id="sName" type="text" placeholder="Name, e.g. Verse groove" maxlength="40" aria-label="Session name" />
+            <button id="sSave" class="on" title="Save the loops of the looper under this name">SAVE</button>
+          </div>
+          <div id="sList"></div>
+          <div class="row">
+            <button id="sImport" style="flex: 1" title="Open a session file made with EXPORT">IMPORT .json</button>
+          </div>
+          <input type="file" id="sFile" accept=".json,application/json" hidden />
+          <div class="hint" id="sMeter" role="status">Browser storage: checking…</div>
+          <div class="hint">
+            The looper keeps its loops on this device by itself and brings them back when you open it. SAVE keeps a set under a
+            name, OPEN replaces the loops (the ones you had are kept as “Before opening”), EXPORT makes a file you can move to
+            another device.
+          </div>
+        </div>
         <div class="prow" id="setTabs">
           <button data-fpb="edit"><i>NEW · EDIT</i>TUNINGS</button>
+          <button data-fpb="files"><i>LOOPS</i>FILES</button>
           <button data-fpb="theme"><i>LOOK</i>THEME</button>
           <button data-fpb="opts"><i>SETTINGS</i>OPTIONS</button>
           <button id="helpBtn"><i>MANUAL</i>HELP</button>
@@ -2609,12 +2679,12 @@
       const $ = (s) => document.querySelector(s),
         $$ = (s) => [...document.querySelectorAll(s)];
       const css = (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
-      function toast(t) {
+      function toast(t, ms = 1600) {
         const e = $("#toast");
         e.textContent = t;
         e.classList.add("show");
         clearTimeout(e._t);
-        e._t = setTimeout(() => e.classList.remove("show"), 1600);
+        e._t = setTimeout(() => e.classList.remove("show"), ms);
       }
       const esc = (x) => String(x ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
       const PAL = ["124,242,154", "255,179,71", "106,183,255", "255,111,165", "197,139,255", "77,224,208"];
@@ -2848,7 +2918,13 @@
       });
       let customTunings = [];
       try {
-        customTunings = JSON.parse(localStorage.getItem("tune-test.customTunings") || "[]");
+        const oldT = localStorage.getItem("tune-test.customTunings");
+        customTunings = JSON.parse(localStorage.getItem("tune-test.customTunings") || oldT || "[]");
+        if (oldT !== null) {
+          // the key had no "tune-test." prefix (it came from LFTuner): move it over once
+          if (localStorage.getItem("tune-test.customTunings") === null) localStorage.setItem("tune-test.customTunings", oldT);
+          localStorage.removeItem("tune-test.customTunings");
+        }
         const o = JSON.parse(localStorage.getItem("tune-test.state") || "{}");
         for (const k of ["view", "inst", "tun", "auto", "a4"]) if (k in o) S[k] = o[k];
         if (o.scl) Object.assign(S.scl, o.scl);
@@ -2991,27 +3067,368 @@
         });
       }
 
+      // the audio input: the default microphone, or a chosen device (an audio interface with an instrument plugged in), always raw
+      const AIN = Object.assign({ dev: "", ch: "mix", lat: 0, gains: {} }, (() => { try { return JSON.parse(localStorage.getItem("tune-test.audioIn")) || {}; } catch { return {}; } })());
+      const ainSave = () => localStorage.setItem("tune-test.audioIn", JSON.stringify({ dev: AIN.dev, ch: AIN.ch, lat: AIN.lat, gains: AIN.gains }));
+      if (!AIN.gains || typeof AIN.gains !== "object" || Array.isArray(AIN.gains)) AIN.gains = {}; // older or damaged settings
+      // the app's own gain for the current input, in dB, kept per device: raw inputs (no browser gain control) can be very quiet
+      const ainDb = () => { const v = +AIN.gains[AIN.dev || "default"]; return Number.isFinite(v) ? Math.max(-12, Math.min(24, v)) : 0; };
+      const AING = new Set(); // the gain nodes in use, so the slider is heard at once
+      // iPhone and iPad (WebKit) open the built-in microphone whatever was chosen: compare what was asked with what was opened
+      const ainOther = (st) => !!(AIN.dev && st && st.deviceId && st.deviceId !== AIN.dev);
+      const ainOtherTxt = "The browser opened a different input than the one chosen (on iPhone and iPad it is always the built-in microphone, and the sound moves to the device while listening: an Apple limitation)";
+      const ainCheck = (s) => {
+        if (ainOther(s.getAudioTracks()[0] && s.getAudioTracks()[0].getSettings())) toast(ainOtherTxt, 6000);
+        return s;
+      };
+      const ainOpen = () =>
+        navigator.mediaDevices
+          .getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false, channelCount: { ideal: 2 }, ...(AIN.dev ? { deviceId: { exact: AIN.dev } } : {}) }, video: false })
+          .catch((e) => {
+            if (AIN.dev && (e.name === "OverconstrainedError" || e.name === "NotFoundError")) {
+              // the chosen device is unplugged: go back to the default input
+              AIN.dev = "";
+              ainSave();
+              ainFace();
+              toast("That input is not connected. Using the default one.");
+              return ainOpen();
+            }
+            throw e;
+          })
+          .then(ainCheck);
+      // the node to listen to: the whole stream, or one channel of it
+      function ainTap(c, src) {
+        const g = c.createGain();
+        g.gain.value = Math.pow(10, ainDb() / 20);
+        AING.add(g);
+        if (AIN.ch === "mix" || (src.channelCount || 1) < 2) src.connect(g);
+        else {
+          const sp = c.createChannelSplitter(2);
+          src.connect(sp);
+          sp.connect(g, AIN.ch === "R" ? 1 : 0);
+        }
+        return g;
+      }
+      function ainGainFace() {
+        const db = ainDb();
+        $("#ainGain").value = db;
+        $("#ainGainTxt").textContent = (db > 0 ? "+" : "") + db + " dB";
+      }
+      async function ainList() {
+        if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) return;
+        const ds = (await navigator.mediaDevices.enumerateDevices()).filter((d) => d.kind === "audioinput");
+        $("#ainDev").innerHTML = '<option value="">Default microphone</option>' + ds.filter((d) => d.deviceId && d.deviceId !== "default").map((d, i) => `<option value="${esc(d.deviceId)}">${esc(d.label || "Input " + (i + 1))}</option>`).join("");
+        ainFace();
+      }
+      function ainFace() {
+        $("#ainDev").value = AIN.dev;
+        if ($("#ainDev").value !== AIN.dev) $("#ainDev").value = "";
+        $("#ainCh").value = AIN.ch;
+        ainGainFace();
+      }
+      const AT = { on: false };
+      async function ainTestStop() {
+        AT.on = false;
+        cancelAnimationFrame(AT.raf);
+        if (AT.stream) AT.stream.getTracks().forEach((t) => t.stop());
+        AT.stream = null;
+        $("#ainTest").classList.remove("on");
+        $("#ainTest").textContent = "LIVE";
+      }
+      async function ainTest() {
+        if (AT.on) return ainTestStop();
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return micError("NO_API");
+        if (MIC.on) micStop();
+        try {
+          const c = await getCtx();
+          AT.stream = await ainOpen();
+          c.resume().catch(() => {});
+          const src = c.createMediaStreamSource(AT.stream),
+            an = c.createAnalyser(),
+            buf = new Float32Array(4096);
+          an.fftSize = 4096;
+          ainTap(c, src).connect(an);
+          AT.on = true;
+          $("#ainTest").classList.add("on");
+          $("#ainTest").textContent = "STOP";
+          $("#ainBox").hidden = false;
+          await ainList(); // the names appear once the browser has allowed the input
+          const t = AT.stream.getAudioTracks()[0],
+            st = t.getSettings(),
+            yn = (v) => (v === false ? "off" : v === true ? "ON" : "?");
+          $("#ainInfo").textContent =
+            `${t.label}\nchannels ${st.channelCount || "?"} · ${Math.round(c.sampleRate)} Hz · input latency ${st.latency != null ? Math.round(st.latency * 1000) + " ms" : "?"} · output ${Math.round((c.outputLatency || c.baseLatency || 0) * 1000)} ms\n` +
+            `echo cancel ${yn(st.echoCancellation)} · noise reduction ${yn(st.noiseSuppression)} · auto gain ${yn(st.autoGainControl)}` +
+            (ainOther(st) ? "\n⚠ " + ainOtherTxt : "");
+          const loop = () => {
+            if (!AT.on) return;
+            an.getFloatTimeDomainData(buf);
+            const d = detectPitch(buf, c.sampleRate);
+            let pk = 0;
+            for (let i = 0; i < buf.length; i++) pk = Math.max(pk, Math.abs(buf[i]));
+            $("#ainLvl").style.width = Math.min(100, Math.round(Math.sqrt(pk) * 100)) + "%";
+            $("#ainLvl").style.background = pk > 0.97 ? "var(--bad, #e55)" : "var(--acc)";
+            $("#ainNote").textContent = d.hz > 0 ? noteName(Math.round(hzToMidi(d.hz))) + " " + d.hz.toFixed(1) + " Hz" : pk > 0.97 ? "TOO LOUD" : "--";
+            AT.raf = requestAnimationFrame(loop);
+          };
+          loop();
+        } catch (e) {
+          ainTestStop();
+          micError(e.name || "UNKNOWN");
+        }
+      }
+
+      // ---- guided tests, like the MIDI TEST: each button runs one check and adds rows to a report that can be copied
+      const AR = { rows: {}, busy: false };
+      const arDb = (x) => (x > 1e-6 ? Math.round(20 * Math.log10(x)) : -120);
+      const arSleep = (ms) => new Promise((r) => setTimeout(r, ms));
+      const arCh = ["left", "right"];
+      async function arRig() {
+        const c = await getCtx(),
+          stream = await ainOpen();
+        c.resume().catch(() => {});
+        const src = c.createMediaStreamSource(stream),
+          sp = c.createChannelSplitter(2),
+          an = [0, 1].map(() => {
+            const a = c.createAnalyser();
+            a.fftSize = 4096;
+            return a;
+          });
+        src.connect(sp);
+        an.forEach((a, i) => sp.connect(a, i));
+        return { c, src, an, stream, track: stream.getAudioTracks()[0], close: () => stream.getTracks().forEach((t) => t.stop()) };
+      }
+      // levels and pitch for a few seconds
+      async function arMeasure(rig, ms, say) {
+        const o = { rms: [0, 0], pk: [0, 0], dc: [0, 0], n: 0, hz: [[], []] },
+          buf = new Float32Array(4096),
+          t0 = performance.now();
+        while (performance.now() - t0 < ms) {
+          await arSleep(60);
+          say(Math.ceil((ms - (performance.now() - t0)) / 1000));
+          o.n++;
+          rig.an.forEach((a, k) => {
+            a.getFloatTimeDomainData(buf);
+            let m = 0,
+              s = 0,
+              p = 0;
+            for (const v of buf) (m += v * v), (s += v), (p = Math.max(p, Math.abs(v)));
+            o.rms[k] += Math.sqrt(m / buf.length);
+            o.dc[k] += Math.abs(s / buf.length);
+            o.pk[k] = Math.max(o.pk[k], p);
+            const d = detectPitch(buf, rig.c.sampleRate);
+            if (d.hz > 0) o.hz[k].push(d.hz);
+          });
+        }
+        o.rms = o.rms.map((v) => v / o.n);
+        o.dc = o.dc.map((v) => v / o.n);
+        return o;
+      }
+      function arInfoRows(rig) {
+        const st = rig.track.getSettings(),
+          yn = (v) => (v === false ? "off" : v === true ? "ON (bad for instruments)" : "?");
+        return [
+          ["◉", "Input: " + (rig.track.label || "?")],
+          ...(ainOther(st) ? [["✘", ainOtherTxt]] : []),
+          [st.channelCount >= 2 ? "✔" : "·", `Channels: ${st.channelCount || "?"}${st.channelCount >= 2 ? "" : " (a mono stream: browsers may mix or hide the other inputs)"}`],
+          ["i", `Sample rate ${Math.round(rig.c.sampleRate)} Hz · reported input latency ${st.latency != null ? Math.round(st.latency * 1000) + " ms" : "?"} · output ${Math.round((rig.c.outputLatency || 0) * 1000)} ms · base ${Math.round(rig.c.baseLatency * 1000)} ms`],
+          [!st.echoCancellation && !st.noiseSuppression && !st.autoGainControl ? "✔" : "✘", `Processing: echo cancel ${yn(st.echoCancellation)}, noise reduction ${yn(st.noiseSuppression)}, auto gain ${yn(st.autoGainControl)}`],
+        ];
+      }
+      async function arNoise(say) {
+        const rig = await arRig();
+        try {
+          say("Silence: mute the instrument or turn its volume down", 0);
+          const o = await arMeasure(rig, 2000, (n) => say("Silence: keep the instrument quiet · " + n, 1));
+          AR.noise = o.rms;
+          AR.rows.noise = [
+            ...arInfoRows(rig),
+            ...[0, 1].map((k) => {
+              const d = arDb(o.rms[k]);
+              return [d <= -60 ? "✔" : d <= -45 ? "·" : "✘", `Noise floor ${arCh[k]}: ${d} dBFS` + (d <= -60 ? " (quiet)" : d <= -45 ? " (some noise or hum)" : " (noisy: lower the gain or check the cable)") + (o.dc[k] > 0.02 ? ` · DC offset ${arDb(o.dc[k])} dB` : "")];
+            }),
+          ];
+        } finally {
+          rig.close();
+        }
+      }
+      async function arPlay(say) {
+        const rig = await arRig();
+        try {
+          const o = await arMeasure(rig, 5000, (n) => say("Play loud and steady: strum, or hold one note · " + n, 1)),
+            nz = AR.noise || [0.002, 0.002],
+            rows = [],
+            act = [0, 1].filter((k) => o.rms[k] > Math.max(0.004, nz[k] * 4));
+          [0, 1].forEach((k) => {
+            const pk = arDb(o.pk[k]);
+            rows.push([act.includes(k) ? (pk >= -1 ? "✘" : pk < -24 ? "·" : "✔") : "·", act.includes(k) ? `Peak ${arCh[k]}: ${pk} dBFS` + (pk >= -1 ? " (clipping: lower the gain)" : pk < -24 ? " (low: raise the gain)" : " (good level)") : `Peak ${arCh[k]}: no signal`]);
+          });
+          rows.push([act.length ? "✔" : "✘", act.length === 2 ? "Channels: signal on both (a stereo source, or the instrument split)" : act.length === 1 ? `Channels: signal only on the ${arCh[act[0]]} (a mono instrument: pick "${act[0] ? "Right" : "Left"}" above)` : "Channels: nothing heard. Is the instrument plugged in and the input gain up?"]);
+          const k = act.sort((a, b) => o.rms[b] - o.rms[a])[0],
+            hz = k == null ? [] : o.hz[k].slice().sort((a, b) => a - b);
+          if (hz.length > 4) {
+            const med = hz[hz.length >> 1],
+              dev = hz.map((h) => Math.abs(1200 * Math.log2(h / med))).sort((a, b) => a - b),
+              mad = dev[dev.length >> 1];
+            rows.push([mad < 8 ? "✔" : "·", `Pitch reading: ${noteName(Math.round(hzToMidi(med)))} ${med.toFixed(1)} Hz, steady within ±${mad.toFixed(1)} cents, found in ${Math.round((hz.length / o.n) * 100)}% of the checks`]);
+          } else rows.push(["·", "Pitch reading: too few clear notes (hold one single note)"]);
+          AR.rows.play = rows;
+        } finally {
+          rig.close();
+        }
+      }
+      // round trip: clicks go out of the speaker (or a cable from the output to the input) and come back in; the time between
+      // the scheduled click and its arrival is the whole chain: output device + air + input device + the browser's buffers
+      async function arLatency(say) {
+        const rig = await arRig(),
+          c = rig.c;
+        try {
+          const sink = c.createGain(),
+            chunks = [],
+            N = 8,
+            GAP = 0.5,
+            start = c.currentTime + 0.6;
+          let cap;
+          try {
+            if (!LP.worklet) {
+              await c.audioWorklet.addModule(URL.createObjectURL(new Blob([CAP_CODE], { type: "application/javascript" })));
+              LP.worklet = true;
+            }
+            cap = new AudioWorkletNode(c, "tp-cap", { channelCount: 1, channelCountMode: "explicit" });
+            cap.port.onmessage = (e) => chunks.push(e.data);
+          } catch {
+            cap = c.createScriptProcessor(1024, 1, 1); // the same fallback as the looper's recorder
+            cap.onaudioprocess = (e) => chunks.push({ t: (e.playbackTime || c.currentTime) - 2048 / c.sampleRate, d: new Float32Array(e.inputBuffer.getChannelData(0)) });
+          }
+          sink.gain.value = 0;
+          ainTap(c, rig.src).connect(cap);
+          cap.connect(sink).connect(c.destination);
+          const clk = c.createBuffer(1, Math.round(c.sampleRate * 0.01), c.sampleRate),
+            d = clk.getChannelData(0);
+          for (let i = 0; i < d.length; i++) d[i] = 0.9 * Math.sin((2 * Math.PI * 2000 * i) / c.sampleRate) * Math.sin((Math.PI * i) / d.length) ** 2;
+          for (let k = 0; k < N; k++) {
+            const b = c.createBufferSource();
+            b.buffer = clk;
+            b.connect(c.destination);
+            b.start(start + k * GAP);
+          }
+          const t0 = performance.now(),
+            total = (0.6 + N * GAP + 0.4) * 1000;
+          while (performance.now() - t0 < total) {
+            await arSleep(100);
+            say("Latency: clicks are playing. Speaker near the mic, or a cable from output to input · " + Math.ceil((total - (performance.now() - t0)) / 1000), 1);
+          }
+          cap.disconnect();
+          let nz = 0,
+            nn = 0;
+          chunks.forEach((ch) => {
+            if (ch.t + ch.d.length / c.sampleRate < start - 0.05) for (const v of ch.d) (nz += v * v), nn++;
+          });
+          const thr = Math.max(0.02, 8 * Math.sqrt(nz / (nn || 1))),
+            got = [];
+          for (let k = 0; k < N; k++) {
+            const at = start + k * GAP;
+            let hit = null;
+            for (const ch of chunks) {
+              if (hit != null || ch.t > at + GAP - 0.05 || ch.t + ch.d.length / c.sampleRate < at) continue;
+              for (let i = 0; i < ch.d.length; i++) {
+                const t = ch.t + i / c.sampleRate;
+                if (t >= at && Math.abs(ch.d[i]) > thr) {
+                  hit = t - at;
+                  break;
+                }
+              }
+            }
+            if (hit != null) got.push(hit * 1000);
+          }
+          got.sort((a, b) => a - b);
+          const ms = (v) => Math.round(v) + " ms";
+          if (got.length >= 4) {
+            const med = got[got.length >> 1];
+            AIN.lat = Math.round(med);
+            ainSave();
+            S.loop.sync = Math.min(500, AIN.lat); // iPhone/iPad 80-130 ms, Chrome on Android up to ~350 ms: no desktop clamp
+            saveState();
+            lpFace();
+            AR.rows.lat = [
+              ["✔", `Round trip: ${ms(med)} (best ${ms(got[0])}, worst ${ms(got[got.length - 1])}, heard ${got.length} of ${N} clicks)`],
+              [got[got.length - 1] - got[0] < 12 ? "✔" : "·", `Jitter: ${ms(got[got.length - 1] - got[0])}` + (got[got.length - 1] - got[0] < 12 ? " (steady)" : " (uneven: the looper could drift a little)")],
+              ["i", "This includes the speaker, the air and the browser's buffers. A cable from the output to the input shows the pure electronic delay. The looper's REC DELAY is now " + AIN.lat + " ms (change it in the looper if you measured with the speaker and then use a cable)."],
+            ];
+          } else AR.rows.lat = [["✘", `Heard only ${got.length} of ${N} clicks. Turn the volume up and put the speaker near the microphone, or connect the output to the input with a cable.`]];
+        } finally {
+          rig.close();
+        }
+      }
+      const AR_STEPS = { noise: ["1 SILENCE", arNoise, "Silence"], play: ["2 PLAY", arPlay, "Play"], lat: ["3 LATENCY", arLatency, "Latency"] };
+      function arRows() {
+        return Object.entries(AR_STEPS).flatMap(([k, [, , name]]) => AR.rows[k] || [["·", name + ": not run yet"]]);
+      }
+      function arFace() {
+        let el = document.getElementById("miLearn");
+        if (!el) {
+          el = document.createElement("div");
+          el.id = "miLearn";
+          document.body.appendChild(el);
+          el.innerHTML = `<div class="mlBox mtBox"><i>AUDIO INPUT TESTS</i><p id="arSay"></p><ul></ul><div class="mlB">${Object.entries(AR_STEPS).map(([k, v]) => `<button data-ar="${k}">${v[0]}</button>`).join("")}<button data-ar="copy">COPY REPORT</button><button data-ar="done" class="on">DONE</button></div></div>`;
+          el.onclick = async (e) => {
+            const b = e.target.closest("[data-ar]");
+            if (!b || (AR.busy && b.dataset.ar !== "done")) return;
+            const k = b.dataset.ar;
+            if (k === "done") {
+              el.remove();
+              return;
+            }
+            if (k === "copy") {
+              const t = ["TUNE.Pocket audio input report", navigator.userAgent, `input: ${AIN.dev ? "chosen device" : "default"}, channel ${AIN.ch}`, ...arRows().map(([a, x]) => a + " " + x)].join("\n");
+              return (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(() => toast("Report copied: paste it in a message"), () => toast("Could not copy here"));
+            }
+            AR.busy = true;
+            el.classList.add("busy");
+            const say = (t, keep) => ((el.querySelector("#arSay").textContent = t), keep || arFace());
+            try {
+              if (AT.on) await ainTestStop();
+              await AR_STEPS[k][1](say);
+              el.querySelector("#arSay").textContent = "Done.";
+            } catch (err) {
+              AR.rows[k] = [["✘", AR_STEPS[k][2] + " failed: " + (err.name || err.message || "unknown")]];
+              el.querySelector("#arSay").textContent = "";
+            }
+            AR.busy = false;
+            el.classList.remove("busy");
+            arFace();
+          };
+        }
+        el.querySelector("ul").innerHTML = arRows()
+          .map(([a, b]) => `<li class="${a === "✔" ? "ok" : a === "i" ? "inf" : ""}"><b>${a}</b>${esc(b)}</li>`)
+          .join("");
+      }
+
       const MIC = { on: false, stream: null, an: null, buf: new Float32Array(4096), raf: 0 };
       async function micStart() {
         if (MIC.on) return;
         if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return micError("NO_API");
         try {
           const c = await getCtx();
-          MIC.stream = await navigator.mediaDevices.getUserMedia({
-            audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false },
-            video: false,
-          });
+          MIC.stream = await ainOpen();
           await c.resume().catch(() => {}); // iOS / Android can suspend the context during the permission prompt
+          c.onstatechange = () => MIC.on && c.state !== "running" && c.state !== "closed" && micAway(); // iOS: "interrupted" after a call or sleep
           const src = c.createMediaStreamSource(MIC.stream);
           MIC.an = c.createAnalyser();
           MIC.an.fftSize = 4096;
-          src.connect(MIC.an);
+          ainTap(c, src).connect(MIC.an);
           MIC.on = true;
           micFace();
           MIC.raf = requestAnimationFrame(micLoop);
         } catch (e) {
           micError(e.name || "UNKNOWN");
         }
+      }
+      // the system took the microphone (sleep, a call, another app): stop cleanly and say how to resume, instead of a stuck input with a growing delay
+      function micAway() {
+        if (!MIC.on) return;
+        micStop();
+        toast("The microphone was paused. Tap MIC to resume", 5000);
       }
       function micStop() {
         MIC.on = false;
@@ -5890,7 +6307,7 @@
 #miLearn ul{list-style:none;margin:10px 0 0;padding:0;font:600 12px var(--mono,monospace);color:var(--dim)}
 #miLearn li{display:flex;gap:8px;padding:5px 0;border-top:1px solid var(--line)}
 #miLearn li b{width:14px;flex:none;text-align:center}
-#miLearn li.ok{color:var(--text)}#miLearn li.ok b{color:var(--acc)}#miLearn li.inf{font-weight:500;font-style:italic}
+#miLearn.busy .mlB button{opacity:.4}#miLearn #arSay{min-height:1.2em;color:var(--acc)}#miLearn li.ok{color:var(--text)}#miLearn li.ok b{color:var(--acc)}#miLearn li.inf{font-weight:500;font-style:italic}
 #midiBar{display:flex;flex-direction:column;gap:6px}#midiBar>button{min-height:42px}.mrow{display:flex;flex-wrap:wrap;gap:6px}.mrow button{flex:1 1 0;min-width:0;padding:0 2px;font-size:11px;min-height:38px}`;
         document.head.appendChild(st);
       }
@@ -6838,18 +7255,45 @@
           .join("");
         ribFace();
       }
-      // a chord: the root low, the chord above it; strummed on the strings, struck on the piano (and the winds)
+      // A chord as the selected instrument plays it: [midi note, delay in s, length in s]. The notes sit inside the range of the
+      // instrument (its open strings and twelve frets above, or its lowest note and about an octave and a half) and each one
+      // plays in its own way: strummed on the guitar, guitalele and ukulele, a root and a fifth on the bass, bowed on the violin,
+      // broken one note at a time on the recorder and the tin whistle, struck on the piano.
+      function cofVoicing(ch, ivs, len) {
+        const kind = KIND(S.inst),
+          ms = stringMidis(),
+          lo = Math.min(...ms),
+          rel = [...new Set(ivs.map((iv) => iv % 12))],
+          up = (m0, hi) => rel.map((iv) => { let m = m0 + iv; while (m > hi) m -= 12; return m; }).sort((a, b) => a - b),
+          rootAt = (floor) => floor + ((((ch.pc - floor) % 12) + 12) % 12);
+        if (S.inst === "piano") {
+          const root = 48 + ch.pc;
+          return [[root - 12, 0, len], ...ivs.map((iv, n) => [root + iv, (n + 1) * 0.008, len])];
+        }
+        if (S.inst === "bass") {
+          const r = rootAt(lo),
+            fifth = ivs.find((iv) => iv >= 6 && iv <= 8) ?? 7;
+          return [[r, 0, len], [r + fifth, 0.03, len]];
+        }
+        if (kind === "wind") {
+          const r = rootAt(lo),
+            notes = [...new Set(up(r, lo + 19))],
+            step = Math.min(0.22, (len * 0.8) / notes.length);
+          return notes.map((m, n) => [m, n * step, Math.max(0.35, step * 2.2)]);
+        }
+        const hi = Math.max(...ms) + 12,
+          r = rootAt(lo),
+          notes = [...new Set([r, ...up(r, hi)])].sort((a, b) => a - b),
+          gap = kind === "fretless" ? 0.07 : 0.03;
+        return notes.map((m, n) => [m, n * gap, len]);
+      }
       function cofPlay(ch, t = 0, len = 1.6) {
         const ivs = cofIvs(ch, S.cof.sev, cofDom(ch, S.cof.minor)),
-          root = 48 + ch.pc,
           kind = KIND(S.inst),
-          strum = kind === "fret" || kind === "fretless" ? 0.03 : 0.008,
-          note = (m, at) =>
-            kind === "fret" || kind === "fretless"
-              ? playInst(midiToHz(m), at, len)
-              : getCtx().then((c) => TK.voice(c, sclOut(c), tkIndex("Piano"), m, c.currentTime + at + 0.01, len, 0.55));
-        note(root - 12, t);
-        ivs.forEach((iv, n) => note(root + iv, t + (n + 1) * strum));
+          voice = tkIndex(S.inst === "whistle" ? "Whistle" : S.inst === "recorder" ? "Recorder" : "Piano");
+        cofVoicing(ch, ivs, len).forEach(([m, d, l]) =>
+          kind === "fret" || kind === "fretless" ? playInst(midiToHz(m), t + d, l) : getCtx().then((c) => TK.voice(c, sclOut(c), voice, m, c.currentTime + t + d + 0.01, l, 0.55)),
+        );
       }
       function cofLight(k, ms) {
         COF.k = k;
@@ -7445,10 +7889,7 @@
         if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return micError("NO_API"), false;
         try {
           const c = await getCtx();
-          LP.stream = await navigator.mediaDevices.getUserMedia({
-            audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false },
-            video: false,
-          });
+          LP.stream = await ainOpen();
           await c.resume().catch(() => {});
           LP.src = c.createMediaStreamSource(LP.stream);
           LP.chunks = [];
@@ -7470,7 +7911,7 @@
           }
           LP.sink = c.createGain();
           LP.sink.gain.value = 0;
-          LP.src.connect(LP.cap);
+          ainTap(c, LP.src).connect(LP.cap);
           LP.cap.connect(LP.sink);
           LP.sink.connect(c.destination);
           return true;
@@ -7659,7 +8100,7 @@
           ).join("");
         if (!$("#lSync").options.length) {
           $("#lSync").innerHTML =
-            `<option value="-1">Auto</option>` + [0, 20, 40, 60, 80, 100, 130, 160, 200, 250, 300].map((v) => `<option value="${v}">${v} ms</option>`).join("");
+            `<option value="-1">Auto</option>` + [0, 20, 40, 60, 80, 100, 130, 160, 200, 250, 300, 350, 400].map((v) => `<option value="${v}">${v} ms</option>`).join("");
           $("#lLen").innerHTML = LENS.map((n) => `<button data-bars="${n}"><b>${"<u></u>".repeat(n)}</b><i>${n} ${n > 1 ? "BARS" : "BAR"}</i></button>`).join("");
         }
         lpFace();
@@ -7691,6 +8132,7 @@
         $("#lMon").classList.toggle("on", S.loop.mon !== false);
         $("#lAutoQ").innerHTML = `AUTO Q<i>${S.loop.aq ? LGRID[S.loop.grid ?? 1][0] : "OFF"}</i>`;
         $("#lAutoQ").classList.toggle("on", !!S.loop.aq);
+        if (S.loop.sync >= 0 && ![...$("#lSync").options].some((o) => +o.value === S.loop.sync)) $("#lSync").add(new Option(S.loop.sync + " ms", S.loop.sync));
         $("#lSync").value = S.loop.sync;
         $("#lSyncTxt").innerHTML = `<i>REC DELAY</i>${S.loop.sync >= 0 ? S.loop.sync + " ms" : "AUTO" + (ctx ? " " + Math.round(lpLat() * 1000) : "")}`;
         const any = lpAny(),
@@ -7929,6 +8371,243 @@
         lpFace();
         playFace();
         toast("All loops cleared (UNDO brings them back)");
+      };
+
+      // ---- storage: IndexedDB "tune-pocket", the same idea as TRACK's. "autosave" holds the loops as they are, "session:<name>" the ones saved by name
+      const idb = {
+        open: () =>
+          (idb.p ||= new Promise((ok, no) => {
+            const r = indexedDB.open("tune-pocket-test", 1);
+            r.onupgradeneeded = () => r.result.createObjectStore("kv");
+            r.onsuccess = () => ok(r.result);
+            r.onerror = () => no(r.error);
+          })),
+        async tx(mode, fn) {
+          const db = await idb.open();
+          return new Promise((ok, no) => {
+            const t = db.transaction("kv", mode),
+              r = fn(t.objectStore("kv"));
+            t.oncomplete = () => ok(r && r.result);
+            t.onerror = t.onabort = () => no(t.error);
+          });
+        },
+        get: (k) => idb.tx("readonly", (s) => s.get(k)),
+        set: (k, v) => idb.tx("readwrite", (s) => s.put(v, k)),
+        del: (k) => idb.tx("readwrite", (s) => s.delete(k)),
+      };
+      // a loop is kept as 16 bit PCM: half the size of the floats, and the recording was 16 bit to begin with
+      const pcm16 = (f) => {
+        const o = new Int16Array(f.length);
+        for (let i = 0; i < f.length; i++) o[i] = Math.max(-1, Math.min(1, f[i])) * 32767;
+        return o;
+      };
+      const pcmB64 = (a) => {
+        const u = new Uint8Array(a.buffer, a.byteOffset, a.byteLength);
+        let t = "";
+        for (let i = 0; i < u.length; i += 0x8000) t += String.fromCharCode.apply(null, u.subarray(i, i + 0x8000));
+        return btoa(t);
+      };
+      const b64Pcm = (t) => {
+        const s = atob(t),
+          u = new Uint8Array(s.length);
+        for (let i = 0; i < s.length; i++) u[i] = s.charCodeAt(i);
+        return new Int16Array(u.buffer, 0, u.length >> 1);
+      };
+      const lpPack = () => ({
+        app: "TUNE.",
+        v: 1,
+        bpm: S.met.bpm,
+        beats: S.met.beats,
+        loops: LP.loops.map((L) => L && { pcm: pcm16(L.buf.getChannelData(0)), rate: L.buf.sampleRate, bars: L.bars, a: L.a, o: L.o, vol: L.vol }),
+      });
+      // a file or a stored session is checked before it touches the looper: it throws and changes nothing
+      function lpVet(o) {
+        if (!o || typeof o !== "object" || !Array.isArray(o.loops) || o.loops.length > 16) throw new Error("This file has no loops");
+        const out = { app: "TUNE.", v: 1, bpm: clamp(Math.round(+o.bpm) || 100, BMIN, BMAX), beats: clamp(Math.round(+o.beats) || 4, 1, 16), loops: [] };
+        let total = 0;
+        for (let i = 0; i < 16; i++) {
+          const x = o.loops[i];
+          if (!x || typeof x !== "object") {
+            out.loops.push(null);
+            continue;
+          }
+          const pcm = typeof x.pcm === "string" ? b64Pcm(x.pcm) : x.pcm,
+            rate = Math.round(+x.rate);
+          if (!(pcm instanceof Int16Array) || !pcm.length) throw new Error("A loop in this file is damaged");
+          if (!(rate >= 8000 && rate <= 192000) || pcm.length > rate * 120) throw new Error("A loop in this file is too long or has a wrong rate");
+          if ((total += pcm.length) > 192000 * 600) throw new Error("This file is too big");
+          out.loops.push({ pcm, rate, bars: clamp(Math.round(+x.bars) || 1, 1, 64), a: clamp(+x.a || 0, -4096, 4096), o: clamp(+x.o || 0, -64, 64), vol: Number.isFinite(+x.vol) ? clamp(+x.vol, 0, 2) : 1 });
+        }
+        return out;
+      }
+      // the looper takes the loops of a vetted session, with the tempo they were made at
+      async function lpLoad(o) {
+        if (LP.rec) return toast("Finish the recording first");
+        // the context is made but not waited for: before the first tap the browser keeps resume() pending, and the loops must load anyway
+        if (!ctx || ctx.state === "closed") ctx = new (window.AudioContext || window.webkitAudioContext)();
+        ctx.resume().catch(() => {});
+        const c = ctx;
+        lpGraph(c);
+        LP.loops.forEach((L, i) => L && lpPut(i, null));
+        const old = beatDur();
+        if (S.met.bpm !== o.bpm || S.met.beats !== o.beats) {
+          S.met.bpm = o.bpm;
+          S.met.beats = o.beats;
+          clkRetime(old);
+        }
+        o.loops.forEach((x, i) => {
+          if (!x) return;
+          const buf = c.createBuffer(1, x.pcm.length, x.rate),
+            d = buf.getChannelData(0);
+          for (let k = 0; k < d.length; k++) d[k] = x.pcm[k] / 32767;
+          LP.loops[i] = lpMake({ buf, bars: x.bars, a: x.a, o: x.o, vol: x.vol });
+        });
+        LP.undo = [];
+        LP.sel = -1;
+        clkMaybeStop();
+        metFace();
+        lpFace();
+        playFace();
+        saveState();
+      }
+      // autosave: what is in the looper is kept every few seconds when it changes (and removed when the pads are emptied)
+      const lpFp = () => [S.met.bpm, S.met.beats, ...LP.loops.map((L) => (L ? [L.buf.length, L.bars, L.a, L.o, L.vol, L.buf.getChannelData(0)[L.buf.length >> 1]].join(":") : "-"))].join("|");
+      const lpAuto = { ready: false, fp: "" };
+      async function lpBoot() {
+        if (lpAuto.ready) return;
+        lpAuto.ready = "loading";
+        let back = false;
+        try {
+          const o = await idb.get("autosave");
+          if (o && !lpHas()) {
+            await lpLoad(lpVet(o));
+            back = true;
+            toast("Your loops are back");
+          }
+        } catch (e) {
+          console.warn("The saved loops could not be opened", e);
+        }
+        lpAuto.fp = back || !lpHas() ? lpFp() : ""; // loops made before this finished are not what is stored: the next autosave writes them
+        lpAuto.ready = true;
+      }
+      setInterval(async () => {
+        if (lpAuto.ready !== true || LP.rec) return; // nothing is written before the saved loops had their turn
+        const fp = lpFp();
+        if (fp === lpAuto.fp) return;
+        lpAuto.fp = fp;
+        try {
+          if (lpHas()) await idb.set("autosave", lpPack());
+          else await idb.del("autosave");
+        } catch {}
+      }, 3000);
+      // ---- sessions: loops saved by name
+      const sessName = (n) => String(n ?? "").replace(/[<>&"'`]/g, "").trim().slice(0, 40);
+      async function sessPut(name, o) {
+        await idb.set("session:" + name, o);
+        const m = (await idb.get("meta")) || {},
+          ls = o.loops.filter(Boolean);
+        m[name] = { d: Date.now(), n: ls.length, bars: ls.reduce((a, x) => a + x.bars, 0), bytes: ls.reduce((a, x) => a + x.pcm.byteLength, 0) };
+        await idb.set("meta", m);
+      }
+      async function sessSave() {
+        const name = sessName($("#sName").value);
+        if (!name) return toast("Give the session a name");
+        if (!lpHas()) return toast("No loops to save yet");
+        if (LP.rec) return toast("Finish the recording first");
+        try {
+          await sessPut(name, lpPack());
+          toast("Saved: " + name);
+          $("#sName").value = "";
+          sessList();
+        } catch (e) {
+          toast("Could not save: " + (e && e.name === "QuotaExceededError" ? "not enough free space on this device" : e.message || e), 3000);
+        }
+      }
+      async function sessOpen(name) {
+        try {
+          const o = lpVet(await idb.get("session:" + name));
+          if (lpHas() && !LP.rec) await sessPut("Before opening", lpPack()); // what was in the pads is not lost
+          await lpLoad(o);
+          toast("Opened: " + name);
+          sessList();
+        } catch (e) {
+          toast("Could not open it: " + (e.message || e), 3000);
+        }
+      }
+      async function sessExport(name) {
+        try {
+          const o = await idb.get("session:" + name),
+            j = JSON.stringify({ ...o, name, loops: o.loops.map((x) => x && { ...x, pcm: pcmB64(x.pcm) }) }),
+            a = document.createElement("a");
+          a.href = URL.createObjectURL(new Blob([j], { type: "application/json" }));
+          a.download = "tune-loops-" + name.replace(/[^\w.-]+/g, "_") + ".json";
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+        } catch (e) {
+          toast("Could not export: " + (e.message || e), 3000);
+        }
+      }
+      async function sessImport(file) {
+        try {
+          if (file.size > 400e6) throw new Error("This file is too big");
+          const j = JSON.parse(await file.text()),
+            o = lpVet(j),
+            name = sessName(j.name) || sessName(file.name.replace(/\.json$/i, "")) || "Imported";
+          await sessPut(name, o);
+          toast("Imported: " + name);
+          sessList();
+        } catch (e) {
+          toast("That file does not work: " + (e.message || e), 3000);
+        }
+      }
+      const fmtMB = (b) => (b / 1048576).toFixed(b < 1048576 * 10 ? 1 : 0) + " MB";
+      async function sessList() {
+        let m = {};
+        try {
+          m = (await idb.get("meta")) || {};
+        } catch {
+          $("#sList").innerHTML = `<div class="hint">Saving needs browser storage, and it is not available here (a private window?).</div>`;
+        }
+        $("#sList").innerHTML = Object.entries(m)
+          .sort((a, b) => b[1].d - a[1].d)
+          .map(([n, x]) => `<div class="srow" data-n="${esc(n)}"><b>${esc(n)}</b><i>${x.n} loop${x.n === 1 ? "" : "s"} · ${x.bars} bars · ${fmtMB(x.bytes)} · ${new Date(x.d).toLocaleDateString()}</i><button data-a="open">OPEN</button><button data-a="exp">EXPORT</button><button data-a="del">DELETE</button></div>`)
+          .join("");
+        try {
+          const { usage = 0, quota = 0 } = await navigator.storage.estimate();
+          $("#sMeter").textContent = quota ? `Browser storage: ${fmtMB(usage)} used · ${fmtMB(quota - usage)} available` : "";
+        } catch {
+          $("#sMeter").textContent = "";
+        }
+      }
+      $("#sSave").onclick = sessSave;
+      $("#sName").onkeydown = (e) => e.key === "Enter" && sessSave();
+      $("#sImport").onclick = () => $("#sFile").click();
+      $("#sFile").onchange = (e) => {
+        const f = e.target.files[0];
+        e.target.value = "";
+        if (f) sessImport(f);
+      };
+      $("#sList").onclick = async (e) => {
+        const b = e.target.closest("button"),
+          n = b && b.closest(".srow").dataset.n;
+        if (!b) return;
+        if (b.dataset.a === "open") return sessOpen(n);
+        if (b.dataset.a === "exp") return sessExport(n);
+        if (!b.dataset.arm) {
+          // DELETE asks once more
+          b.dataset.arm = "1";
+          b.textContent = "SURE?";
+          return setTimeout(() => ((b.textContent = "DELETE"), delete b.dataset.arm), 2500);
+        }
+        try {
+          await idb.del("session:" + n);
+          const m = (await idb.get("meta")) || {};
+          delete m[n];
+          await idb.set("meta", m);
+        } catch {}
+        sessList();
       };
 
       // ---- the beat tools: drag across the wave to choose whole beats and CROP to them; ◀ ▶ slide the loop;
@@ -8277,7 +8956,7 @@
         if (v !== "scl") practiceStop();
         if (v === "scl") requestAnimationFrame(drawDia);
         if (v === "met") metRender();
-        if (v === "loop") lpRender();
+        if (v === "loop") (lpRender(), lpBoot());
         if (v === "jam") jWaveKick();
         if (v !== "loop") lpMicClose(); // the metronome and the loops keep playing in the other views
         rhythmKick();
@@ -8424,6 +9103,7 @@
         if (!b) return;
         if (b.dataset.fpb === "edit" && fpOpen !== "edit") return editPanel(null, "New tuning");
         filePanel(b.dataset.fpb);
+        if (fpOpen === "files") sessList();
       });
       function notesFace() {
         $$("#nnBar [data-nn]").forEach((b) => b.classList.toggle("on", (b.dataset.nn === "sol") === NOTES_SOL));
@@ -8466,9 +9146,12 @@
       // stop listening and playing when the app goes to the background
       document.addEventListener("visibilitychange", () => {
         if (document.hidden) {
-          if (MIC.on) micStop();
+          if (MIC.on) ((MIC.away = true), micStop());
           if (J.on) jamStop();
           rhythmStopAll();
+        } else if (MIC.away) {
+          MIC.away = false;
+          toast("The microphone was paused while the app was away. Tap MIC to resume", 5000);
         }
       });
 
@@ -9101,7 +9784,10 @@
               "**THEME** has the six looks shared with TRACK.Pocket. On a wide screen the background is animated and moves with the band or the microphone.",
               "## Options",
               "**OPTIONS** → **Note names**: letters (**A B C**) or solfège (**Do Re Mi**). The choice is shared with TRACK.Pocket and SING.Pocket.",
+              "**OPTIONS** → **Audio input**: pick the input the tuner and the looper listen to (a USB audio interface with a guitar or bass works too), raw and without the browser's processing, and one channel of it if you like. **GAIN** lifts a quiet input (a phone microphone in Firefox, a guitar cable) and is kept per input; it adds no delay. **LIVE** shows the level and the note. **TESTS** runs guided checks (noise, level and clipping, channels, pitch steadiness, round-trip latency) and **COPY REPORT** gives a text to paste. **On iPhone and iPad** the browser (every iOS browser uses Apple's engine) always listens to the built-in microphone, whatever you choose, and moves the sound to the device itself while listening, with a delay of about 80 to 130 ms: an Apple limitation, shown as a warning. Chrome or Firefox on a computer, or Firefox on Android, do better. The latency test sets the looper's REC DELAY, and after sleep or a call the microphone is paused: tap MIC to resume.",
               "**OPTIONS** → **Install**: adds TUNE.Pocket to your home screen or apps, with its own window and working offline. The **INSTALL** button (here and in the welcome note) says **INSTALLED** when you already run it as an app; on iPhone it shows the Safari ▸ Share ▸ Add to Home Screen steps.",
+              "## Files: loop sessions",
+              "**FILES** (bottom bar) keeps the looper's loops. The looper saves them by itself every few seconds and brings them back the next time you open it, with the tempo they were made at. Type a name and tap **SAVE** to keep a set under that name. **OPEN** replaces the loops in the pads (the ones you had are kept as *Before opening*). **EXPORT** makes a file to move to another device and **IMPORT .json** opens one. **DELETE** asks once more. The line at the bottom shows how much browser storage is used and free.",
               "Tunings and settings are kept on this device. Tunings saved by the old LFTuner app are loaded automatically.",
             ],
             es: [
@@ -9114,7 +9800,10 @@
               "**THEME** tiene los seis aspectos que comparte con TRACK.Pocket. En pantallas anchas el fondo está animado y se mueve con la banda o el micrófono.",
               "## Opciones",
               "**OPTIONS** → **Note names**: letras (**A B C**) o solfeo (**Do Re Mi**). La elección se comparte con TRACK.Pocket y SING.Pocket.",
+              "**OPTIONS** → **Entrada de audio**: elige la entrada que escuchan el afinador y el looper (una interfaz USB con guitarra o bajo también vale), sin procesar por el navegador, y un solo canal si quieres. **GAIN** sube una entrada floja (el micrófono del móvil en Firefox, un cable de guitarra) y se guarda por entrada; no añade retardo. **LIVE** muestra el nivel y la nota. **TESTS** hace comprobaciones guiadas (ruido, nivel y saturación, canales, estabilidad de la nota, latencia de ida y vuelta) y **COPY REPORT** da un texto para pegar. **En iPhone y iPad** el navegador (todos los de iOS usan el motor de Apple) siempre escucha el micrófono integrado, elijas lo que elijas, y pasa el sonido al propio dispositivo mientras escucha, con un retardo de unos 80 a 130 ms: una limitación de Apple, que se muestra como aviso. Chrome o Firefox en un ordenador, o Firefox en Android, funcionan mejor. La prueba de latencia fija el REC DELAY del looper, y tras dormir o una llamada el micrófono se pausa: toca MIC para reanudar.",
               "**OPTIONS** → **Install**: añade TUNE.Pocket a tu pantalla de inicio o a tus aplicaciones, con su propia ventana y funcionando sin conexión. El botón **INSTALL** (aquí y en la nota de bienvenida) dice **INSTALLED** si ya la usas como app; en iPhone muestra los pasos Safari ▸ Compartir ▸ Añadir a pantalla de inicio.",
+              "## Files: sesiones de loops",
+              "**FILES** (barra de abajo) guarda los loops del looper. El looper los guarda solo cada pocos segundos y los devuelve la próxima vez que lo abres, con el tempo con el que se hicieron. Escribe un nombre y toca **SAVE** para guardar un conjunto con ese nombre. **OPEN** sustituye los loops de los pads (los que tenías se guardan como *Before opening*). **EXPORT** crea un archivo para llevar a otro dispositivo e **IMPORT .json** abre uno. **DELETE** pide un segundo toque. La línea de abajo muestra cuánto almacenamiento del navegador se usa y cuánto queda.",
               "Las afinaciones y ajustes se guardan en este dispositivo. Las afinaciones guardadas en la antigua app LFTuner se cargan automáticamente.",
             ],
           },
@@ -9143,8 +9832,13 @@
             b: {
               en: [
                 "## Version 2.3.0",
+                "- **Audio input tests:** OPTIONS ▸ Audio input ▸ **TESTS** runs guided checks like the MIDI TEST: noise floor, level and clipping, which channels carry signal, pitch steadiness, and the round-trip latency (clicks out, heard back). **COPY REPORT** gives a text to paste.",
+                "- **Audio input (OPTIONS):** pick a USB audio interface (or any input) and the tuner and the looper listen to it directly, raw, instead of the microphone, with a channel choice (left, right, both) and a GAIN kept per input for quiet ones. TEST shows the level, the note and what the browser really gave: channels, sample rate, latency.",
                 "- **JAM keys:** the empty space of the JAM view shows a waveform and rotates to a **piano** and **drum pads** (the last button of the bottom row). A new **KEYS PLAY** instrument in SOUNDS sets what the keys play, on screen and from a MIDI keyboard, through the jam effects. When the effects of the JAM or the looper are open, the MIDI pads and keys play them.",
                 "- **Install it:** the app is now a web app (PWA). Add it to the Home Screen (iPhone: Safari ▸ Share; Android and desktop: Chrome ▸ Install app) and it opens like an app and works offline. The welcome note and **OPTIONS** have an **INSTALL** button that knows when the app is already installed. The Android APK is retired.",
+                "- **Loops are kept:** the looper saves its loops by itself and brings them back when you reopen it. TUNINGS ▸ **FILES** saves sets of loops by name, exports and imports them as files, and shows the storage used. Custom tunings moved to a `tune.` key (they move over by themselves).",
+                "- **Circle of fifths:** the chords now sound like the instrument you chose and sit in its range: strummed on the guitar, guitalele and ukulele, a root and a fifth on the bass, bowed on the violin, one note at a time on the recorder and tin whistle (they played as a piano before).",
+                "- **Install it:** the app is now a web app (PWA). Add it to the Home Screen (iPhone: Safari ▸ Share; Android and desktop: Chrome ▸ Install app) and it opens like an app and works offline. The Android APK is retired.",
                 "- **Looper:** the tempo and the bar length are locked while a recording counts in or runs, and the count-in never shows more than one bar (it once showed hundreds).",
                 "- **MIDI starting assignment:** known controllers (Akai MPK, Launchkey…) now start with a function on each knob and pad, shown as tags with a line on the DEVICE drawing: the pads hold the JAM effects (Flanger, Filter, Echo…) and knob 1 sets the tempo, and the keys play the piano as always. ASSIGN, LEARN and the **DEFAULTS** switch in DEVICE change it, and CLEAR turns it off.",
                 "- **MIDI:** the DEVICE view draws your controller (Akai MPK, Launchkey, Synido, Casio, nanoPAD) and lights its keys, pads, knobs and joystick as you play; TEST counts different keys, not presses; the same five buttons (ASSIGN, CLEAR, TEST, DEVICE, SOUND) in all three apps, and SOUND turns the app's own sound off for keyboards with speakers.",
@@ -9154,8 +9848,13 @@
               ],
               es: [
                 "## Versión 2.3.0",
+                "- **Pruebas de entrada de audio:** OPCIONES ▸ Entrada de audio ▸ **TESTS** hace comprobaciones guiadas como el TEST de MIDI: ruido de fondo, nivel y saturación, qué canales llevan señal, estabilidad de la nota y la latencia de ida y vuelta (suenan clics y se escuchan de vuelta). **COPY REPORT** da un texto para pegar.",
+                "- **Entrada de audio (OPCIONES):** elige una interfaz de audio USB (o cualquier entrada) y el afinador y el looper la escuchan directamente, sin procesar, en vez del micrófono, con elección de canal (izquierdo, derecho, ambos) y una GAIN guardada por entrada para las flojas. PRUEBA muestra el nivel, la nota y lo que el navegador entrega de verdad: canales, frecuencia de muestreo y latencia.",
                 "- **Teclas del JAM:** el espacio vacío del JAM muestra una forma de onda y rota a un **piano** y **pads de batería** (el último botón de la barra de abajo). Un nuevo instrumento **KEYS PLAY** en SOUNDS elige lo que tocan las teclas, en pantalla y desde un teclado MIDI, con los efectos del jam. Con los efectos del JAM o del looper abiertos, los pads y teclas MIDI los tocan.",
                 "- **Instálala:** la app ahora es una web app (PWA). Añádela a la pantalla de inicio (iPhone: Safari ▸ Compartir; Android y escritorio: Chrome ▸ Instalar app) y se abre como una app y funciona sin conexión. La nota de bienvenida y **OPTIONS** tienen un botón **INSTALL** que sabe si la app ya está instalada. El APK de Android se retira.",
+                "- **Los loops se conservan:** el looper guarda sus loops solo y los devuelve al volver a abrirlo. TUNINGS ▸ **FILES** guarda conjuntos de loops con nombre, los exporta e importa como archivos y muestra el almacenamiento usado. Las afinaciones propias pasaron a una clave `tune.` (se mueven solas).",
+                "- **Círculo de quintas:** los acordes suenan como el instrumento elegido y caen en su registro: rasgueados en guitarra, guitalele y ukelele, fundamental y quinta en el bajo, con arco en el violín, nota a nota en la flauta y el tin whistle (antes sonaban como piano).",
+                "- **Instálala:** la app ahora es una web app (PWA). Añádela a la pantalla de inicio (iPhone: Safari ▸ Compartir; Android y escritorio: Chrome ▸ Instalar app) y se abre como una app y funciona sin conexión. El APK de Android se retira.",
                 "- **Looper:** el tempo y la longitud del compás se bloquean mientras una grabación cuenta o graba, y la cuenta nunca muestra más de un compás (una vez mostró cientos).",
                 "- **Asignación MIDI inicial:** los controladores conocidos (Akai MPK, Launchkey…) empiezan con una función en cada pote y pad, mostrada como etiquetas con una línea en el dibujo de DEVICE: los pads mantienen los efectos del JAM (Flanger, Filtro, Eco…) y el pote 1 ajusta el tempo, y las teclas tocan el piano como siempre. ASSIGN, LEARN y el interruptor **DEFAULTS** de DEVICE la cambian, y CLEAR la desactiva.",
                 "- **MIDI:** la vista DEVICE dibuja tu controlador (Akai MPK, Launchkey, Synido, Casio, nanoPAD) e ilumina sus teclas, pads, potes y joystick al tocar; TEST cuenta teclas distintas, no pulsaciones; los mismos cinco botones (ASSIGN, CLEAR, TEST, DEVICE, SOUND) en las tres apps, y SOUND apaga el sonido de la app para teclados con altavoces.",
@@ -9920,6 +10619,24 @@
       }
       $("#instBtn").onclick = () => pwaRun(false);
       $("#wInst").onclick = () => pwaRun(true);
+      $("#ainDev").onchange = () => ((AIN.dev = $("#ainDev").value), ainSave(), ainGainFace(), toast(AIN.dev ? "Input chosen. Restart the tuner or the looper to use it." : "Default microphone"));
+      $("#ainCh").onchange = () => ((AIN.ch = $("#ainCh").value), ainSave());
+      $("#ainGain").oninput = () => {
+        AIN.gains[AIN.dev || "default"] = +$("#ainGain").value;
+        ainSave();
+        ainGainFace();
+        const v = Math.pow(10, ainDb() / 20);
+        for (const g of AING) {
+          if (g.context.state === "closed") AING.delete(g);
+          else g.gain.setTargetAtTime(v, g.context.currentTime, 0.02);
+        }
+      };
+      $("#ainGain").onchange = () => toast("Gain " + $("#ainGainTxt").textContent + " for this input");
+      $("#ainTest").onclick = ainTest;
+      $("#ainTests").onclick = arFace;
+      ainFace();
+      ainList();
+      navigator.mediaDevices && navigator.mediaDevices.addEventListener && navigator.mediaDevices.addEventListener("devicechange", ainList);
       addEventListener("pocketinstall", () => {
         PWA.ev = window.pocketInstall;
         pwaFace();
@@ -9972,5 +10689,5 @@
         if (!localStorage.getItem("tune-test.welcome")) welcome();
       } catch {}
     </script>
-  <div style="position:fixed;left:4px;bottom:2px;z-index:99;font:700 9px monospace;opacity:.7;pointer-events:none;color:#ff5e7a">TEST BUILD · tune-fixes · f114338</div></body>
+  <div style="position:fixed;left:4px;bottom:2px;z-index:99;font:700 9px monospace;opacity:.7;pointer-events:none;color:#ff5e7a">TEST BUILD · beta · 90a5da5</div></body>
 </html>

@@ -4,9 +4,9 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Pocket apps</title>
-    <meta name="description" content="TRACK.Pocket, TUNE.Pocket and SING.Pocket: three small, free music apps that run in your browser, install like apps and work offline." />
+    <meta name="description" content="TRACK.Pocket, TUNE.Pocket, SING.Pocket and PLAY.Pocket: four small, free music apps that run in your browser, install like apps and work offline." />
     <meta property="og:title" content="Pocket apps" />
-    <meta property="og:description" content="Three small, free music apps: a tracker, a tuner and a vocal coach. In your browser, installable, offline." />
+    <meta property="og:description" content="Four small, free music apps: a tracker, a tuner, a vocal coach and a guitar rig. In your browser, installable, offline." />
     <meta property="og:image" content="https://utopick.github.io/img/track.png" />
     <meta name="theme-color" content="#0d0f12" />
     <style>
@@ -56,7 +56,7 @@
         <p class="lead">Test builds: features still being tried, not released. They keep their own data, so your songs and settings in the real apps are not touched. Things may break; tell me what does.</p>
         <div id="tl"></div>
       </section>
-      <p class="lead">Three small, free music apps. They run in your browser, install on your phone or computer like an app, work offline, and keep everything on your device.</p>
+      <p class="lead">Four small, free music apps. They run in your browser, install on your phone or computer like an app, work offline, and keep everything on your device.</p>
 
       <section class="app" style="--c: #7cf29a">
         <a href="https://utopick.github.io/track-pocket/"><img src="img/track.png" width="2560" height="640" alt="TRACK.Pocket" /></a>
@@ -91,6 +91,16 @@
         </div>
       </section>
 
+      <section class="app" style="--c: #ff9f1c">
+        <a href="test/play-beta/"><img src="img/play.png" width="2560" height="640" alt="PLAY.Pocket" /></a>
+        <p>A pocket guitar rig: pedals, amps and cabs on a board, a looper and backing tracks. New, in beta.</p>
+        <div class="row">
+          <a class="btn main" href="test/play-beta/">TRY THE BETA</a>
+          <a class="btn src" href="https://github.com/utopick/play-pocket" title="PLAY.Pocket source code on GitHub"><svg viewBox="0 0 16 16" width="18" height="18" aria-hidden="true" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>SOURCE CODE</a>
+          <a class="tag" title="Not released yet: this is a test build with its own data">BETA</a>
+        </div>
+      </section>
+
       <section id="qr">
         <h2>Print it</h2>
         <p>A QR code for each app, and one for this page. Point a phone camera at it and the app opens. Free to print on cards, flyers and stickers. The SVG stays sharp at any size, so use it for print. Keep a quiet white margin around it, and test the printed copy with a phone before you make many.</p>
@@ -98,7 +108,7 @@
           <figure><img src="img/qr/track.svg" width="160" height="160" alt="QR code for TRACK.Pocket" /><figcaption>TRACK.Pocket<br /><a href="img/qr/track.svg" download>SVG</a> · <a href="img/qr/track.png" download>PNG</a></figcaption></figure>
           <figure><img src="img/qr/tune.svg" width="160" height="160" alt="QR code for TUNE.Pocket" /><figcaption>TUNE.Pocket<br /><a href="img/qr/tune.svg" download>SVG</a> · <a href="img/qr/tune.png" download>PNG</a></figcaption></figure>
           <figure><img src="img/qr/sing.svg" width="160" height="160" alt="QR code for SING.Pocket" /><figcaption>SING.Pocket<br /><a href="img/qr/sing.svg" download>SVG</a> · <a href="img/qr/sing.png" download>PNG</a></figcaption></figure>
-          <figure><img src="img/qr/all.svg" width="160" height="160" alt="QR code for this page, with all three apps" /><figcaption>All three apps<br /><a href="img/qr/all.svg" download>SVG</a> · <a href="img/qr/all.png" download>PNG</a></figcaption></figure>
+          <figure><img src="img/qr/all.svg" width="160" height="160" alt="QR code for this page, with all the apps" /><figcaption>All the apps<br /><a href="img/qr/all.svg" download>SVG</a> · <a href="img/qr/all.png" download>PNG</a></figcaption></figure>
         </div>
       </section>
 
@@ -107,16 +117,11 @@
     <script>
       // The test builds: add a card when a feature branch is published with ./test-build.sh (it writes test/<app>-<branch>/).
       const TESTS = [
+        { app: "PLAY.Pocket", name: "Beta", repo: "play-pocket", branch: "beta", dir: "play-beta", note: "The new guitar rig app. PEDAL BOARD: 16 pedals, 4 amps and 4 cabs in a signal chain that fills the screen (tap a unit to turn it on or off, press and hold or double tap to open it, drag to move it). LIVE PLAY: one unit full screen, with what it does, its waveform in and out, and a TEST riff button. LOOPER as in TUNE.Pocket (16 loops, edit tools, effects, undo, kept after a reload), TRACKS to play along with, a MIXER and a LATENCY TEST. Plug in a guitar through an interface and use headphones." },
+        { app: "TRACK.Pocket", name: "Beta", repo: "track-pocket", branch: "beta", dir: "track-beta", note: "SYNC (Files ▸ SYNC): devices on the same Wi-Fi share a song, the Variator, samples, PLAY / STOP, the mixer, and keys, pads, effect pads and launched loops played on one sound on the others. Pair with QR codes (scan each other's with the camera), by sound, or by codes. SOUND HERE / SOUND EVERYWHERE decides who makes the sound. Also the MIDI fixes: a MIDI volume knob moves the master and the Variator knobs, and the Live FX pads play from MIDI." },
+        { app: "TUNE.Pocket", name: "Beta", repo: "tune-pocket", branch: "beta", dir: "tune-beta", note: "OPTIONS ▸ Audio input: pick a USB interface for the tuner and the looper, with gain, LIVE and guided TESTS (noise, level, channels, latency) and a COPY REPORT. The looper keeps its loops after a reload, with FILES for named sets. JAM has a waveform, a piano and drum pads, and a KEYS PLAY instrument. The circle of fifths sounds like the instrument you chose. Warnings for iPhone and iPad, where the browser always uses the built-in microphone." },
+        { app: "SING.Pocket", name: "Beta", repo: "sing-pocket", branch: "beta", dir: "sing-beta", note: "OPTIONS ▸ Microphone: input, channel, gain, gate, high-pass and your voice range per input, with LIVE, guided TESTS and AUTO SETUP, and a COPY REPORT. A new AIR view shows how clean or breathy your tone is, with a side view of the mouth for five shapes. Bigger play and loop marks on the sampler pads, and MIDI pads and keys play the sampler effects. Warnings for iPhone and iPad.", },
         { app: "LAB.Pocket", name: "Audio latency", dir: "latency-lab", note: "A test tool for the coming guitar pedal app: how much delay the browser adds between your microphone or USB interface and your headphones. MEASURE ROUND TRIP plays 5 clicks and times them coming back (a cable from output to input, or the speaker next to the mic). Records runs and exports them as JSON. Headphones on before you turn the monitor up." },
-        { app: "SING.Pocket", name: "Air detector", repo: "sing-pocket", branch: "air-detector", dir: "sing-air-detector", note: "A new AIR view: how much of your tone is clean or breathy (a waveform coloured by it, live and for the whole take), and a side view of the tongue, soft palate and larynx for five mouth shapes. Needs a microphone." },
-        { app: "TRACK.Pocket", name: "Sync devices", repo: "track-pocket", branch: "lan-sync", dir: "track-lan-sync", note: "Files ▸ SYNC: devices on the same Wi-Fi share one song, its samples and PLAY / STOP. They pair with two QR codes and no sound: HOST on one shows a code, JOIN on the other reads it with its camera and shows an answer code, the host reads that one with SCAN (or SCAN jsQR, a second reader to compare), and both confirm the same 4 digits. All of it happens in one dialog on each device. HOST again adds another device, and the panel lists who is in. One device makes the sound (the host at first): SOUND HERE moves it, SOUND EVERYWHERE gives it to all. The Variator is shared: all the devices show the same seed, knobs and patterns, and it stays on while they visit other screens (EXPORT ▸ BACK TO OUR SONG ends it). Keys, pads, effect pads and launched loops played on a silent device sound on the one that makes the sound. APP QR shows a code that opens the app on a new device. Needs two devices." },
-        { app: "TUNE.Pocket", name: "Loops are kept", repo: "tune-pocket", branch: "tune-storage", dir: "tune-tune-storage", note: "The looper brings its loops back after a reload. TUNINGS ▸ FILES saves sets of loops by name, exports and imports them as files and shows the storage used. Record a loop, wait a few seconds, reload the page and open the looper." },
-        { app: "TUNE.Pocket", name: "Circle of fifths sounds like your instrument", repo: "tune-pocket", branch: "cof-instruments", dir: "tune-cof-instruments", note: "Open the circle of fifths, pick an instrument in the dropdown and tap chords. Each instrument plays them in its own way and range: guitar, guitalele and ukulele strummed, bass a root and a fifth, violin bowed, recorder and tin whistle one note at a time. Needs sound." },
-        { app: "TRACK.Pocket", name: "MIDI: master knob and Live FX", repo: "track-pocket", branch: "track-fixes", dir: "track-track-fixes", note: "A MIDI volume knob now moves the master knob in the mixer and the knobs in the Variator. With the Live FX pads open the MIDI pads and keys play the effects. In the Variator, with the piano open only the pads play effects, and with the drum pads open both play drums. Needs a MIDI controller (Chrome, Edge or Firefox)." },
-        { app: "SING.Pocket", name: "Microphone setup", repo: "sing-pocket", branch: "mic-setup", dir: "sing-mic-setup", note: "OPTIONS has a new Microphone block: input, channel, gain, gate, high-pass and your voice range, kept per input. LIVE shows level and note. TESTS runs guided checks (silence, voice, pops, range, browser processing) and AUTO SETUP sets everything from them. COPY REPORT gives a text to paste." },
-        { app: "TUNE.Pocket", name: "Audio input", repo: "tune-pocket", branch: "audio-input", dir: "tune-audio-input", note: "OPTIONS has a new Audio input block: pick a USB audio interface (guitar, bass, any instrument) and the tuner and the looper listen to it directly. GAIN lifts a quiet input (kept per input). LIVE shows level and note. TESTS runs guided checks (noise, level, channels, pitch, round-trip latency) with a report to copy. Plug in an interface first." },
-        { app: "TUNE.Pocket", name: "JAM keys, piano and drums", repo: "tune-pocket", branch: "tune-fixes", dir: "tune-tune-fixes", note: "JAM: the empty space shows a waveform and the last button of the bottom row rotates it to a piano and drum pads. SOUNDS has a KEYS PLAY instrument for the piano and a MIDI keyboard. With the JAM or looper effects open the MIDI pads and keys play them." },
-        { app: "SING.Pocket", name: "Sampler marks and MIDI effects", repo: "sing-pocket", branch: "sing-fixes", dir: "sing-sing-fixes", note: "The play and loop marks on the sampler pads are big now. With the sampler effects open the MIDI pads and keys play them." },
       ];
       const tb = document.getElementById("tb"), box = document.getElementById("tests");
       document.getElementById("tl").innerHTML = TESTS.map((t) => `<div class="tc"><div><b>${t.app} · ${t.name}</b><p>${t.note}</p></div>${(t.links || [["TRY IT", t.dir]]).map(([l, d]) => `<a class="btn main" style="--c:var(--dim)" href="test/${d}/">${l}</a>`).join("")}${t.branch ? `<a class="tag" href="https://github.com/utopick/${t.repo}/tree/${t.branch}" title="The branch on GitHub">${t.branch}</a>` : ""}</div>`).join("");
