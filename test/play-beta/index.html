@@ -372,7 +372,9 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
       header .hv + .hv { margin-left: 2px; }
       header .hv.on { background: var(--acc); border-color: var(--acc); color: var(--ink); }
       body.pocket header { position: relative; }
-      header .hv { width: 38px !important; }
+      header .hv { width: 31px !important; min-width: 0; }
+      header .hv + .hv { margin-left: 0; }
+      header #logo { flex: none; }
       #lvl { position: absolute; left: 6px; right: 6px; bottom: 0; height: 3px; border-radius: 2px; overflow: hidden; background: var(--line); }
       #lvl i { display: block; height: 100%; width: 0; background: var(--acc); }
       #lvl.clip i { background: var(--hot); }
@@ -489,6 +491,8 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
       #bGrid .sq.unit-in { --pc: #888; background: var(--pc); border-color: color-mix(in srgb, var(--pc) 60%, #000); color: #111; }
       #bGrid .sq.unit-in.dark { color: #eee; }
       #bGrid .sq.unit-in.off { filter: saturate(0.4) brightness(0.7); }
+      #bGrid .sq .ki { width: 24px; height: 24px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; opacity: 0.6; }
+      #bGrid .sq .ki.wide { width: 32px; }
       #bGrid .sq small { font: 700 8px var(--mono); opacity: 0.75; }
       #bGrid .sq .led { width: 8px; height: 8px; border-radius: 50%; background: #3a0000; border: 1px solid #000; }
       #bGrid .sq:not(.off) .led { background: #ff2a2a; box-shadow: 0 0 6px 2px rgba(255, 40, 40, 0.7); }
@@ -576,11 +580,53 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
       #mixer .kn .kb { fill: var(--panel2); stroke: var(--line); }
       #mixer .kn .kp { stroke: var(--text); stroke-width: 3; stroke-linecap: round; }
       #mixer .kn text { fill: var(--text); font: 800 11px var(--mono); text-anchor: middle; }
+      .mkgrid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px 2px; margin: 6px; }
+      .mkc { display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 0; }
+      .mkc b { font: 900 10px var(--mono); letter-spacing: 0.5px; text-align: center; }
+      .mkc small { font: 700 10px var(--mono); color: var(--dim); min-height: 12px; }
+      .mk { width: 72px; height: 72px; touch-action: none; cursor: ns-resize; user-select: none; -webkit-user-select: none; }
+      .mk:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; border-radius: 50%; }
+      .mk svg { width: 100%; height: 100%; pointer-events: none; }
+      .mk .kt { fill: none; stroke: var(--line); stroke-width: 5; stroke-linecap: round; }
+      .mk .kv { fill: none; stroke: var(--acc); stroke-width: 5; stroke-linecap: round; }
+      .mk .kb { fill: var(--panel2); stroke: var(--line); }
+      .mk .kp { stroke: var(--text); stroke-width: 3; stroke-linecap: round; }
+      .mk text { fill: var(--text); font: 800 11px var(--mono); text-anchor: middle; }
+      #synSel { display: flex; gap: 6px; margin: 6px 6px 0; height: 52px; flex: none; }
+      #synSel button { width: 52px; font-size: 20px; }
+      #synSel b { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; border: 1px solid var(--line); border-radius: 6px; background: var(--panel2); font: 700 16px system-ui, sans-serif; cursor: pointer; text-align: center; }
+      #synSel b small { font: 700 10px system-ui, sans-serif; color: var(--dim); letter-spacing: 1px; }
+      #synth .hint, #voice .hint { margin: 4px 8px; font-size: 12px; line-height: 1.3; }
+      #synKeys { position: relative; flex: 1; min-height: 120px; margin: 6px; display: flex; touch-action: none; user-select: none; -webkit-user-select: none; }
+      #synKeys .k { flex: 1; min-width: 0; border: 1px solid #222; border-radius: 0 0 6px 6px; background: #e8ecf1; position: relative; }
+      #synKeys .k.down { background: var(--acc); }
+      #synKeys .k.b { position: absolute; top: 0; height: 60%; width: 6.2%; z-index: 2; background: #15181d; border-radius: 0 0 4px 4px; flex: none; }
+      #synKeys .k.b.down { background: color-mix(in srgb, var(--acc) 70%, #000); }
+      #synKeys .k i { position: absolute; bottom: 4px; left: 0; right: 0; text-align: center; font: 700 9px var(--mono); font-style: normal; color: #667; pointer-events: none; }
+      #voMeter { margin: 4px 8px 0; height: 6px; border: 1px solid var(--line); border-radius: 3px; overflow: hidden; flex: none; }
+      #voMeter i { display: block; height: 100%; width: 0; background: var(--acc); }
+      #voPads { flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(3, 1fr); grid-auto-rows: 1fr; gap: 6px; margin: 6px; }
+      #voPads .sq { cursor: pointer; touch-action: manipulation; min-height: 0; }
+      #voPads .nt.sm { font-size: 14px; font-family: system-ui, -apple-system, sans-serif; white-space: nowrap; }
+      #voPads .sq.ok { background: rgb(var(--ccrgb)); color: var(--chink, #06100a); }
+      #voPads .sq.ok .in { color: var(--chink, #06100a); }
+      #voRib { height: 52px; margin: 0 0 6px; }
+      #voRib > button { flex: 1; font-size: 12px; }
+      #vTabs .listenBtn.on, #voRib .listenBtn.on { background: var(--hot); border-color: var(--hot); color: #fff; }
+      #synRib { height: 52px; margin: 0 0 6px; }
+      #synRib > button { flex: 1; font-size: 12px; }
       #mixer .strip .mt { width: 84px; height: 6px; border: 1px solid var(--line); border-radius: 3px; overflow: hidden; }
       #mixer .strip .mt i { display: block; height: 100%; width: 0; background: var(--acc); }
       #mixer .strip .mute { min-height: 0; height: 32px; width: 84px; padding: 0; }
       #mixer .strip .mute.on { background: var(--hot); border-color: var(--hot); color: #fff; }
       #mix .hint { margin: 0 6px; }
+      #fxPads { flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(3, 1fr); grid-auto-rows: 1fr; gap: 6px; margin: 6px; }
+      #fxPads[hidden], #fxBar[hidden], #mixer[hidden], #mixHint[hidden] { display: none; }
+      #fxPads .sq { cursor: pointer; touch-action: manipulation; min-height: 0; }
+      #fxPads .nt.sm { font-size: 14px; font-family: system-ui, -apple-system, sans-serif; white-space: nowrap; }
+      #fxPads .sq.ok { background: rgb(var(--ccrgb)); color: var(--chink, #06100a); }
+      #fxPads .sq.ok .in { color: var(--chink, #06100a); }
+      #fxBar { margin: 0 0 6px; padding: 0 6px; }
       #mRib { margin-top: auto; }
       /* latency test: a ball bounces between the walls; pick the string when it crosses the middle (and the click sounds) */
       #lt { position: fixed; inset: 0; z-index: 80; background: rgba(0, 0, 0, 0.6); display: flex; align-items: center; justify-content: center; }
@@ -619,6 +665,12 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
       </button>
       <button class="hv" id="hMix" data-v="mix" title="Mixer: the volume of the guitar, the test riff and the master">
         <svg class="ic" viewBox="0 0 24 24"><path d="M6 3v18M12 3v18M18 3v18" /><rect x="4" y="13" width="4" height="3" /><rect x="10" y="6" width="4" height="3" /><rect x="16" y="10" width="4" height="3" /></svg>
+      </button>
+      <button class="hv" id="hSynth" data-v="synth" title="Synth: play a keyboard with a MIDI controller or the screen, with eight instruments made by the app">
+        <svg class="ic" viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12" rx="1.5" /><path d="M8 18v-5M12 18v-5M16 18v-5M6.5 6v7h3V6M14.5 6v7h3V6" /></svg>
+      </button>
+      <button class="hv" id="hVoice" data-v="voice" title="Voice: change your voice with the microphone (pitch, robot, megaphone and more)">
+        <svg class="ic" viewBox="0 0 24 24"><rect x="5" y="6" width="14" height="12" rx="3" /><circle cx="9.5" cy="11" r="1.3" /><circle cx="14.5" cy="11" r="1.3" /><path d="M9 15h6M12 6V3" /></svg>
       </button>
       <button class="hv" id="hFiles" data-v="files" title="Files: save and load your board, theme, options, stats, latency test, help">
         <svg class="ic" viewBox="0 0 24 24"><path d="M5 4h11l3 3v13H5z" /><path d="M8 4v5h7V4M8 20v-6h8v6" /></svg>
@@ -695,10 +747,42 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
       <!-- MIXER -->
       <section id="mix">
         <div class="card" id="mixer"></div>
-        <div class="hint">Each source has a volume knob (drag it up or down, tap it twice to put it back) and a mute (M); the master sets what reaches your headphones. The bars move while sound plays. The speaker at the end of the pedal board opens this tab.</div>
+        <div id="fxPads" hidden></div>
+        <div class="prow" id="fxBar" hidden><button id="mLatch" title="Effects stay on when tapped (on) or only while held (off)"><i>TAP ON / OFF</i>LATCH</button><button id="mFxOff" title="Turn every effect off"><i>EFFECTS</i>ALL OFF</button></div>
+        <div class="hint" id="mixHint">Each source has a volume knob (drag it up or down, tap it twice to put it back) and a mute (M); the master sets what reaches your headphones. The bars move while sound plays. The speaker at the end of the pedal board opens this tab.</div>
         <div class="prow" id="mRib">
           <button class="riffBtn" title="Play a test riff through the board. Tap again to stop."><i>TEST</i>RIFF ▶</button>
-          <button data-go="board" title="Back to the board"><i>PEDAL</i>BOARD</button>
+          <button id="mFxB"></button>
+          <button data-go="board" title="Back to the pedal board"><i>PEDAL</i>BOARD</button>
+        </div>
+      </section>
+      <!-- SYNTH: eight instruments made by the app, played from a MIDI controller or the keys on the screen -->
+      <section id="synth">
+        <div id="synSel">
+          <button id="synPrev" title="Previous instrument" aria-label="Previous instrument">◁</button>
+          <b id="synName" role="button" tabindex="0" title="Tap for the list of instruments"></b>
+          <button id="synNext" title="Next instrument" aria-label="Next instrument">▷</button>
+        </div>
+        <div class="hint" id="synDesc"></div>
+        <div class="mkgrid" id="synK"></div>
+        <div class="hint" id="synMidi"></div>
+        <div id="synKeys" title="Play the synth: slide across the keys"></div>
+        <div class="prow" id="synRib">
+          <button id="synOctD" title="Play one octave lower"><i>OCTAVE</i>−</button>
+          <button id="synOctU" title="Play one octave higher"><i>OCTAVE</i>+</button>
+          <button id="synThru" title="Send the synth through the pedal board (on) or straight to the mixer (off)"></button>
+          <button id="synMidiB" title="Connect the MIDI controllers that are plugged in"><i>MIDI</i>INPUT</button>
+        </div>
+      </section>
+      <!-- VOICE: change your voice, from the microphone -->
+      <section id="voice">
+        <div class="hint" id="voHint"></div>
+        <div id="voMeter" title="The level of your voice"><i></i></div>
+        <div class="hint" id="voDesc"></div>
+        <div id="voPads"></div>
+        <div class="mkgrid" id="voK"></div>
+        <div class="prow" id="voRib">
+          <button class="listenBtn" id="listen3" title="Start listening: your voice comes in through the microphone. Use headphones. Tap again to stop."><svg class="ic" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3" /><path d="M5 11a7 7 0 0 0 14 0M12 18v3" /></svg><i>LISTEN</i>RECORD</button>
         </div>
       </section>
       <!-- FILES -->
@@ -1249,7 +1333,49 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
         });
         return out;
       }
-      const MIX0 = { gtr: { v: 1, m: false }, riff: { v: 0.8, m: false }, trk: { v: 0.8, m: false }, loop: { v: 1, m: false }, click: { v: 0.7, m: false }, master: { v: 0.8, m: false } };
+      // the synth's instruments: all made by the app (subtractive, FM and additive synthesis: no samples, no network, nothing to license).
+      // Each has its start values for the eight knobs (0 to 1): cutoff, resonance, attack, decay, sustain, release, detune, brightness.
+      const SYN = [
+        { id: "lead", name: "SAW LEAD", type: "sub", osc: [["sawtooth", -1, 0], ["sawtooth", 1, 0]], desc: "Two detuned saws through a low-pass filter: a bright, fat lead.", def: [0.62, 0.2, 0.04, 0.45, 0.7, 0.3, 0.35, 0.3] },
+        { id: "bass", name: "SQUARE BASS", type: "sub", osc: [["square", 0, 0], ["sine", 0, -1]], desc: "A square with a sub octave underneath, dark and round: play low.", def: [0.3, 0.25, 0.02, 0.35, 0.5, 0.15, 0.05, 0.45] },
+        { id: "pad", name: "WARM PAD", type: "sub", osc: [["sawtooth", -1, 0], ["sawtooth", 1, 0], ["sawtooth", 0, 0], ["triangle", 0, -1]], desc: "Four soft oscillators that swell slowly and fade slowly: hold chords.", def: [0.4, 0.15, 0.62, 0.6, 0.8, 0.7, 0.5, 0.1] },
+        { id: "organ", name: "DRAWBAR ORGAN", type: "organ", desc: "Nine sine drawbars added together, like a tonewheel organ. BRIGHT pulls the high ones out.", def: [0.9, 0.0, 0.02, 0.3, 1, 0.08, 0, 0.5] },
+        { id: "epiano", name: "E. PIANO", type: "fm", ratio: 1, idx: 3, desc: "Two-operator FM: a bell-like attack that mellows as it rings, like an electric piano.", def: [0.8, 0, 0.01, 0.7, 0.25, 0.4, 0, 0.45] },
+        { id: "bell", name: "GLASS BELLS", type: "fm", ratio: 3.5, idx: 4, desc: "FM with an off-beat ratio: inharmonic, glassy bells that ring on.", def: [0.9, 0, 0.01, 0.85, 0.1, 0.7, 0, 0.5] },
+        { id: "pluck", name: "SYNTH PLUCK", type: "sub", osc: [["sawtooth", -1, 0], ["square", 1, 0]], desc: "A short, bright pluck: the filter snaps shut as the note decays.", def: [0.35, 0.3, 0.0, 0.35, 0.0, 0.2, 0.2, 0.8] },
+        { id: "brass", name: "SYNTH BRASS", type: "sub", osc: [["sawtooth", -1, 0], ["sawtooth", 1, 0]], desc: "Saws with a filter that opens as you press, like a brass section.", def: [0.4, 0.15, 0.14, 0.5, 0.75, 0.2, 0.3, 0.7] },
+      ];
+      // the voice changer: a pitch shifter and one "character" at a time, from the microphone to the VOICE fader
+      const VOICES = [
+        { name: "CLEAN", ch: "", pitch: 0, mix: 0, depth: 0.5, bri: 0.9, desc: "Your own voice, unchanged: the starting point." },
+        { name: "HELIUM", ch: "", pitch: 7, mix: 1, depth: 0.5, bri: 0.9, desc: "Seven semitones up: a small, squeaky voice." },
+        { name: "DEEP", ch: "", pitch: -5, mix: 1, depth: 0.5, bri: 0.7, desc: "Five semitones down: a big, slow voice." },
+        { name: "MONSTER", ch: "mega", pitch: -9, mix: 1, depth: 0.7, bri: 0.55, desc: "Far down and crunched: a growl." },
+        { name: "ROBOT", ch: "robot", pitch: 0, mix: 1, depth: 0.5, bri: 0.85, desc: "A ring modulator: a metallic, machine voice. DEPTH changes its buzz." },
+        { name: "ALIEN", ch: "alien", pitch: 3, mix: 1, depth: 0.5, bri: 0.9, desc: "Up a little, with a slow buzz and a wobble: from somewhere else." },
+        { name: "MEGAPHONE", ch: "mega", pitch: 0, mix: 1, depth: 0.45, bri: 0.7, desc: "A narrow, pushed sound like a loudhailer. DEPTH is the drive." },
+        { name: "CHOIR", ch: "choir", pitch: 0, mix: 0.85, depth: 0.5, bri: 0.9, desc: "Your voice with two harmonies above and below, and a hall behind." },
+        { name: "ECHO", ch: "echo", pitch: 0, mix: 0.75, depth: 0.45, bri: 0.9, desc: "Repeats of your voice that fade away. DEPTH is how many." },
+      ];
+      function vetVoice(o) {
+        o = o && typeof o === "object" ? o : {};
+        const sel = clamp(Math.floor(+o.sel) || 0, 0, VOICES.length - 1),
+          P = VOICES[sel],
+          f = (v, d) => (Number.isFinite(+v) ? clamp(+v, 0, 1) : d);
+        return { sel, pitch: f(o.pitch, P.pitch / 24 + 0.5), mix: f(o.mix, P.mix), depth: f(o.depth, P.depth), bri: f(o.bri, P.bri) };
+      }
+      const SYK = ["cut", "res", "a", "d", "s", "r", "det", "bri"];
+      function vetSyn(o) {
+        o = o && typeof o === "object" ? o : {};
+        const k = {};
+        SYN.forEach((I) => {
+          const src = o.k && typeof o.k[I.id] === "object" && o.k[I.id] ? o.k[I.id] : {};
+          k[I.id] = {};
+          SYK.forEach((n, i) => (k[I.id][n] = Number.isFinite(+src[n]) ? clamp(+src[n], 0, 1) : I.def[i]));
+        });
+        return { inst: clamp(Math.floor(+o.inst) || 0, 0, SYN.length - 1), oct: clamp(Math.round(+o.oct) || 0, -2, 2), thru: o.thru === true, k, bend: 0 };
+      }
+      const MIX0 = { syn: { v: 0.8, m: false }, voice: { v: 0.8, m: false }, gtr: { v: 1, m: false }, riff: { v: 0.8, m: false }, trk: { v: 0.8, m: false }, loop: { v: 1, m: false }, click: { v: 0.7, m: false }, master: { v: 0.8, m: false } };
       function vetMix(o) {
         const d = JSON.parse(JSON.stringify(MIX0));
         for (const k in d) if (o && o[k]) (d[k].v = clamp(+o[k].v || 0, 0, 1.5)), (d[k].m = o[k].m === true);
@@ -1263,10 +1389,13 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
         fx: vetFx(saved.fx),
         slots: vetSlots(saved.slots),
         mix: vetMix(saved.mix),
+        mlatch: saved.mlatch !== false,
+        syn: vetSyn(saved.syn),
+        voice: vetVoice(saved.voice),
         loop: { bpm: clamp(Math.round(+saved.loop?.bpm) || 100, 40, 240), bars: [1, 2, 4, 8].includes(+saved.loop?.bars) ? +saved.loop.bars : 2, click: saved.loop?.click !== false, trLoop: saved.loop?.trLoop === true, mon: saved.loop?.mon !== false, aq: saved.loop?.aq === true, grid: [0, 1, 2, 3].includes(+saved.loop?.grid) ? +saved.loop.grid : 1, sync: Number.isFinite(+saved.loop?.sync) ? clamp(Math.round(+saved.loop.sync), -1, 500) : -1, latch: saved.loop?.latch !== false },
         view: "pedal",
       };
-      const save = () => store("play-test.state", { sel: S.sel, fx: S.fx, slots: S.slots, mix: S.mix, loop: S.loop });
+      const save = () => store("play-test.state", { sel: S.sel, fx: S.fx, slots: S.slots, mix: S.mix, loop: S.loop, mlatch: S.mlatch, syn: { inst: S.syn.inst, oct: S.syn.oct, thru: S.syn.thru, k: S.syn.k }, voice: S.voice });
       const cur = () => ofKind(S.kind)[S.sel[S.kind]];
 
       // ======================================================================
@@ -1422,7 +1551,41 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
           return true;
         }
       }
-      registerProcessor("pp-cap", Cap);`;
+      registerProcessor("pp-cap", Cap);
+      // a pitch shifter: two read heads on a delay line, half a window apart, each fading in and out (the delay changes by 1 - ratio samples per sample)
+      class Pitch extends AudioWorkletProcessor {
+        static get parameterDescriptors() {
+          return [{ name: "ratio", defaultValue: 1, minValue: 0.25, maxValue: 4, automationRate: "k-rate" }];
+        }
+        constructor() {
+          super();
+          this.buf = new Float32Array(65536);
+          this.w = 0;
+          this.p = 0;
+          this.W = Math.round(sampleRate * 0.06);
+        }
+        process(inputs, outputs, par) {
+          const x = inputs[0] && inputs[0][0], y = outputs[0][0];
+          if (!x || !y) return true;
+          const r = par.ratio[0], W = this.W, M = 65535, buf = this.buf;
+          for (let n = 0; n < y.length; n++) {
+            buf[this.w] = x[n];
+            let a = 0;
+            for (let h = 0; h < 2; h++) {
+              let ph = this.p + h * 0.5;
+              ph -= Math.floor(ph);
+              const pos = this.w - (ph * W + 2), i0 = Math.floor(pos), f = pos - i0;
+              a += (buf[i0 & M] * (1 - f) + buf[(i0 + 1) & M] * f) * (0.5 - 0.5 * Math.cos(6.283185307 * ph));
+            }
+            y[n] = a;
+            this.w = (this.w + 1) & M;
+            this.p += (1 - r) / W;
+            this.p -= Math.floor(this.p);
+          }
+          return true;
+        }
+      }
+      registerProcessor("pp-pitch", Pitch);`;
       async function loadWorklets(ctx) {
         if (!ctx.audioWorklet) return false;
         const url = URL.createObjectURL(new Blob([WORKLET_JS], { type: "text/javascript" }));
@@ -1517,10 +1680,13 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
         N.chT = h.g(); // TRACKS fader
         N.chL = h.g(); // LOOPS fader
         N.chC = h.g(); // CLICK fader
+        N.chS = h.g(); // SYNTH fader
+        N.chV = h.g(); // VOICE fader
         N.chG.connect(N.rig);
         N.chR.connect(N.rig);
         // the guitar and the riff go through the board; tracks, loops and the click go straight to the master
-        for (const n of [N.boardOut, N.chT, N.chL, N.chC]) n.connect(N.master);
+        for (const n of [N.boardOut, N.chT, N.chL, N.chC, N.chV]) n.connect(N.master);
+        N.chS.connect(S.syn.thru ? N.rig : N.master); // the synth plays straight to the master, or through the pedal board
         if (wl) {
           // the looper records the board's output (the guitar with its pedals), not the tracks or the loops
           N.cap = new AudioWorkletNode(ctx, "pp-cap", { channelCount: 1, channelCountMode: "explicit" });
@@ -1532,12 +1698,15 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
         const half = h.g(0.5),
           safe = ctx.createWaveShaper();
         safe.curve = curveOf((x) => Math.tanh(2 * x));
-        h.chain(N.master, half, safe);
+        N.fx = mfxBuild(h); // the FX pads of the mixer act on the whole mix
+        N.master.connect(N.fx.in);
+        N.fx.out.connect(half);
+        half.connect(safe);
         N.post = half; // the output stage's entry: the latency test's clicks go here too, so they reach the same output
         N.limit = safe;
         // a meter on each mixer strip
         N.meters = {};
-        for (const [k, node] of [["gtr", N.chG], ["riff", N.chR], ["trk", N.chT], ["loop", N.chL], ["click", N.chC], ["master", N.master]]) {
+        for (const [k, node] of [["gtr", N.chG], ["riff", N.chR], ["trk", N.chT], ["loop", N.chL], ["click", N.chC], ["syn", N.chS], ["voice", N.chV], ["master", N.master]]) {
           const m = ctx.createAnalyser();
           m.fftSize = 512;
           node.connect(m);
@@ -1550,11 +1719,13 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
       const faderGain = (k) => (S.mix[k].m ? 0 : S.mix[k].v);
       function applyMix() {
         if (!A.nodes) return;
-        ramp(A.nodes.chG.gain, faderGain("gtr"));
+        ramp(A.nodes.chG.gain, A.voiceTab ? 0 : faderGain("gtr")); // the guitar is silent while the voice tab is open: only the voice
         ramp(A.nodes.chR.gain, faderGain("riff"));
         ramp(A.nodes.chT.gain, faderGain("trk"));
         ramp(A.nodes.chL.gain, faderGain("loop"));
         ramp(A.nodes.chC.gain, faderGain("click"));
+        ramp(A.nodes.chS.gain, faderGain("syn"));
+        ramp(A.nodes.chV.gain, faderGain("voice"));
         ramp(A.nodes.master.gain, faderGain("master"));
       }
       // iPhone and iPad: every browser there uses Apple's engine, which only hears the built-in mic and is too slow to play through
@@ -1600,6 +1771,7 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
         rewire();
         applyFx();
         applyMix();
+        MFX.forEach(([id]) => mfxApply(id));
         await outRoute();
         if (mic) {
           const src = ctx.createMediaStreamSource(stream),
@@ -1616,6 +1788,7 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
           meter.fftSize = 1024;
           gain.connect(meter);
           Object.assign(A, { gain, meter });
+          voiceBuild();
           if (wl) {
             const on = new AudioWorkletNode(ctx, "pp-onset", { numberOfOutputs: 1 }),
               mute = ctx.createGain();
@@ -1713,7 +1886,7 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
         A.stream?.getTracks().forEach((t) => t.stop());
         A.ctx?.close().catch(() => {});
         cancelAnimationFrame(A.raf);
-        Object.assign(A, { ctx: null, stream: null, nodes: null, meter: null, gain: null, track: null, onset: null, mic: false, tap: null });
+        Object.assign(A, { voice: null, ctx: null, stream: null, nodes: null, meter: null, gain: null, track: null, onset: null, mic: false, tap: null });
         $$(".listenBtn").forEach((b) => b.classList.remove("on"));
         $("#lvl i").style.width = "0";
         statsFace();
@@ -1737,6 +1910,7 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
         if (S.view === "mix") mixMeters();
         if (S.view === "loop") lpFrame();
         if (KINDS[S.view]) wavDraw();
+        if (S.view === "voice") voiceMeter();
         A.raf = requestAnimationFrame(meterLoop);
       }
       $$(".listenBtn").forEach((b) => (b.onclick = () => (A.mic ? (engineStop(), toast("Stopped listening")) : listenStart())));
@@ -2057,7 +2231,11 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
           renderUnit();
         }
         if (v === "board") boardFace();
-        if (v === "mix") mixFace();
+        if (v === "mix") (mixFace(), mixMode());
+        if (v === "synth") (synFace(), synMidiConnect(true));
+        if (v === "voice") voiceFace();
+        A.voiceTab = v === "voice";
+        applyMix();
         if (v === "loop") lpFace();
         if (v === "tracks") trFace();
         if (v === "files" && !fpOpen) filePanel("files"); // the tab opens on its first panel, like the sister apps' file tabs
@@ -2273,6 +2451,12 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
       };
       const B = { drag: null, dragged: false, rows: 4, hold: 0 };
       const DARK_UNITS = new Set(["dist", "comp"]);
+      // a small drawing of what the unit is: a stomp box, an amp head or a speaker cab
+      const KICON = {
+        pedal: '<svg class="ki" viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="2.5" width="12" height="19" rx="2"/><circle cx="9.5" cy="7" r="1.3"/><circle cx="14.5" cy="7" r="1.3"/><circle cx="12" cy="16" r="2.6"/></svg>',
+        amp: '<svg class="ki wide" viewBox="0 0 32 24" aria-hidden="true"><rect x="2" y="4" width="28" height="16" rx="2"/><circle cx="7" cy="8" r="1.2"/><circle cx="12" cy="8" r="1.2"/><circle cx="17" cy="8" r="1.2"/><circle cx="22" cy="8" r="1.2"/><path d="M5 12h22M5 14.5h22M5 17h22"/></svg>',
+        cab: '<svg class="ki" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="12" cy="12" r="6.2"/><circle cx="12" cy="12" r="2"/></svg>',
+      };
       const kindCol = (p) => p.col || (p.kind === "amp" ? "#c9ad72" : "#4a4038");
       // rows that fit the room (squares are as wide as the screen allows), and at least the rows the units already placed need
       function boardRows() {
@@ -2304,7 +2488,7 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
           }
           const on = S.fx[id].on,
             dark = p.kind === "cab" || DARK_UNITS.has(id) ? " dark" : "";
-          h += `<button class="sq unit-in${dark}${on ? "" : " off"}" data-i="${i}" style="${pos};--pc:${kindCol(p)}" title="${esc(p.name)} (${on ? "on" : "off"}): tap to turn it ${on ? "off" : "on"}, press and hold or double tap to open it, drag to move it" aria-label="${esc(p.name)}, ${p.kind}, ${on ? "on" : "off"}"><span class="led"></span>${esc(p.name)}<small>${p.kind.toUpperCase()}</small></button>`;
+          h += `<button class="sq unit-in${dark}${on ? "" : " off"}" data-i="${i}" style="${pos};--pc:${kindCol(p)}" title="${esc(p.name)} (${on ? "on" : "off"}): tap to turn it ${on ? "off" : "on"}, press and hold or double tap to open it, drag to move it" aria-label="${esc(p.name)}, ${p.kind}, ${on ? "on" : "off"}"><span class="led"></span>${KICON[p.kind]}${esc(p.name)}<small>${p.kind.toUpperCase()}</small></button>`;
         }
         // the cable: in at the right edge of the first row, through every square's centre, to the speaker
         const pts = [[400, 50], ...Array.from({ length: n + 1 }, (_, i) => sqRC(i)).map(([r, c]) => [c * 100 + 50, r * 100 + 50])];
@@ -2470,9 +2654,581 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
       $("#pickClose").onclick = () => ($("#pick").hidden = true);
 
       // ======================================================================
+      // SYNTH: eight instruments, a MIDI keyboard or the keys on the screen. Voices are made when a key goes down (oscillators,
+      // a filter and an envelope each) and fade out on release; the sustain pedal, pitch bend and the mod wheel work.
+      // ======================================================================
+      // a row of knobs for the synth and the voice: items [key, label, text(value 0..1)], drag up or down, tap twice for the start value
+      function mkPanel(root, items, get, set, start) {
+        root.innerHTML = items.map(([k, l]) => `<div class="mkc" data-k="${k}"><b>${l}</b><div class="mk" role="slider" tabindex="0" aria-label="${l}" aria-valuemin="0" aria-valuemax="100" title="${l}: drag up or down, tap twice to put it back (arrow keys too)"></div><small></small></div>`).join("");
+        const face = (c) => {
+          const it = items.find((x) => x[0] === c.dataset.k),
+            v = get(c.dataset.k);
+          c.querySelector(".mk").innerHTML = mixKnobSvg(v, Math.round(v * 100));
+          c.querySelector(".mk").setAttribute("aria-valuenow", Math.round(v * 100));
+          c.querySelector("small").textContent = it[2](v);
+        };
+        const put = (c, v) => (set(c.dataset.k, clamp(v, 0, 1)), face(c));
+        $$(".mkc", root).forEach(face);
+        let d = null;
+        root.onpointerdown = (e) => {
+          const k = e.target.closest(".mk");
+          if (!k) return;
+          e.preventDefault();
+          k.setPointerCapture(e.pointerId);
+          const c = k.closest(".mkc"),
+            now = performance.now();
+          if (d && d.c === c && now - d.t < 300) {
+            put(c, start(c.dataset.k));
+            d = null;
+            return;
+          }
+          d = { c, y: e.clientY, v: get(c.dataset.k), t: now };
+        };
+        root.onpointermove = (e) => d && e.buttons && put(d.c, d.v + (d.y - e.clientY) / 160);
+        root.onkeydown = (e) => {
+          const k = e.target.closest(".mk"),
+            dir = { ArrowUp: 1, ArrowRight: 1, ArrowDown: -1, ArrowLeft: -1 }[e.key];
+          if (!k || !dir) return;
+          e.preventDefault();
+          const c = k.closest(".mkc");
+          put(c, get(c.dataset.k) + dir * 0.05);
+        };
+        return () => $$(".mkc", root).forEach(face);
+      }
+      const SYV = { voices: new Map(), sustain: false, held: new Set(), midi: null, lit: new Map() };
+      const synK = () => S.syn.k[SYN[S.syn.inst].id];
+      const synPar = () => {
+        const k = synK();
+        return { cutHz: 80 * Math.pow(150, k.cut), Q: 0.5 + k.res * 11, A: 0.002 * Math.pow(1000, k.a), D: 0.02 * Math.pow(100, k.d), S: k.s, R: 0.03 * Math.pow(100, k.r), det: k.det * 35, bri: k.bri };
+      };
+      function synStart(note, vel) {
+        const c = A.ctx;
+        if (!c || !A.nodes) return;
+        if (SYV.voices.has(note)) synRelease(note, true);
+        while (SYV.voices.size >= 10) synRelease(SYV.voices.keys().next().value, true); // at most 10 voices: the oldest goes
+        const I = SYN[S.syn.inst],
+          k = synPar(),
+          t = c.currentTime + 0.003,
+          f = 440 * Math.pow(2, (note + S.syn.oct * 12 - 69) / 12),
+          peak = 0.22 * (0.25 + 0.75 * vel),
+          amp = c.createGain(),
+          v = { amp, oscs: [], k, t };
+        amp.gain.setValueAtTime(0, t);
+        amp.gain.linearRampToValueAtTime(peak, t + k.A);
+        amp.gain.setTargetAtTime(peak * k.S, t + k.A, k.D / 3);
+        amp.connect(A.nodes.chS);
+        const osc = (type, hz, base, out) => {
+          const o = c.createOscillator();
+          o.type = type;
+          o.frequency.value = hz;
+          o._base = base;
+          o.detune.value = base + S.syn.bend * 100;
+          o.connect(out);
+          o.start(t);
+          v.oscs.push(o);
+          return o;
+        };
+        if (I.type === "sub") {
+          const flt = c.createBiquadFilter();
+          flt.type = "lowpass";
+          flt.Q.value = k.Q;
+          flt.frequency.setValueAtTime(Math.min(18000, k.cutHz * (1 + k.bri * 7)), t);
+          flt.frequency.setTargetAtTime(k.cutHz, t, k.D / 2 + 0.02);
+          flt.connect(amp);
+          I.osc.forEach(([ty, ds, oc]) => osc(ty, f * Math.pow(2, oc), ds * k.det, flt));
+          v.flt = flt;
+        } else if (I.type === "fm") {
+          const car = c.createOscillator(),
+            mod = c.createOscillator(),
+            mg = c.createGain(),
+            flt = c.createBiquadFilter();
+          car.frequency.value = f;
+          mod.frequency.value = f * I.ratio;
+          const idx = k.bri * I.idx * f;
+          mg.gain.setValueAtTime(idx, t);
+          mg.gain.setTargetAtTime(idx * 0.15, t, k.D / 2 + 0.05);
+          flt.type = "lowpass";
+          flt.frequency.value = Math.max(k.cutHz, 400);
+          mod.connect(mg).connect(car.frequency);
+          car.connect(flt).connect(amp);
+          car.detune.value = S.syn.bend * 100;
+          car._base = 0;
+          mod.detune.value = S.syn.bend * 100;
+          mod._base = 0;
+          car.start(t);
+          mod.start(t);
+          v.oscs.push(car, mod);
+        } else {
+          // organ: nine drawbars (16', 5 1/3', 8', 4', 2 2/3', 2', 1 3/5', 1 1/3', 1'), the high ones follow BRIGHT
+          const sum = c.createGain(),
+            flt = c.createBiquadFilter();
+          flt.type = "lowpass";
+          flt.frequency.value = Math.max(k.cutHz, 500);
+          sum.gain.value = 0.16;
+          [0.5, 1.5, 1, 2, 3, 4, 5, 6, 8].forEach((h, i) => {
+            const g = c.createGain();
+            g.gain.value = i < 4 ? [0.8, 0.5, 1, 0.8][i] : 0.55 * k.bri * 2 * (1 - (i - 4) * 0.12);
+            g.connect(sum);
+            osc("sine", f * h, 0, g);
+          });
+          sum.connect(flt).connect(amp);
+        }
+        SYV.voices.set(note, v);
+        synLight(note, true);
+      }
+      function synRelease(note, quick) {
+        const v = SYV.voices.get(note),
+          c = A.ctx;
+        if (!v || !c) return;
+        SYV.voices.delete(note);
+        SYV.held.delete(note);
+        synLight(note, false);
+        const now = c.currentTime,
+          R = quick ? 0.03 : v.k.R;
+        v.amp.gain.cancelScheduledValues(now);
+        v.amp.gain.setValueAtTime(v.amp.gain.value, now);
+        v.amp.gain.setTargetAtTime(0, now, R / 3);
+        v.oscs.forEach((o) => o.stop(now + R * 1.5 + 0.1));
+        setTimeout(() => v.amp.disconnect(), (R * 1.5 + 0.3) * 1000);
+      }
+      function synOff(note) {
+        if (SYV.sustain && SYV.voices.has(note)) SYV.held.add(note); // the pedal keeps it until it is let go
+        else synRelease(note, false);
+      }
+      function synLight(note, on) {
+        const el = $(`#synKeys [data-n="${note - 48}"]`);
+        if (el) el.classList.toggle("down", on);
+      }
+      // MIDI: whatever comes in is untrusted (numbers are checked)
+      function synMsg(d) {
+        if (!d || d.length < 2 || d.length > 3) return;
+        const st = d[0] & 0xf0,
+          a = d[1] & 0x7f,
+          b = (d[2] || 0) & 0x7f;
+        if (st === 0x90 && b > 0) engineEnsure().then(() => synStart(a, b / 127));
+        else if (st === 0x80 || st === 0x90) synOff(a);
+        else if (st === 0xb0) {
+          if (a === 64) {
+            SYV.sustain = b >= 64;
+            if (!SYV.sustain) [...SYV.held].forEach((n) => synRelease(n, false));
+          } else if (a === 1 || a === 74) synKnob("cut", b / 127);
+          else if (a === 71) synKnob("res", b / 127);
+        } else if (st === 0xe0) {
+          S.syn.bend = (((b << 7) | a) - 8192) / 8192 * 2; // two semitones each way
+          SYV.voices.forEach((v) => v.oscs.forEach((o) => (o.detune.value = o._base + S.syn.bend * 100)));
+        }
+      }
+      let synFaceKnobs = () => {};
+      function synKnob(key, v) {
+        synK()[key] = clamp(v, 0, 1);
+        synFaceKnobs();
+        save();
+      }
+      async function synMidiConnect(quiet) {
+        if (!navigator.requestMIDIAccess) return quiet || toast("This browser has no MIDI (use Chrome, Edge or Firefox)", 2800);
+        try {
+          SYV.midi = SYV.midi || (await navigator.requestMIDIAccess());
+        } catch {
+          return quiet || toast("MIDI was not allowed in this browser", 2800);
+        }
+        const ins = [...SYV.midi.inputs.values()];
+        ins.forEach((i) => (i.onmidimessage = (e) => synMsg(e.data)));
+        SYV.midi.onstatechange = () => synMidiConnect(true);
+        $("#synMidi").textContent = ins.length ? "MIDI: " + ins.map((i) => i.name || "controller").join(", ") + ". Notes, sustain pedal, pitch bend and the mod wheel (cutoff) work." : "No MIDI controller found: plug one in, or play the keys on the screen.";
+        if (!quiet) toast(ins.length ? "MIDI connected" : "No MIDI controller found", 2200);
+      }
+      function synKeysBuild() {
+        const white = [0, 2, 4, 5, 7, 9, 11],
+          blk = { 1: 0, 3: 1, 6: 3, 8: 4, 10: 5 };
+        let h = "";
+        for (let i = 0; i < 15; i++) h += `<div class="k" data-n="${[0, 2, 4, 5, 7, 9, 11][i % 7] + 12 * Math.floor(i / 7)}">${i % 7 === 0 ? `<i>C${3 + Math.floor(i / 7) + S.syn.oct}</i>` : ""}</div>`;
+        for (let n = 0; n <= 24; n++) {
+          const m = n % 12;
+          if (blk[m] === undefined) continue;
+          const wi = [0, 2, 4, 5, 7, 9, 11].indexOf(m - 1) + 7 * Math.floor(n / 12);
+          h += `<div class="k b" data-n="${n}" style="left:${(((wi + 1) / 15) * 100 - 3.1).toFixed(2)}%"></div>`;
+        }
+        $("#synKeys").innerHTML = h;
+      }
+      (() => {
+        const keys = $("#synKeys"),
+          map = new Map();
+        const down = async (e, k) => {
+          await engineEnsure();
+          const n = 48 + +k.dataset.n;
+          map.set(e.pointerId, n);
+          synStart(n, 0.8);
+        };
+        keys.addEventListener("pointerdown", (e) => {
+          const k = e.target.closest(".k");
+          if (!k) return;
+          e.preventDefault();
+          keys.setPointerCapture(e.pointerId);
+          down(e, k);
+        });
+        keys.addEventListener("pointermove", (e) => {
+          if (!map.has(e.pointerId)) return;
+          const k = document.elementFromPoint(e.clientX, e.clientY)?.closest("#synKeys .k");
+          if (!k) return;
+          const n = 48 + +k.dataset.n;
+          if (n === map.get(e.pointerId)) return;
+          synOff(map.get(e.pointerId));
+          map.set(e.pointerId, n);
+          synStart(n, 0.8);
+        });
+        const up = (e) => {
+          if (map.has(e.pointerId)) (synOff(map.get(e.pointerId)), map.delete(e.pointerId));
+        };
+        keys.addEventListener("pointerup", up);
+        keys.addEventListener("pointercancel", up);
+      })();
+      function synFace() {
+        const I = SYN[S.syn.inst];
+        $("#synName").innerHTML = `<small>INSTRUMENT ${S.syn.inst + 1}/${SYN.length}</small>${esc(I.name)}`;
+        $("#synDesc").textContent = I.desc;
+        $("#synThru").innerHTML = `<i>${S.syn.thru ? "THRU BOARD" : "TO MIXER"}</i>${S.syn.thru ? "PEDALS ON" : "PEDALS OFF"}`;
+        $("#synThru").classList.toggle("on", S.syn.thru);
+        $("#synOctD").disabled = S.syn.oct <= -2;
+        $("#synOctU").disabled = S.syn.oct >= 2;
+        $$("#synKeys .k i").forEach((e, i) => (e.textContent = "C" + (3 + i + S.syn.oct)));
+        synFaceKnobs = mkPanel(
+          $("#synK"),
+          [["cut", "CUTOFF", (v) => Math.round(80 * Math.pow(150, v)) + " Hz"], ["res", "RESO", (v) => Math.round(v * 100) + "%"], ["a", "ATTACK", (v) => (0.002 * Math.pow(1000, v)).toFixed(2) + " s"], ["d", "DECAY", (v) => (0.02 * Math.pow(100, v)).toFixed(2) + " s"], ["s", "SUSTAIN", (v) => Math.round(v * 100) + "%"], ["r", "RELEASE", (v) => (0.03 * Math.pow(100, v)).toFixed(2) + " s"], ["det", "DETUNE", (v) => Math.round(v * 35) + " ct"], ["bri", "BRIGHT", (v) => Math.round(v * 100) + "%"]],
+          (k) => synK()[k],
+          (k, v) => ((synK()[k] = v), save()),
+          (k) => SYN[S.syn.inst].def[SYK.indexOf(k)],
+        );
+      }
+      const synPick = (d) => {
+        S.syn.inst = (S.syn.inst + d + SYN.length) % SYN.length;
+        save();
+        synFace();
+        toast(SYN[S.syn.inst].name, 900);
+      };
+      $("#synPrev").onclick = () => synPick(-1);
+      $("#synNext").onclick = () => synPick(1);
+      $("#synName").onclick = () => synPick(1);
+      $("#synOctD").onclick = () => ((S.syn.oct = Math.max(-2, S.syn.oct - 1)), save(), synFace(), toast("Octave " + (S.syn.oct >= 0 ? "+" : "") + S.syn.oct, 900));
+      $("#synOctU").onclick = () => ((S.syn.oct = Math.min(2, S.syn.oct + 1)), save(), synFace(), toast("Octave " + (S.syn.oct >= 0 ? "+" : "") + S.syn.oct, 900));
+      $("#synThru").onclick = () => {
+        S.syn.thru = !S.syn.thru;
+        save();
+        if (A.nodes) {
+          A.nodes.chS.disconnect();
+          A.nodes.chS.connect(S.syn.thru ? A.nodes.rig : A.nodes.master);
+        }
+        synFace();
+        toast(S.syn.thru ? "The synth goes through the pedal board" : "The synth goes straight to the mixer");
+      };
+      $("#synMidiB").onclick = () => synMidiConnect(false);
+      synKeysBuild();
+
+      // ======================================================================
+      // VOICE: the microphone through a pitch shifter and one character (robot, megaphone, alien, choir, echo) to the VOICE fader.
+      // The guitar is silent while this tab is open, so only the voice comes out.
+      // ======================================================================
+      function voiceBuild() {
+        const N = A.nodes,
+          c = A.ctx,
+          h = A.h;
+        if (!N || !A.gain) return;
+        const V = { segs: {}, in: h.g(), dry: h.g(1), wet: h.g(0), sum: h.g(), tone: h.bq("lowpass", 12000, 0.7) };
+        A.gain.connect(V.in);
+        let prev = V.in;
+        const pitchNode = () => {
+          const n = new AudioWorkletNode(c, "pp-pitch", { numberOfInputs: 1, numberOfOutputs: 1, outputChannelCount: [1], channelCount: 1, channelCountMode: "explicit" });
+          return n;
+        };
+        if (A.wl) {
+          V.pitch = pitchNode();
+          V.in.connect(V.pitch);
+          prev = V.pitch;
+        }
+        const shape = (f) => {
+          const w = c.createWaveShaper();
+          w.curve = curveOf(f);
+          return w;
+        };
+        const seg = (id, make, send) => {
+          const x = h.box();
+          x.send = !!send;
+          make(x);
+          V.segs[id] = x;
+          prev.connect(x.in);
+          prev = x.out;
+        };
+        seg("robot", (x) => {
+          const g = h.g(0);
+          x.osc = h.lfo(60);
+          x.osc.connect(g.gain);
+          h.chain(x.in, g, h.g(1.8), x.wet);
+        });
+        seg("mega", (x) => {
+          x.pre = h.g(3);
+          h.chain(x.in, h.bq("highpass", 500, 0.8), x.pre, shape((v) => Math.tanh(2.5 * v) * 0.8), h.bq("lowpass", 3300, 0.8), x.wet);
+        });
+        seg("alien", (x) => {
+          const g = h.g(0),
+            d = c.createDelay(0.05),
+            l = h.lfo(6);
+          h.lfo(28).connect(g.gain);
+          d.delayTime.value = 0.012;
+          l.connect(h.g(0.004)).connect(d.delayTime);
+          h.chain(x.in, g, h.g(1.8), d, x.wet);
+        });
+        seg("choir", (x) => {
+          const cv = c.createConvolver(),
+            n = Math.round(c.sampleRate * 1.4),
+            ir = c.createBuffer(2, n, c.sampleRate),
+            out = h.g(0.8);
+          for (let ch = 0; ch < 2; ch++) {
+            const d = ir.getChannelData(ch);
+            for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / n, 2.4);
+          }
+          cv.buffer = ir;
+          if (A.wl)
+            [1.26, 0.84].forEach((r) => {
+              const pn = pitchNode();
+              pn.parameters.get("ratio").value = r;
+              x.in.connect(pn);
+              pn.connect(h.g(0.5)).connect(out);
+            });
+          x.in.connect(out);
+          out.connect(cv);
+          cv.connect(x.wet);
+          out.connect(x.wet);
+        }, true);
+        seg("echo", (x) => {
+          const d = c.createDelay(1);
+          x.fb = h.g(0.4);
+          d.delayTime.value = 0.28;
+          x.in.connect(d);
+          d.connect(x.wet);
+          h.chain(d, h.bq("lowpass", 3200, 0.7), x.fb).connect(d);
+        }, true);
+        prev.connect(V.wet);
+        V.in.connect(V.dry);
+        V.wet.connect(V.tone);
+        V.dry.connect(V.sum);
+        V.tone.connect(V.sum);
+        V.sum.connect(N.chV);
+        A.voice = V;
+        voiceApply();
+      }
+      function voiceApply() {
+        const V = A.voice,
+          v = S.voice,
+          P = VOICES[v.sel];
+        if (!V) return;
+        const now = A.ctx.currentTime;
+        ramp(V.dry.gain, 1 - v.mix);
+        ramp(V.wet.gain, v.mix);
+        V.pitch?.parameters.get("ratio").setTargetAtTime(Math.pow(2, ((v.pitch - 0.5) * 24) / 12), now, 0.03);
+        V.tone.frequency.setTargetAtTime(1500 * Math.pow(8, v.bri), now, 0.03);
+        for (const id in V.segs) {
+          const x = V.segs[id],
+            on = P.ch === id;
+          if (x.send) ramp(x.wet.gain, on ? 0.9 : 0);
+          else (ramp(x.dry.gain, on ? 0 : 1), ramp(x.wet.gain, on ? 1 : 0));
+        }
+        V.segs.robot.osc.frequency.setTargetAtTime(30 + v.depth * 160, now, 0.03);
+        V.segs.mega.pre.gain.setTargetAtTime(1 + v.depth * 7, now, 0.03);
+        V.segs.echo.fb.gain.setTargetAtTime(0.15 + v.depth * 0.6, now, 0.03);
+      }
+      let voiceFaceKnobs = () => {};
+      function voiceFace() {
+        const P = VOICES[S.voice.sel];
+        $("#voDesc").textContent = P.desc;
+        $("#voHint").textContent = A.mic ? "Listening: speak or sing. Wear headphones, or your voice will feed back." : "Tap the microphone icon (top left, or LISTEN below) to start, and put headphones on: your voice would feed back through a speaker.";
+        $("#voPads").innerHTML = VOICES.map((q, i) => `<div class="sq has${S.voice.sel === i ? " ok" : ""}" data-v="${i}" role="button" tabindex="0" title="${q.name}: ${esc(q.desc)}" style="--ccrgb:${LPAL[i % 6]};--v:.25"><span class="nt sm">${q.name}</span></div>`).join("");
+        voiceFaceKnobs = mkPanel(
+          $("#voK"),
+          [["pitch", "PITCH", (v) => { const st = Math.round((v - 0.5) * 24); return (st > 0 ? "+" : "") + st + " st"; }], ["mix", "MIX", (v) => Math.round(v * 100) + "% voice fx"], ["depth", "DEPTH", (v) => Math.round(v * 100) + "%"], ["bri", "BRIGHT", (v) => Math.round(1500 * Math.pow(8, v)) + " Hz"]],
+          (k) => S.voice[k],
+          (k, v) => ((S.voice[k] = v), voiceApply(), save()),
+          (k) => (k === "pitch" ? P.pitch / 24 + 0.5 : P[k]),
+        );
+      }
+      $("#voPads").addEventListener("pointerdown", (e) => {
+        const p = e.target.closest("[data-v]");
+        if (!p) return;
+        e.preventDefault();
+        const P = VOICES[+p.dataset.v];
+        S.voice = { sel: +p.dataset.v, pitch: P.pitch / 24 + 0.5, mix: P.mix, depth: P.depth, bri: P.bri };
+        save();
+        voiceApply();
+        voiceFace();
+        toast(P.name, 900);
+      });
+      function voiceMeter() {
+        const m = A.meter;
+        $("#voMeter i").style.width = m ? Math.min(100, Math.sqrt(peakOf(m)) * 100) + "%" : "0";
+      }
+
+      // ======================================================================
+      // FX PADS (in the mixer tab): effects on the whole mix, to latch or hold. Each is a unit-like segment in series after the
+      // master fader: dry through when off, the effect when on (ECHO and REVERB are sends: the dry sound stays).
+      // ======================================================================
+      const MFX = [
+        ["lofi", "LO-FI", "crushed"],
+        ["tape", "TAPE", "wobble"],
+        ["radio", "RADIO", "AM band"],
+        ["tele", "PHONE", "narrow"],
+        ["water", "UNDERWATER", "muffled"],
+        ["stut", "STUTTER", "16th chop"],
+        ["lp", "LOW PASS", "dark"],
+        ["hp", "HIGH PASS", "thin"],
+        ["echo", "ECHO", "throw"],
+        ["verb", "REVERB", "wash"],
+        ["robot", "ROBOT", "ring mod"],
+        ["crunch", "CRUNCH", "whole mix"],
+      ];
+      const MF = { on: new Set(), held: new Map(), view: "mix" };
+      function mfxBuild(h) {
+        const c = h.ctx,
+          F = { in: h.g(), segs: {} },
+          shape = (f) => {
+            const w = c.createWaveShaper();
+            w.curve = curveOf(f);
+            return w;
+          };
+        let prev = F.in;
+        const seg = (id, make, send) => {
+          const x = h.box();
+          x.send = !!send;
+          make(x);
+          F.segs[id] = x;
+          prev.connect(x.in);
+          prev = x.out;
+        };
+        seg("lofi", (x) => h.chain(x.in, shape((v) => Math.round(v * 14) / 14), h.bq("lowpass", 3200, 0.7), h.bq("highpass", 120, 0.7), x.wet));
+        seg("tape", (x) => {
+          const d = c.createDelay(0.1),
+            l1 = h.lfo(0.7),
+            l2 = h.lfo(6.5);
+          d.delayTime.value = 0.015;
+          l1.connect(h.g(0.004)).connect(d.delayTime); // wow: a slow wobble of the pitch
+          l2.connect(h.g(0.0007)).connect(d.delayTime); // flutter: a fast, small one
+          h.chain(x.in, d, h.bq("lowpass", 5200, 0.7), shape((v) => Math.tanh(1.6 * v)), x.wet);
+        });
+        seg("radio", (x) => h.chain(x.in, h.bq("highpass", 450, 0.8), h.bq("lowpass", 3400, 0.8), shape((v) => Math.tanh(3 * v) * 0.8), x.wet));
+        seg("tele", (x) => h.chain(x.in, h.bq("highpass", 400, 1), h.bq("highpass", 400, 1), h.bq("lowpass", 2800, 1), h.bq("lowpass", 2800, 1), x.wet));
+        seg("water", (x) => {
+          const f = h.bq("lowpass", 350, 7),
+            l = h.lfo(0.35);
+          l.connect(h.g(170)).connect(f.frequency);
+          h.chain(x.in, f, x.wet);
+        });
+        seg("stut", (x) => {
+          const gate = h.g(0.5),
+            o = c.createOscillator();
+          o.type = "square";
+          o.frequency.value = 8;
+          o.start();
+          o.connect(h.g(0.5)).connect(gate.gain);
+          x.osc = o;
+          h.chain(x.in, gate, x.wet);
+        });
+        seg("lp", (x) => h.chain(x.in, h.bq("lowpass", 500, 1), x.wet));
+        seg("hp", (x) => h.chain(x.in, h.bq("highpass", 1200, 0.8), x.wet));
+        seg("echo", (x) => {
+          const d = c.createDelay(2),
+            fb = h.g(0.45);
+          d.delayTime.value = 0.375;
+          x.in.connect(d);
+          d.connect(x.wet);
+          h.chain(d, h.bq("lowpass", 3000, 0.7), fb).connect(d);
+          x.d = d;
+        }, true);
+        seg("verb", (x) => {
+          const cv = c.createConvolver(),
+            n = Math.round(c.sampleRate * 1.8),
+            ir = c.createBuffer(2, n, c.sampleRate);
+          for (let ch = 0; ch < 2; ch++) {
+            const d = ir.getChannelData(ch);
+            for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / n, 2.6);
+          }
+          cv.buffer = ir;
+          h.chain(x.in, cv, h.g(0.5), x.wet);
+        }, true);
+        seg("robot", (x) => {
+          const g = h.g(0),
+            o = h.lfo(70);
+          o.connect(g.gain);
+          h.chain(x.in, g, h.g(1.6), x.wet);
+        });
+        seg("crunch", (x) => h.chain(x.in, h.g(3), shape((v) => Math.tanh(6 * v) * 0.7), h.bq("lowpass", 5000, 0.7), x.wet));
+        F.out = prev;
+        return F;
+      }
+      function mfxApply(id) {
+        const x = A.nodes?.fx?.segs[id];
+        if (!x) return;
+        const on = MF.on.has(id);
+        if (x.send) ramp(x.wet.gain, on ? 0.8 : 0);
+        else {
+          ramp(x.dry.gain, on ? 0 : 1);
+          ramp(x.wet.gain, on ? 1 : 0);
+        }
+        if (id === "stut" && on) x.osc.frequency.value = (S.loop.bpm / 60) * 4; // sixteenth notes of the looper's tempo
+      }
+      function mfxSet(id, on) {
+        on ? MF.on.add(id) : MF.on.delete(id);
+        mfxApply(id);
+        $$(`#fxPads [data-fx="${id}"]`).forEach((e) => e.classList.toggle("ok", on));
+        const cnt = $("#mFxCount");
+        if (cnt) cnt.textContent = MF.on.size ? "FX · " + MF.on.size : "FX PADS";
+      }
+      function mfxFace() {
+        $("#fxPads").innerHTML = MFX.map(
+          ([id, n, h], i) => `<div class="sq has${MF.on.has(id) ? " ok" : ""}" data-fx="${id}" role="button" tabindex="0" title="${n}: ${h}. ${S.mlatch ? "Tap to turn it on or off" : "Hold to play it"}" style="--ccrgb:${LPAL[Math.floor(i / 2) % 6]};--v:.25"><span class="nt sm">${n}</span><span class="in">${h}</span></div>`,
+        ).join("");
+        $("#mLatch").classList.toggle("on", S.mlatch);
+      }
+      // the mixer tab shows the knobs or the FX pads, and the lower button swaps them
+      function mixMode(v) {
+        MF.view = v ?? MF.view;
+        const fx = MF.view === "fx";
+        $("#mixer").hidden = $("#mixHint").hidden = fx;
+        $("#fxPads").hidden = $("#fxBar").hidden = !fx;
+        $("#mFxB").innerHTML = fx ? "<i>BACK TO</i>MIXER" : `<i>EFFECTS</i><span id="mFxCount">${MF.on.size ? "FX · " + MF.on.size : "FX PADS"}</span>`;
+        $("#mFxB").title = fx ? "Back to the volume knobs" : "Effects on the whole mix: lo-fi, tape, radio, stutter and more, to latch or hold";
+        $("#mFxB").classList.toggle("on", fx);
+        if (fx) mfxFace();
+      }
+      $("#mFxB").onclick = () => mixMode(MF.view === "fx" ? "mix" : "fx");
+      $("#fxPads").addEventListener("pointerdown", async (e) => {
+        const p = e.target.closest("[data-fx]");
+        if (!p) return;
+        e.preventDefault();
+        await engineEnsure();
+        const id = p.dataset.fx;
+        if (S.mlatch) mfxSet(id, !MF.on.has(id));
+        else (MF.held.set(e.pointerId, id), mfxSet(id, true));
+      });
+      const mfxUp = (e) => {
+        const id = MF.held.get(e.pointerId);
+        if (!id) return;
+        MF.held.delete(e.pointerId);
+        if (![...MF.held.values()].includes(id)) mfxSet(id, false);
+      };
+      addEventListener("pointerup", mfxUp);
+      addEventListener("pointercancel", mfxUp);
+      $("#mLatch").onclick = () => {
+        S.mlatch = !S.mlatch;
+        save();
+        mfxFace();
+        toast(S.mlatch ? "Latch on: tap an effect to turn it on or off" : "Latch off: effects play while you hold them");
+      };
+      $("#mFxOff").onclick = () => {
+        [...MF.on].forEach((id) => mfxSet(id, false));
+        toast("Effects off");
+      };
+
+      // ======================================================================
       // MIXER: a knob and a mute for each source, and the master
       // ======================================================================
-      const MIXCH = [["gtr", "GUITAR"], ["riff", "TEST RIFF"], ["trk", "TRACKS"], ["loop", "LOOPS"], ["click", "CLICK"], ["master", "MASTER"]];
+      const MIXCH = [["gtr", "GUITAR"], ["riff", "TEST RIFF"], ["syn", "SYNTH"], ["voice", "VOICE"], ["trk", "TRACKS"], ["loop", "LOOPS"], ["click", "CLICK"], ["master", "MASTER"]];
       const dbTxt = (v) => (v <= 0.001 ? "-∞" : db(20 * Math.log10(v)));
       // a knob drawn as TRACK.Pocket's mixer knobs: a track, the value arc, the cap with a pointer, the value inside
       function mixKnobSvg(f, txt) {
@@ -3687,7 +4443,7 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
             en: [
                             "The squares icon at the top opens the **PEDAL BOARD**: the order your sound goes through. It comes in at the top right and runs right to left, down, left to right, down... along the cable to the **speaker** at the end. The board fills the screen with squares: the more room, the more rows (up to 27 units).",
               "- Tap an **empty square** (+) to add a pedal, amp or cab there; it comes in switched on.",
-              "- Tap a unit to turn it **on or off** (a dimmed unit is off). **Press and hold** it, or **double tap**, to open it full screen in LIVE PLAY.",
+              "- Each square has a small drawing of what it is: a stomp box for a pedal, an amp head, or a speaker cab. Tap a unit to turn it **on or off** (a dimmed unit is off). **Press and hold** it, or **double tap**, to open it full screen in LIVE PLAY.",
               "- **Drag** a unit onto another square to swap them, or onto an empty one to move it. A drive before the amp and the delay and reverb after the cab is the classic order, but try anything.",
               "- To take a unit off the board, open it in LIVE PLAY and tap **TAKE OFF BOARD** (beside its description). A unit that is off lets the sound through untouched; one that is not on the board is not in the sound at all.",
               "- The **speaker** opens the MIXER.",
@@ -3696,7 +4452,7 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
             es: [
                             "El icono de cuadrados de arriba abre el **PEDAL BOARD**: el orden por el que pasa tu sonido. Entra arriba a la derecha y va de derecha a izquierda, baja, de izquierda a derecha, baja... siguiendo el cable hasta el **altavoz** al final. El board llena la pantalla de casillas: cuanto más espacio, más filas (hasta 27 unidades).",
               "- Toca una **casilla vacía** (+) para poner ahí un pedal, amplificador o pantalla; entra encendido.",
-              "- Toca una unidad para **encenderla o apagarla** (una atenuada está apagada). **Mantén pulsado** o **toca dos veces** para abrirla a pantalla completa en LIVE PLAY.",
+              "- Cada casilla lleva un dibujo de lo que es: una caja de pedal, un cabezal de ampli o una pantalla. Toca una unidad para **encenderla o apagarla** (una atenuada está apagada). **Mantén pulsado** o **toca dos veces** para abrirla a pantalla completa en LIVE PLAY.",
               "- **Arrastra** una unidad a otra casilla para intercambiarlas, o a una vacía para moverla. Lo clásico es la saturación antes del amplificador y el delay y la reverb después de la pantalla, pero prueba lo que quieras.",
               "- Para quitar una unidad del board, ábrela en LIVE PLAY y toca **TAKE OFF BOARD** (junto a su descripción). Una unidad apagada deja pasar el sonido sin tocarlo; una que no está en el board no está en el sonido.",
               "- El **altavoz** abre el MIXER.",
@@ -3760,11 +4516,51 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
               "The faders icon at the top (or the speaker on the board) opens the **MIXER**: a strip for the **GUITAR** (your input), the **TEST RIFF**, the **TRACKS**, the **LOOPS** and the **CLICK**, and the **MASTER**, which sets what reaches your headphones. Each one is a **knob** like TRACK.Pocket's mixer: drag it up or down, tap it twice to put it back, and **M** mutes it.",
               "- Slide a fader to set its volume (0 dB is unchanged); **M** mutes it. The bar under each one shows its level while sound plays.",
               "- A soft limiter after the master keeps a loud board from clipping harshly.",
+              "- The lower button swaps the knobs for the **FX PADS**: effects on the whole mix (LO-FI, TAPE, RADIO, PHONE, UNDERWATER, STUTTER, LOW PASS, HIGH PASS, ECHO, REVERB, ROBOT, CRUNCH). With **LATCH** on, a tap turns an effect on or off, so you can leave LO-FI running; with it off, an effect plays while you hold it. **ALL OFF** turns them all off. **BACK TO MIXER** brings the knobs back.",
             ],
             es: [
               "El icono de faders de arriba (o el altavoz del board) abre el **MIXER**: una tira para la **GUITAR** (tu entrada), el **TEST RIFF**, las **TRACKS**, los **LOOPS** y el **CLICK**, y el **MASTER**, que decide lo que llega a tus auriculares. Cada una es un **potenciómetro** como el mezclador de TRACK.Pocket: arrástralo arriba o abajo, tócalo dos veces para devolverlo a su sitio, y **M** lo silencia.",
               "- Desliza un fader para su volumen (0 dB es sin cambio); **M** lo silencia. La barra de debajo muestra su nivel mientras suena.",
               "- Un limitador suave después del master evita que un board muy fuerte sature de forma áspera.",
+              "- El botón de abajo cambia los potenciómetros por los **FX PADS**: efectos sobre toda la mezcla (LO-FI, TAPE, RADIO, PHONE, UNDERWATER, STUTTER, LOW PASS, HIGH PASS, ECHO, REVERB, ROBOT, CRUNCH). Con **LATCH** activado, un toque enciende o apaga un efecto, así puedes dejar el LO-FI sonando; sin él, el efecto suena mientras lo mantienes pulsado. **ALL OFF** los apaga todos. **BACK TO MIXER** devuelve los potenciómetros.",
+            ],
+          },
+        },
+        {
+          id: "synth",
+          t: { en: "SYNTH", es: "SYNTH" },
+          b: {
+            en: [
+              "The keyboard icon at the top opens the **SYNTH**: play it from a MIDI keyboard or controller (plug it in, then tap **MIDI INPUT** if it is not found) or from the keys on the screen, where you can slide across the keys.",
+              "- **◁ ▷** (or tap the name) changes the instrument. All eight are made by the app, with no samples: SAW LEAD, SQUARE BASS, WARM PAD, DRAWBAR ORGAN, E. PIANO and GLASS BELLS (FM synthesis), SYNTH PLUCK and SYNTH BRASS.",
+              "- The knobs shape the sound: **CUTOFF** and **RESO** (the filter), **ATTACK, DECAY, SUSTAIN, RELEASE** (how a note swells and fades), **DETUNE** and **BRIGHT**. Drag a knob up or down, tap it twice to put it back. Each instrument keeps its own settings.",
+              "- **OCTAVE − / +** moves the keys. **PEDALS OFF / ON** sends the synth straight to the mixer, or through the pedal board.",
+              "- From MIDI it understands notes (with velocity), the sustain pedal, pitch bend (two semitones) and the mod wheel or CC 74 (the cutoff). Its volume is the SYNTH knob in the mixer.",
+            ],
+            es: [
+              "El icono del teclado de arriba abre el **SYNTH**: tócalo con un teclado o controlador MIDI (conéctalo y toca **MIDI INPUT** si no aparece) o con las teclas de la pantalla, donde puedes deslizar el dedo por las teclas.",
+              "- **◁ ▷** (o toca el nombre) cambia el instrumento. Los ocho los hace la app, sin muestras: SAW LEAD, SQUARE BASS, WARM PAD, DRAWBAR ORGAN, E. PIANO y GLASS BELLS (síntesis FM), SYNTH PLUCK y SYNTH BRASS.",
+              "- Los potenciómetros dan forma al sonido: **CUTOFF** y **RESO** (el filtro), **ATTACK, DECAY, SUSTAIN, RELEASE** (cómo crece y se apaga una nota), **DETUNE** y **BRIGHT**. Arrastra uno hacia arriba o abajo, tócalo dos veces para devolverlo. Cada instrumento guarda sus ajustes.",
+              "- **OCTAVE − / +** mueve las teclas. **PEDALS OFF / ON** manda el synth directo al mixer, o por el pedal board.",
+              "- Desde MIDI entiende notas (con velocidad), el pedal de sustain, el pitch bend (dos semitonos) y la rueda de modulación o el CC 74 (el cutoff). Su volumen es el potenciómetro SYNTH del mixer.",
+            ],
+          },
+        },
+        {
+          id: "voice",
+          t: { en: "VOICE", es: "VOICE" },
+          b: {
+            en: [
+              "The face icon at the top opens **VOICE**: your microphone through a voice changer. **Use headphones**, or your voice comes out of the speaker and feeds back. Tap the microphone icon first.",
+              "- Tap a pad: CLEAN, HELIUM, DEEP, MONSTER, ROBOT, ALIEN, MEGAPHONE, CHOIR (two harmonies and a hall) or ECHO. Each sets the knobs, which you can then change.",
+              "- **PITCH** shifts your voice up or down by up to a whole octave. **MIX** goes from your own voice to the changed one. **DEPTH** sets how strong the character is (the robot's buzz, the megaphone's drive, how many echoes). **BRIGHT** softens or opens the top.",
+              "- While this tab is open the **guitar is silent**, so only your voice comes out. Its volume is the VOICE knob in the mixer. There is a small delay, as with anything played through the browser.",
+            ],
+            es: [
+              "El icono de la cara de arriba abre **VOICE**: tu micrófono por un cambiador de voz. **Usa auriculares**, o tu voz saldrá por el altavoz y se acoplará. Toca antes el icono del micrófono.",
+              "- Toca un pad: CLEAN, HELIUM, DEEP, MONSTER, ROBOT, ALIEN, MEGAPHONE, CHOIR (dos armonías y una sala) o ECHO. Cada uno ajusta los potenciómetros, que luego puedes cambiar.",
+              "- **PITCH** sube o baja tu voz hasta una octava entera. **MIX** va de tu propia voz a la cambiada. **DEPTH** fija lo fuerte que es el carácter (el zumbido del robot, la saturación del megáfono, cuántos ecos). **BRIGHT** suaviza o abre los agudos.",
+              "- Con esta pestaña abierta la **guitarra se silencia**, así que solo sale tu voz. Su volumen es el potenciómetro VOICE del mixer. Hay un pequeño retardo, como con todo lo que suena a través del navegador.",
             ],
           },
         },
@@ -3909,5 +4705,5 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
       lpFace();
       trLoad();
     </script>
-  <div style="position:fixed;left:4px;bottom:2px;z-index:99;font:700 9px monospace;opacity:.7;pointer-events:none;color:#ff5e7a">TEST BUILD · beta · 5d792f4</div></body>
+  <div style="position:fixed;left:4px;bottom:2px;z-index:99;font:700 9px monospace;opacity:.7;pointer-events:none;color:#ff5e7a">TEST BUILD · beta · 2440fa6</div></body>
 </html>
