@@ -621,6 +621,9 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
       .mk .kv { fill: none; stroke: var(--acc); stroke-width: 5; stroke-linecap: round; }
       .mk .kb { fill: var(--panel2); stroke: var(--line); }
       .mk .kp { stroke: var(--text); stroke-width: 3; stroke-linecap: round; }
+      .mk .ki { fill: none; stroke: var(--text); stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; pointer-events: none; }
+      .mk .ki circle { fill: var(--text); stroke: none; }
+      .mk .ki circle[r="6.5"] { fill: none; stroke: var(--text); }
       .mk text { fill: var(--text); font: 800 11px var(--mono); text-anchor: middle; }
       #synWave { display: block; flex: none; width: calc(100% - 12px); height: 76px; margin: 6px 6px 0; border: 1px solid var(--line); border-radius: 8px; background: var(--wave, var(--panel)); }
       #synSel { display: flex; gap: 6px; margin: 6px 6px 0; height: 52px; flex: none; }
@@ -634,8 +637,7 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
       #synKeys .k.b { position: absolute; top: 0; height: 60%; width: 6.2%; z-index: 2; background: #15181d; border-radius: 0 0 4px 4px; flex: none; }
       #synKeys .k.b.down { background: color-mix(in srgb, var(--acc) 70%, #000); }
       #synKeys .k i { position: absolute; bottom: 4px; left: 0; right: 0; text-align: center; font: 700 9px var(--mono); font-style: normal; color: #667; pointer-events: none; }
-      #voMeter { margin: 4px 8px 0; height: 6px; border: 1px solid var(--line); border-radius: 3px; overflow: hidden; flex: none; }
-      #voMeter i { display: block; height: 100%; width: 0; background: var(--acc); }
+      #voWave { display: block; flex: none; width: calc(100% - 12px); height: 104px; margin: 6px 6px 0; border: 1px solid var(--line); border-radius: 8px; background: var(--wave, var(--panel)); }
       #voPads { flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(3, 1fr); grid-auto-rows: 1fr; gap: 6px; margin: 6px; }
       #voPads .sq { cursor: pointer; touch-action: manipulation; min-height: 0; }
       #voPads .nt.sm { font-size: 14px; font-family: system-ui, -apple-system, sans-serif; white-space: nowrap; }
@@ -669,6 +671,17 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
       #lt .row { display: flex; gap: 6px; }
       #lt .row button { flex: 1; }
       #instBtn:disabled { opacity: 0.6; color: var(--text); }
+    </style>
+      <style id="selpick-css">
+      /* the shared list picker (every dropdown opens as a list of big buttons): the same in the four apps */
+      #selPick { position: fixed; inset: 0; z-index: 9000; background: rgba(0, 0, 0, 0.6); display: flex; align-items: center; justify-content: center; }
+      #selPick[hidden] { display: none; }
+      #selPick .sp-card { width: min(100%, 520px); max-height: 92%; overflow: auto; display: flex; flex-direction: column; gap: 6px; padding: 12px; margin: 8px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; color: var(--text); }
+      #selPick h3 { margin: 4px 0 0; font-size: 13px; letter-spacing: 1px; }
+      #selPick .sp-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+      #selPick .sp-grid button { min-height: 44px; min-width: 0; padding: 6px; font-size: 12px; overflow-wrap: anywhere; }
+      #selPick .sp-grid button.on { background: var(--acc); border-color: var(--acc); color: var(--ink, #000); }
+      #selPick .sp-grid button:disabled { opacity: 0.4; }
     </style>
   </head>
   <body class="pocket">
@@ -810,8 +823,7 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
       <!-- VOICE: change your voice, from the microphone -->
       <section id="voice">
         <div class="hint" id="voHint"></div>
-        <div id="voMeter" title="The level of your voice"><i></i></div>
-        <div class="hint" id="voDesc"></div>
+        <canvas id="voWave" title="Your voice: the grey line is what comes in, the colour line what comes out, with the note you are singing and the note it becomes"></canvas>
         <div id="voPads"></div>
         <div class="mkgrid" id="voK"></div>
         <div class="prow" id="voRib">
@@ -1957,7 +1969,7 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
         if (S.view === "mix") mixMeters();
         if (S.view === "loop") lpFrame();
         if (KINDS[S.view]) wavDraw();
-        if (S.view === "voice") voiceMeter();
+        if (S.view === "voice") voiceWave();
         if (S.view === "synth" && SYV.voices.size) synWave();
         A.raf = requestAnimationFrame(meterLoop);
       }
@@ -2776,12 +2788,26 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
       // a filter and an envelope each) and fade out on release; the sustain pedal, pitch bend and the mod wheel work.
       // ======================================================================
       // a row of knobs for the synth and the voice: items [key, label, text(value 0..1)], drag up or down, tap twice for the start value
+      // the symbols a synth puts on its knobs: a filter curve, an envelope stage, two detuned waves, a sun...
+      const KICO = {
+        cut: '<path d="M21 28H32C37 28 38 33 43 38"/>',
+        res: '<path d="M21 37H27Q31 19 35 33L43 38"/>',
+        a: '<path d="M22 39L35 26V39"/>',
+        d: '<path d="M22 26L33 38H42"/>',
+        s: '<path d="M21 32H43M21 28V36"/>',
+        r: '<path d="M21 28H30L42 39"/>',
+        det: '<path d="M21 29Q26 23 31 29T41 29M21 36Q26 30 31 36T41 36"/>',
+        bri: '<circle cx="32" cy="32" r="3.2"/><path d="M32 23V26M32 38V41M23 32H26M38 32H41M25.6 25.6L27.8 27.8M36.2 36.2L38.4 38.4M25.6 38.4L27.8 36.2M36.2 27.8L38.4 25.6"/>',
+        pitch: '<path d="M27 39V25M23 29L27 25L31 29M37 25V39M33 35L37 39L41 35"/>',
+        mix: '<circle cx="28" cy="32" r="6.5"/><circle cx="36" cy="32" r="6.5"/>',
+        depth: '<path d="M22 38Q32 20 42 38M26.5 38Q32 28 37.5 38M30.5 38Q32 34 33.5 38"/>',
+      };
       function mkPanel(root, items, get, set, start) {
         root.innerHTML = items.map(([k, l]) => `<div class="mkc" data-k="${k}"><b>${l}</b><div class="mk" role="slider" tabindex="0" aria-label="${l}" aria-valuemin="0" aria-valuemax="100" title="${l}: drag up or down, tap twice to put it back (arrow keys too)"></div><small></small></div>`).join("");
         const face = (c) => {
           const it = items.find((x) => x[0] === c.dataset.k),
             v = get(c.dataset.k);
-          c.querySelector(".mk").innerHTML = mixKnobSvg(v, Math.round(v * 100));
+          c.querySelector(".mk").innerHTML = mixKnobSvg(v, Math.round(v * 100), KICO[it[0]]);
           c.querySelector(".mk").setAttribute("aria-valuenow", Math.round(v * 100));
           c.querySelector("small").textContent = it[2](v);
         };
@@ -3210,6 +3236,13 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
         V.dry.connect(V.sum);
         V.tone.connect(V.sum);
         V.sum.connect(N.chV);
+        V.ai = c.createAnalyser(); // what comes in (for the picture and the note) and what comes out
+        V.ao = c.createAnalyser();
+        V.ai.fftSize = V.ao.fftSize = 2048;
+        A.gain.connect(V.ai);
+        V.sum.connect(V.ao);
+        V.bi = new Float32Array(2048);
+        V.bo = new Float32Array(2048);
         A.voice = V;
         voiceApply();
       }
@@ -3236,7 +3269,7 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
       let voiceFaceKnobs = () => {};
       function voiceFace() {
         const P = VOICES[S.voice.sel];
-        $("#voDesc").textContent = P.desc;
+        voiceWave();
         $("#voHint").textContent = A.mic ? "Listening: speak or sing. Wear headphones, or your voice will feed back." : "Tap the microphone icon (top left, or LISTEN below) to start, and put headphones on: your voice would feed back through a speaker.";
         $("#voPads").innerHTML = VOICES.map((q, i) => `<div class="sq has${S.voice.sel === i ? " ok" : ""}" data-v="${i}" role="button" tabindex="0" title="${q.name}: ${esc(q.desc)}" style="--ccrgb:${LPAL[i % 6]};--v:.25"><span class="nt sm">${q.name}</span></div>`).join("");
         voiceFaceKnobs = mkPanel(
@@ -3258,9 +3291,107 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
         voiceFace();
         toast(P.name, 900);
       });
-      function voiceMeter() {
-        const m = A.meter;
-        $("#voMeter i").style.width = m ? Math.min(100, Math.sqrt(peakOf(m)) * 100) + "%" : "0";
+      // the note of a voice: autocorrelation on the last 2048 samples, between 70 and 900 Hz
+      function voicePitch(buf, sr) {
+        const N = buf.length,
+          minLag = Math.floor(sr / 900),
+          maxLag = Math.min(1100, Math.floor(sr / 70));
+        let rms = 0;
+        for (let k = 0; k < N; k++) rms += buf[k] * buf[k];
+        if (Math.sqrt(rms / N) < 0.01) return -1;
+        const W = N - maxLag,
+          c = new Float32Array(maxLag + 2);
+        for (let lag = minLag; lag <= maxLag + 1; lag++) {
+          let sum = 0;
+          for (let j = 0; j < W; j += 2) sum += buf[j] * buf[j + lag];
+          c[lag] = sum;
+        }
+        let c0 = 0;
+        for (let j = 0; j < W; j += 2) c0 += buf[j] * buf[j];
+        let d = minLag;
+        while (d < maxLag && c[d] > c[d + 1]) d++; // past the first dip
+        let best = d;
+        for (let lag = d; lag <= maxLag; lag++) if (c[lag] > c[best]) best = lag;
+        for (let lag = d + 1; lag < best; lag++) if (c[lag] >= 0.9 * c[best] && c[lag] >= c[lag - 1] && c[lag] >= c[lag + 1]) { best = lag; break; } // the first peak that is nearly as strong: not an octave too low
+        const a = c[best - 1], b = c[best], e = c[best + 1],
+          sh = a - 2 * b + e ? (0.5 * (a - e)) / (a - 2 * b + e) : 0;
+        return b > 0.45 * c0 ? sr / (best + sh) : -1;
+      }
+      const NOTE_N = ["C", "C♯", "D", "D♯", "E", "F", "F♯", "G", "G♯", "A", "A♯", "B"];
+      const noteOf = (hz) => {
+        const m = 69 + 12 * Math.log2(hz / 440),
+          r = Math.round(m);
+        return { name: NOTE_N[((r % 12) + 12) % 12] + (Math.floor(r / 12) - 1), cents: Math.round((m - r) * 100) };
+      };
+      let voFrame = 0;
+      function voiceWave() {
+        const cv = $("#voWave"),
+          w = cv.clientWidth,
+          h = cv.clientHeight,
+          dpr = devicePixelRatio || 1;
+        if (!w || S.view !== "voice") return;
+        if (cv.width !== Math.round(w * dpr)) ((cv.width = Math.round(w * dpr)), (cv.height = Math.round(h * dpr)));
+        const g = cv.getContext("2d"),
+          cs = getComputedStyle(document.documentElement),
+          dim = cs.getPropertyValue("--dim"),
+          acc = cs.getPropertyValue("--acc"),
+          V = A.voice;
+        g.setTransform(dpr, 0, 0, dpr, 0, 0);
+        g.clearRect(0, 0, w, h);
+        g.fillStyle = dim;
+        g.fillRect(0, h / 2, w, 1);
+        g.font = "700 11px " + (cs.getPropertyValue("--mono") || "monospace");
+        if (!V) {
+          g.textAlign = "center";
+          g.fillText("Tap the microphone to see your voice", w / 2, h / 2 - 8);
+          return;
+        }
+        V.ai.getFloatTimeDomainData(V.bi);
+        V.ao.getFloatTimeDomainData(V.bo);
+        let pi = 0,
+          po = 0;
+        for (let k = 0; k < 2048; k++) ((pi = Math.max(pi, Math.abs(V.bi[k]))), (po = Math.max(po, Math.abs(V.bo[k]))));
+        const sc = (h / 2 - 8) / Math.max(0.04, pi, po);
+        let i0 = 1;
+        while (i0 < 900 && !(V.bi[i0 - 1] < 0 && V.bi[i0] >= 0)) i0++;
+        if (i0 >= 900) i0 = 0;
+        const line = (buf, col, lw) => {
+          g.beginPath();
+          for (let k = 0; k < 1000; k++) {
+            const x = (k / 999) * w,
+              y = h / 2 - buf[i0 + k] * sc;
+            k ? g.lineTo(x, y) : g.moveTo(x, y);
+          }
+          g.strokeStyle = col;
+          g.lineWidth = lw;
+          g.stroke();
+        };
+        line(V.bi, dim, 1.5);
+        line(V.bo, acc, 2);
+        // the note heard (a few times a second)
+        if (!(voFrame++ % 4)) V.note = voicePitch(V.bi, A.ctx.sampleRate);
+        g.textAlign = "left";
+        g.fillStyle = dim;
+        g.fillText("IN", 8, 14);
+        g.textAlign = "right";
+        g.fillStyle = acc;
+        g.fillText("OUT", w - 8, 14);
+        if (V.note > 0) {
+          const n = noteOf(V.note),
+            ratio = V.pitch ? V.pitch.parameters.get("ratio").value : 1,
+            o = noteOf(V.note * ratio);
+          g.font = "900 22px " + (cs.getPropertyValue("--mono") || "monospace");
+          g.textAlign = "left";
+          g.fillStyle = cs.getPropertyValue("--text");
+          g.fillText(n.name, 28, h - 12);
+          g.font = "700 10px " + (cs.getPropertyValue("--mono") || "monospace");
+          g.fillStyle = dim;
+          g.fillText((n.cents > 0 ? "+" : "") + n.cents + "¢", 28 + 14 * n.name.length + 6, h - 12);
+          g.font = "900 22px " + (cs.getPropertyValue("--mono") || "monospace");
+          g.textAlign = "right";
+          g.fillStyle = acc;
+          g.fillText(o.name, w - 28, h - 12);
+        }
       }
 
       // ======================================================================
@@ -3429,12 +3560,12 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
       const MIXCH = [["gtr", "GUITAR"], ["riff", "TEST RIFF"], ["syn", "SYNTH"], ["voice", "VOICE"], ["trk", "TRACKS"], ["loop", "LOOPS"], ["click", "CLICK"], ["master", "MASTER"]];
       const dbTxt = (v) => (v <= 0.001 ? "-∞" : db(20 * Math.log10(v)));
       // a knob drawn as TRACK.Pocket's mixer knobs: a track, the value arc, the cap with a pointer, the value inside
-      function mixKnobSvg(f, txt) {
+      function mixKnobSvg(f, txt, icon) {
         const a0 = 0.75 * Math.PI,
           a = a0 + clamp(f, 0, 1) * 1.5 * Math.PI,
           P = (ang, rr) => [32 + Math.cos(ang) * rr, 32 + Math.sin(ang) * rr].map((x) => x.toFixed(1)).join(" "),
           arc = (from, to, rr) => `M${P(from, rr)} A${rr} ${rr} 0 ${to - from > Math.PI ? 1 : 0} 1 ${P(to, rr)}`;
-        return `<svg viewBox="0 0 64 64"><path class="kt" d="${arc(a0, a0 + 1.5 * Math.PI, 26)}"/>${f > 0.005 ? `<path class="kv" d="${arc(a0, a, 26)}"/>` : ""}<circle class="kb" cx="32" cy="32" r="18"/><path class="kp" d="M${P(a, 8)} L${P(a, 17)}"/><text x="32" y="36.5">${txt}</text></svg>`;
+        return `<svg viewBox="0 0 64 64"><path class="kt" d="${arc(a0, a0 + 1.5 * Math.PI, 26)}"/>${f > 0.005 ? `<path class="kv" d="${arc(a0, a, 26)}"/>` : ""}<circle class="kb" cx="32" cy="32" r="18"/><path class="kp" d="M${P(a, icon ? 12 : 8)} L${P(a, 17)}"/>${icon ? `<g class="ki">${icon}</g>` : `<text x="32" y="36.5">${txt}</text>`}</svg>`;
       }
       const mixKnobFace = (st) => {
         const v = S.mix[st.dataset.ch].v;
@@ -4734,14 +4865,14 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
             en: [
               "The keyboard icon at the top opens the **SYNTH**: play it from a MIDI keyboard or controller (plug it in, then tap **MIDI INPUT** if it is not found) or from the keys on the screen, where you can slide across the keys.",
               "- At the top, a drawing of the instrument's wave (saws, a square, an FM tone...) shows what it is made of; while you play, the real output is drawn over it. **◁ ▷** steps through the instruments and tapping the name opens the list: LEADS (SAW LEAD, SUPERSAW, SYNTHWAVE LEAD, CHIP LEAD), BASS (SQUARE BASS, OUTRUN BASS), PADS (WARM PAD, SYNTHWAVE PAD, LO-FI PAD), KEYS (E. PIANO, LO-FI KEYS, DRAWBAR ORGAN, GLASS BELLS, KALIMBA) and SYNTH PLUCK and SYNTH BRASS. All are made by the app (oscillators, FM and drawbars), with no samples.",
-              "- The knobs shape the sound: **CUTOFF** and **RESO** (the filter), **ATTACK, DECAY, SUSTAIN, RELEASE** (how a note swells and fades), **DETUNE** and **BRIGHT**. Drag a knob up or down, tap it twice to put it back. Each instrument keeps its own settings.",
+              "- The knobs shape the sound, each marked with its usual synth symbol: **CUTOFF** and **RESO** (the filter), **ATTACK, DECAY, SUSTAIN, RELEASE** (how a note swells and fades), **DETUNE** and **BRIGHT**. Drag a knob up or down, tap it twice to put it back. Each instrument keeps its own settings.",
               "- **OCTAVE − / +** moves the ten keys. **PEDALS ON / OFF**: the synth goes through the pedal board by default, so your pedals and amp shape it; switch it off to send it straight to the mixer.",
               "- From MIDI it understands notes (with velocity), the sustain pedal, pitch bend (two semitones) and the mod wheel or CC 74 (the cutoff). Its volume is the SYNTH knob in the mixer.",
             ],
             es: [
               "El icono del teclado de arriba abre el **SYNTH**: tócalo con un teclado o controlador MIDI (conéctalo y toca **MIDI INPUT** si no aparece) o con las teclas de la pantalla, donde puedes deslizar el dedo por las teclas.",
               "- Arriba, un dibujo de la onda del instrumento (sierras, un cuadrado, un tono FM...) muestra de qué está hecho; mientras tocas, se dibuja encima la salida real. **◁ ▷** pasa de un instrumento a otro y tocar el nombre abre la lista: LEADS (SAW LEAD, SUPERSAW, SYNTHWAVE LEAD, CHIP LEAD), BASS (SQUARE BASS, OUTRUN BASS), PADS (WARM PAD, SYNTHWAVE PAD, LO-FI PAD), KEYS (E. PIANO, LO-FI KEYS, DRAWBAR ORGAN, GLASS BELLS, KALIMBA) y SYNTH PLUCK y SYNTH BRASS. Todos los hace la app (osciladores, FM y drawbars), sin muestras.",
-              "- Los potenciómetros dan forma al sonido: **CUTOFF** y **RESO** (el filtro), **ATTACK, DECAY, SUSTAIN, RELEASE** (cómo crece y se apaga una nota), **DETUNE** y **BRIGHT**. Arrastra uno hacia arriba o abajo, tócalo dos veces para devolverlo. Cada instrumento guarda sus ajustes.",
+              "- Los potenciómetros dan forma al sonido, cada uno con su símbolo habitual de sintetizador: **CUTOFF** y **RESO** (el filtro), **ATTACK, DECAY, SUSTAIN, RELEASE** (cómo crece y se apaga una nota), **DETUNE** y **BRIGHT**. Arrastra uno hacia arriba o abajo, tócalo dos veces para devolverlo. Cada instrumento guarda sus ajustes.",
               "- **OCTAVE − / +** mueve las diez teclas. **PEDALS ON / OFF**: el synth pasa por el pedal board de serie, así que tus pedales y tu ampli le dan forma; apágalo para mandarlo directo al mixer.",
               "- Desde MIDI entiende notas (con velocidad), el pedal de sustain, el pitch bend (dos semitonos) y la rueda de modulación o el CC 74 (el cutoff). Su volumen es el potenciómetro SYNTH del mixer.",
             ],
@@ -4753,12 +4884,14 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
           b: {
             en: [
               "The face icon at the top opens **VOICE**: your microphone through a voice changer. **Use headphones**, or your voice comes out of the speaker and feeds back. Tap the microphone icon first.",
+              "- At the top, a **waveform** shows your voice coming in (grey) and the changed voice going out (colour), with the note you are singing (left) and the note it becomes (right).",
               "- Tap a pad: CLEAN, HELIUM, DEEP, MONSTER, ROBOT, ALIEN, MEGAPHONE, CHOIR (two harmonies and a hall) or ECHO. Each sets the knobs, which you can then change.",
               "- **PITCH** shifts your voice up or down by up to a whole octave. **MIX** goes from your own voice to the changed one. **DEPTH** sets how strong the character is (the robot's buzz, the megaphone's drive, how many echoes). **BRIGHT** softens or opens the top.",
               "- While this tab is open the **guitar is silent**, so only your voice comes out. Its volume is the VOICE knob in the mixer. There is a small delay, as with anything played through the browser.",
             ],
             es: [
               "El icono de la cara de arriba abre **VOICE**: tu micrófono por un cambiador de voz. **Usa auriculares**, o tu voz saldrá por el altavoz y se acoplará. Toca antes el icono del micrófono.",
+              "- Arriba, una **onda** muestra tu voz entrando (gris) y la voz cambiada saliendo (de color), con la nota que cantas (izquierda) y la nota en que se convierte (derecha).",
               "- Toca un pad: CLEAN, HELIUM, DEEP, MONSTER, ROBOT, ALIEN, MEGAPHONE, CHOIR (dos armonías y una sala) o ECHO. Cada uno ajusta los potenciómetros, que luego puedes cambiar.",
               "- **PITCH** sube o baja tu voz hasta una octava entera. **MIX** va de tu propia voz a la cambiada. **DEPTH** fija lo fuerte que es el carácter (el zumbido del robot, la saturación del megáfono, cuántos ecos). **BRIGHT** suaviza o abre los agudos.",
               "- Con esta pestaña abierta la **guitarra se silencia**, así que solo sale tu voz. Su volumen es el potenciómetro VOICE del mixer. Hay un pequeño retardo, como con todo lo que suena a través del navegador.",
@@ -4835,21 +4968,23 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
           b: {
             en: [
               "## Version 0.5.0",
+                "- **Lists:** every dropdown now opens as a list of big buttons, grouped like the dropdown was, instead of the browser's own list. Tap one to choose, tap outside or CLOSE to leave.",
               "- **The first beta.** 16 pedals, 4 amps and 4 cabs on a board, with your instrument or the test riff.",
               "- **PEDAL BOARD and LIVE PLAY** are two tabs: the board fills the screen with squares (tap a unit to turn it on or off, press and hold or double tap to open it, drag to move it), and LIVE PLAY shows one unit full screen with what it does, where the sound comes from and goes, and its waveform in and out.",
               "- **LOOPER** as in TUNE.Pocket: 16 pads in time, EDIT tools (volume, overdub, reverse, normalize, nudge, quantize, crop), loop FX, UNDO, and the loops are kept on the device.",
               "- **MIXER** with knobs like TRACK.Pocket's, a mute and a meter under each, and **FX PADS** on the whole mix (lo-fi, tape, radio, stutter, echo, reverb and more, to latch or hold).",
-              "- **SYNTH:** eight instruments made by the app, played from a MIDI keyboard or the keys on the screen, straight to the mixer or through the pedal board. **VOICE:** the microphone through a voice changer (pitch, robot, megaphone and more). Use headphones.",
+              "- **SYNTH:** sixteen instruments (leads, synthwave, lo-fi, bass, pads, keys) made by the app, with the wave drawn at the top, through your pedals by default; **VOICE** changes your voice with its waveform and the note you sing; **pedal chains** are saved by name in FILES, played from a MIDI keyboard or the keys on the screen, straight to the mixer or through the pedal board. **VOICE:** the microphone through a voice changer (pitch, robot, megaphone and more). Use headphones.",
               "- **Install it:** the app is a web app (PWA). Add it to the Home Screen (iPhone: Safari ▸ Share; Android and desktop: Chrome ▸ Install app) and it opens like an app and works offline. **OPTIONS** has an **INSTALL** button.",
               "- **Safer:** an imported board and the loops kept on the device are checked before they are used.",
             ],
             es: [
               "## Versión 0.5.0",
+                "- **Listas:** cada desplegable ahora se abre como una lista de botones grandes, agrupada como estaba el desplegable, en vez de la lista del navegador. Toca uno para elegir, toca fuera o CLOSE para salir.",
               "- **La primera beta.** 16 pedales, 4 amplificadores y 4 pantallas en un board, con tu instrumento o el riff de prueba.",
               "- **PEDAL BOARD y LIVE PLAY** son dos pestañas: el board llena la pantalla de casillas (toca una unidad para encenderla o apagarla, mantén pulsado o toca dos veces para abrirla, arrastra para moverla), y LIVE PLAY muestra una unidad a pantalla completa con lo que hace, de dónde viene y a dónde va el sonido, y su onda de entrada y de salida.",
               "- **LOOPER** como en TUNE.Pocket: 16 pads a tempo, herramientas EDIT (volumen, overdub, reverse, normalize, desplazar, cuantizar, recortar), efectos de loop, UNDO, y los loops se guardan en el dispositivo.",
               "- **MIXER** con potenciómetros como los de TRACK.Pocket, un mute y un medidor bajo cada uno, y **FX PADS** sobre toda la mezcla (lo-fi, tape, radio, stutter, eco, reverb y más, fijos o mientras los mantienes).",
-              "- **SYNTH:** ocho instrumentos generados por la app, tocados desde un teclado MIDI o las teclas de la pantalla, directos al mezclador o a través del board. **VOICE:** el micrófono a través de un cambiador de voz (tono, robot, megáfono y más). Usa auriculares.",
+              "- **SYNTH:** dieciséis instrumentos (leads, synthwave, lo-fi, bajos, pads, teclas) hechos por la app, con la onda dibujada arriba, por tus pedales de serie; **VOICE** cambia tu voz con su onda y la nota que cantas; las **cadenas de pedales** se guardan con nombre en FILES, tocados desde un teclado MIDI o las teclas de la pantalla, directos al mezclador o a través del board. **VOICE:** el micrófono a través de un cambiador de voz (tono, robot, megáfono y más). Usa auriculares.",
               "- **Instálala:** la app es una web app (PWA). Añádela a la pantalla de inicio (iPhone: Safari ▸ Compartir; Android y escritorio: Chrome ▸ Instalar app) y se abre como una app y funciona sin conexión. **OPTIONS** tiene un botón **INSTALL**.",
               "- **Más segura:** un board importado y los loops guardados en el dispositivo se comprueban antes de usarse.",
             ],
@@ -4986,5 +5121,62 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
       lpFace();
       trLoad();
     </script>
-  <div style="position:fixed;left:4px;bottom:2px;z-index:99;font:700 9px monospace;opacity:.7;pointer-events:none;color:#ff5e7a">TEST BUILD · beta · 5d6697b</div></body>
+      <script id="selpick">
+      // The shared list picker: a tap on any <select> opens its options as a list of big buttons (grouped as the <optgroup>s are),
+      // sets the select and fires "input" and "change". The select still works with a keyboard. Identical in the four apps.
+      (() => {
+        const box = document.createElement("div");
+        box.id = "selPick";
+        box.hidden = true;
+        box.innerHTML = '<div class="sp-card" role="dialog" aria-modal="true" aria-label="Choose"><h3 id="spT"></h3><div id="spL"></div><button id="spX" type="button" title="Close the list">CLOSE</button></div>';
+        document.body.appendChild(box);
+        const esc = (x) => String(x).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+        let cur = null;
+        const close = () => ((box.hidden = true), (cur = null));
+        function open(sel) {
+          if (!box.hidden && cur === sel) return;
+          cur = sel;
+          const lab = sel.closest("label"),
+            title = sel.getAttribute("aria-label") || sel.title || (lab && lab.textContent.replace(/\s+/g, " ").trim().slice(0, 40)) || "Choose";
+          box.querySelector("#spT").textContent = title;
+          const btn = (o, i) => `<button type="button" data-i="${i}" class="${o.selected ? "on" : ""}"${o.disabled ? " disabled" : ""}>${esc(o.textContent.trim() || "·")}</button>`;
+          let h = "",
+            loose = "";
+          const flush = () => ((h += loose ? `<div class="sp-grid">${loose}</div>` : ""), (loose = ""));
+          [...sel.children].forEach((c) => {
+            if (c.tagName === "OPTGROUP") {
+              flush();
+              h += `<h3>${esc(c.label)}</h3><div class="sp-grid">${[...c.children].map((o) => btn(o, o.index)).join("")}</div>`;
+            } else if (c.tagName === "OPTION") loose += btn(c, c.index);
+          });
+          flush();
+          box.querySelector("#spL").innerHTML = h;
+          box.hidden = false;
+          const on = box.querySelector("button.on");
+          if (on) on.scrollIntoView({ block: "center" });
+        }
+        const hit = (e) => {
+          const s = e.target && e.target.closest ? e.target.closest("select") : null;
+          return s && !box.contains(s) && !s.disabled && !s.multiple && s.size <= 1 ? s : null;
+        };
+        // the browser's own dropdown opens on press (a mouse) or on release (a finger): both are stopped, and the list opens on the tap
+        for (const t of ["pointerdown", "mousedown"]) document.addEventListener(t, (e) => hit(e) && e.preventDefault(), true);
+        document.addEventListener("touchend", (e) => { const s = hit(e); if (s) (e.preventDefault(), open(s)); }, { capture: true, passive: false });
+        document.addEventListener("click", (e) => { const s = hit(e); if (s) (e.preventDefault(), open(s)); }, true);
+        box.addEventListener("click", (e) => {
+          if (e.target === box || e.target.closest("#spX")) return close();
+          const b = e.target.closest("[data-i]");
+          if (!b || !cur) return;
+          const s = cur;
+          close();
+          if (s.selectedIndex !== +b.dataset.i) {
+            s.selectedIndex = +b.dataset.i;
+            s.dispatchEvent(new Event("input", { bubbles: true }));
+            s.dispatchEvent(new Event("change", { bubbles: true }));
+          }
+        });
+        addEventListener("keydown", (e) => e.key === "Escape" && !box.hidden && close());
+      })();
+    </script>
+  <div style="position:fixed;left:4px;bottom:2px;z-index:99;font:700 9px monospace;opacity:.7;pointer-events:none;color:#ff5e7a">TEST BUILD · beta · ee3018f</div></body>
 </html>

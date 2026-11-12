@@ -1502,6 +1502,17 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
       html:not([data-theme]), html[data-theme="dark"] { --acc: #e40078; --brand: #e40078; --ok: #7cf29a; --ink: #ffffff; --playbg: #3a1428; --playbg2: #4a1832; --tie: #2a1d24; }
       html[data-theme="light"] { --acc: #e40078; --brand: #e40078; --ok: #12a05c; --ink: #ffffff; --playbg: #f9d0e4; --playbg2: #f6c2dc; --tie: #f3d9e5; }
 </style>
+      <style id="selpick-css">
+      /* the shared list picker (every dropdown opens as a list of big buttons): the same in the four apps */
+      #selPick { position: fixed; inset: 0; z-index: 9000; background: rgba(0, 0, 0, 0.6); display: flex; align-items: center; justify-content: center; }
+      #selPick[hidden] { display: none; }
+      #selPick .sp-card { width: min(100%, 520px); max-height: 92%; overflow: auto; display: flex; flex-direction: column; gap: 6px; padding: 12px; margin: 8px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; color: var(--text); }
+      #selPick h3 { margin: 4px 0 0; font-size: 13px; letter-spacing: 1px; }
+      #selPick .sp-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+      #selPick .sp-grid button { min-height: 44px; min-width: 0; padding: 6px; font-size: 12px; overflow-wrap: anywhere; }
+      #selPick .sp-grid button.on { background: var(--acc); border-color: var(--acc); color: var(--ink, #000); }
+      #selPick .sp-grid button:disabled { opacity: 0.4; }
+    </style>
   </head>
   <body class="pocket">
     <canvas id="bgfx" aria-hidden="true"></canvas>
@@ -6169,6 +6180,7 @@ registerProcessor("autotune", AutoTune);
             b: {
               en: [
                 "## Version 1.4.0",
+                "- **Lists:** every dropdown now opens as a list of big buttons, grouped like the dropdown was, instead of the browser's own list. Tap one to choose, tap outside or CLOSE to leave.",
                 "- **Air:** a new view (the wind icon) that listens to your tone and says how much of it is clean, mixed or airy, live and as a result you can compare over time, with a side-view diagram of the tongue, soft palate and larynx for five mouth shapes (hum, nay, oo, ah, yawn).",
                 "- **Microphone setup (OPTIONS):** pick the input, its channel, the gain, a gate, a high-pass and your range, per input. **TESTS** measures noise, level, pops, range and the browser processing, and **AUTO SETUP** sets everything from them. The recording, autotune and the sampler use the same cleaned input.",
                 "- **Sampler:** the play and loop marks on the pads are big enough to see now. While the sampler effects are open, the MIDI pads and keys play them.",
@@ -6182,6 +6194,7 @@ registerProcessor("autotune", AutoTune);
               ],
               es: [
                 "## Versión 1.4.0",
+                "- **Listas:** cada desplegable ahora se abre como una lista de botones grandes, agrupada como estaba el desplegable, en vez de la lista del navegador. Toca uno para elegir, toca fuera o CLOSE para salir.",
                 "- **Aire:** una vista nueva (el icono del viento) que escucha tu tono y dice qué parte es limpia, mixta o con aire, en directo y como resultado que puedes comparar con el tiempo, con un diagrama lateral de la lengua, el paladar blando y la laringe para cinco formas de la boca (hum, nay, oo, ah, bostezo).",
                 "- **Configurar el micrófono (OPCIONES):** elige la entrada, su canal, la ganancia, una puerta, un filtro de graves y tu rango, por entrada. **TESTS** mide ruido, nivel, golpes de aire, rango y el procesado del navegador, y **AUTO SETUP** lo configura todo. La grabación, el autotune y el sampler usan la misma entrada ya limpia.",
                 "- **Sampler:** las marcas de reproducción y de bucle en los pads ahora se ven bien. Con los efectos del sampler abiertos, los pads y teclas MIDI los tocan.",
@@ -9287,5 +9300,62 @@ registerProcessor("autotune", AutoTune);
       } catch {}
       if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
     </script>
-  <div style="position:fixed;left:4px;bottom:2px;z-index:99;font:700 9px monospace;opacity:.7;pointer-events:none;color:#ff5e7a">TEST BUILD · beta · d14c64b</div></body>
+      <script id="selpick">
+      // The shared list picker: a tap on any <select> opens its options as a list of big buttons (grouped as the <optgroup>s are),
+      // sets the select and fires "input" and "change". The select still works with a keyboard. Identical in the four apps.
+      (() => {
+        const box = document.createElement("div");
+        box.id = "selPick";
+        box.hidden = true;
+        box.innerHTML = '<div class="sp-card" role="dialog" aria-modal="true" aria-label="Choose"><h3 id="spT"></h3><div id="spL"></div><button id="spX" type="button" title="Close the list">CLOSE</button></div>';
+        document.body.appendChild(box);
+        const esc = (x) => String(x).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+        let cur = null;
+        const close = () => ((box.hidden = true), (cur = null));
+        function open(sel) {
+          if (!box.hidden && cur === sel) return;
+          cur = sel;
+          const lab = sel.closest("label"),
+            title = sel.getAttribute("aria-label") || sel.title || (lab && lab.textContent.replace(/\s+/g, " ").trim().slice(0, 40)) || "Choose";
+          box.querySelector("#spT").textContent = title;
+          const btn = (o, i) => `<button type="button" data-i="${i}" class="${o.selected ? "on" : ""}"${o.disabled ? " disabled" : ""}>${esc(o.textContent.trim() || "·")}</button>`;
+          let h = "",
+            loose = "";
+          const flush = () => ((h += loose ? `<div class="sp-grid">${loose}</div>` : ""), (loose = ""));
+          [...sel.children].forEach((c) => {
+            if (c.tagName === "OPTGROUP") {
+              flush();
+              h += `<h3>${esc(c.label)}</h3><div class="sp-grid">${[...c.children].map((o) => btn(o, o.index)).join("")}</div>`;
+            } else if (c.tagName === "OPTION") loose += btn(c, c.index);
+          });
+          flush();
+          box.querySelector("#spL").innerHTML = h;
+          box.hidden = false;
+          const on = box.querySelector("button.on");
+          if (on) on.scrollIntoView({ block: "center" });
+        }
+        const hit = (e) => {
+          const s = e.target && e.target.closest ? e.target.closest("select") : null;
+          return s && !box.contains(s) && !s.disabled && !s.multiple && s.size <= 1 ? s : null;
+        };
+        // the browser's own dropdown opens on press (a mouse) or on release (a finger): both are stopped, and the list opens on the tap
+        for (const t of ["pointerdown", "mousedown"]) document.addEventListener(t, (e) => hit(e) && e.preventDefault(), true);
+        document.addEventListener("touchend", (e) => { const s = hit(e); if (s) (e.preventDefault(), open(s)); }, { capture: true, passive: false });
+        document.addEventListener("click", (e) => { const s = hit(e); if (s) (e.preventDefault(), open(s)); }, true);
+        box.addEventListener("click", (e) => {
+          if (e.target === box || e.target.closest("#spX")) return close();
+          const b = e.target.closest("[data-i]");
+          if (!b || !cur) return;
+          const s = cur;
+          close();
+          if (s.selectedIndex !== +b.dataset.i) {
+            s.selectedIndex = +b.dataset.i;
+            s.dispatchEvent(new Event("input", { bubbles: true }));
+            s.dispatchEvent(new Event("change", { bubbles: true }));
+          }
+        });
+        addEventListener("keydown", (e) => e.key === "Escape" && !box.hidden && close());
+      })();
+    </script>
+  <div style="position:fixed;left:4px;bottom:2px;z-index:99;font:700 9px monospace;opacity:.7;pointer-events:none;color:#ff5e7a">TEST BUILD · beta · 33b2f61</div></body>
 </html>
