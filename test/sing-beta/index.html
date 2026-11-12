@@ -1514,6 +1514,18 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
       #selPick .sp-grid button.on { background: var(--acc); border-color: var(--acc); color: var(--ink, #000); }
       #selPick .sp-grid button:disabled { opacity: 0.4; }
     </style>
+      <style id="micwarn-css">
+      /* the shared microphone warning: the same in the four apps */
+      #micWarn { position: fixed; inset: 0; z-index: 9100; background: rgba(0, 0, 0, 0.7); display: flex; align-items: center; justify-content: center; padding: 12px; }
+      #micWarn[hidden] { display: none; }
+      #micWarn .mw-card { width: min(100%, 460px); max-height: 94%; overflow: auto; display: flex; flex-direction: column; gap: 8px; padding: 16px; margin: 0; background: var(--panel, #161a20); color: var(--text, #e8ecf1); border: 2px solid var(--hot, #ff5e7a); border-radius: var(--r, 10px); font: 14px/1.4 system-ui, sans-serif; text-align: left; }
+      #micWarn h3 { margin: 0; font-size: 16px; color: var(--hot, #ff5e7a); }
+      #micWarn p, #micWarn ol { margin: 0; }
+      #micWarn ol { padding-left: 20px; display: flex; flex-direction: column; gap: 6px; }
+      #micWarn .mw-s { min-height: 18px; color: var(--hot, #ff5e7a); font-weight: 700; }
+      #micWarn .mw-row { display: flex; gap: 8px; }
+      #micWarn .mw-row button { flex: 1; min-height: 48px; font-weight: 800; }
+    </style>
   </head>
   <body class="pocket">
     <canvas id="bgfx" aria-hidden="true"></canvas>
@@ -2077,7 +2089,7 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
     }
     // a control nobody assigned, doing what its model's starting assignment says
     function fallback(from, key, cc, on, value) {
-      if (MI.holdDefaults && MI.holdDefaults()) return false; // the app is using the pads and keys for something on screen
+      if (!cc && MI.holdDefaults && MI.holdDefaults()) return false; // the app is using the pads and keys for something on screen (a knob keeps its starting function)
       const e = effective(from, profOf(from), controlOf(from, key)), action = e && e[0] && MI.actions().find((a) => a.id === e[0]);
       if (!action) return false;
       run(action, from + "/" + key, cc, on, value);
@@ -2534,13 +2546,7 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
         MIC.stream = MIC.src = MIC.an = MIC.hp = MIC.gn = null;
       }
       function micError(code) {
-        const m = {
-          NotAllowedError: "Microphone blocked. Allow it in the browser's site settings and reload.",
-          NotFoundError: "No microphone found.",
-          NotReadableError: "The microphone is busy in another app.",
-          NO_API: location.protocol === "http:" ? "The microphone needs https (or localhost)." : "This browser has no microphone support.",
-        };
-        toast(m[code] || "Could not open the microphone (" + code + ")", 3500);
+        window.micWarn(code); // the shared microphone dialog (id micwarn)
       }
       // ---- MIC TESTS: guided checks like the MIDI TEST, a report to copy, and AUTO SETUP that sets the parameters from them
       const AR = { rows: {}, res: {}, busy: false },
@@ -6198,6 +6204,7 @@ registerProcessor("autotune", AutoTune);
             b: {
               en: [
                 "## Version 1.4.0",
+                "- **Microphone blocked:** if the browser or the phone has the microphone switched off, a message now says so and shows the steps to turn it on for iPhone, Android or a computer (before, only a short note flashed by). TUNE, SING and PLAY check when they open.",
                 "- **Sample sets:** FILES ▸ Sample sets keeps the sampler's 16 pads by name, opens a set again (what was on the pads is kept as \"Before opening\") and exports or imports it as a .json file.",
                 "- **Lists:** every dropdown now opens as a list of big buttons, grouped like the dropdown was, instead of the browser's own list. Tap one to choose, tap outside or CLOSE to leave.",
                 "- **Air:** a new view (the wind icon) that listens to your tone and says how much of it is clean, mixed or airy, live and as a result you can compare over time, with a side-view diagram of the tongue, soft palate and larynx for five mouth shapes (hum, nay, oo, ah, yawn).",
@@ -6213,6 +6220,7 @@ registerProcessor("autotune", AutoTune);
               ],
               es: [
                 "## Versión 1.4.0",
+                "- **Micrófono bloqueado:** si el navegador o el teléfono tiene el micrófono desactivado, ahora un mensaje lo dice y muestra los pasos para activarlo en iPhone, Android u ordenador (antes solo pasaba un aviso breve). TUNE, SING y PLAY lo comprueban al abrir.",
                 "- **Conjuntos de muestras:** ARCHIVOS ▸ Conjuntos de muestras guarda los 16 pads del sampler con un nombre, abre un conjunto otra vez (lo que había en los pads se guarda como \"Before opening\") y lo exporta o importa como archivo .json.",
                 "- **Listas:** cada desplegable ahora se abre como una lista de botones grandes, agrupada como estaba el desplegable, en vez de la lista del navegador. Toca uno para elegir, toca fuera o CLOSE para salir.",
                 "- **Aire:** una vista nueva (el icono del viento) que escucha tu tono y dice qué parte es limpia, mixta o con aire, en directo y como resultado que puedes comparar con el tiempo, con un diagrama lateral de la lengua, el paladar blando y la laringe para cinco formas de la boca (hum, nay, oo, ah, bostezo).",
@@ -9543,5 +9551,93 @@ registerProcessor("autotune", AutoTune);
         addEventListener("keydown", (e) => e.key === "Escape" && !box.hidden && close());
       })();
     </script>
-  <div style="position:fixed;left:4px;bottom:2px;z-index:99;font:700 9px monospace;opacity:.7;pointer-events:none;color:#ff5e7a">TEST BUILD · beta · 59a903d</div></body>
+      <script id="micwarn">
+      /* the shared microphone warning (the same in the four apps): micWarn(errorName) shows what is wrong and how to fix it */
+      (() => {
+        const meta = document.querySelector('meta[name="apple-mobile-web-app-title"]'),
+          app = ((meta && meta.content) || "").slice(0, 4).toLowerCase(),
+          ua = navigator.userAgent,
+          plat = /iPhone|iPad|iPod/.test(ua) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1) ? "ios" : /Android/.test(ua) ? "android" : "desk",
+          lang = () => {
+            let l = "";
+            try { l = localStorage.getItem(app + (document.title.startsWith("TEST") ? "-test" : "") + ".lang") || ""; } catch {}
+            return (l || navigator.language || "en").toLowerCase().startsWith("es") ? "es" : "en";
+          };
+        const T = {
+          en: {
+            ok: "TRY AGAIN", x: "CLOSE", still: "Still blocked. Follow the steps, then try again.",
+            blocked: ["The microphone is blocked", "This app needs the microphone to hear you, and the browser is not letting it. Nothing will be heard until you allow it."],
+            steps: {
+              ios: ["Open Settings › Apps › Safari › Microphone (older iOS: Settings › Safari › Microphone) and choose Ask or Allow.", "In Safari, tap the aA button › Website Settings › Microphone › Allow.", "Come back here and tap TRY AGAIN."],
+              android: ["Tap the lock icon next to the web address › Permissions › Microphone › Allow.", "Still blocked? Open Android Settings › Apps › your browser › Permissions › Microphone and allow it. Also check that Settings › Privacy › Microphone access is on.", "Come back here and tap TRY AGAIN."],
+              desk: ["Click the lock icon in the address bar › Site settings (or Permissions) › Microphone › Allow.", "Also check that the system lets the browser use the microphone (Windows: Settings › Privacy › Microphone. macOS: System Settings › Privacy & Security › Microphone).", "Tap TRY AGAIN."],
+            },
+            none: ["No microphone found", "The browser sees no microphone. Plug one in, or check that the microphone of the device is not disabled, then try again."],
+            busy: ["The microphone is busy", "Another app or tab is using it (a call, a recorder, a video chat). Close it, then try again."],
+            noapi: ["This browser cannot use the microphone", location.protocol === "http:" ? "It needs https (or localhost)." : "Try Chrome, Edge, Firefox or Safari."],
+            other: ["The microphone did not start", "The browser said: "],
+          },
+          es: {
+            ok: "REINTENTAR", x: "CERRAR", still: "Sigue bloqueado. Sigue los pasos y vuelve a intentarlo.",
+            blocked: ["El micrófono está bloqueado", "Esta app necesita el micrófono para oírte y el navegador no la deja. No se oirá nada hasta que lo permitas."],
+            steps: {
+              ios: ["Abre Ajustes › Apps › Safari › Micrófono (iOS antiguo: Ajustes › Safari › Micrófono) y elige Preguntar o Permitir.", "En Safari, toca el botón aA › Ajustes del sitio web › Micrófono › Permitir.", "Vuelve aquí y toca REINTENTAR."],
+              android: ["Toca el candado junto a la dirección web › Permisos › Micrófono › Permitir.", "¿Sigue bloqueado? Abre Ajustes de Android › Aplicaciones › tu navegador › Permisos › Micrófono y permítelo. Mira también que Ajustes › Privacidad › Acceso al micrófono esté activado.", "Vuelve aquí y toca REINTENTAR."],
+              desk: ["Haz clic en el candado de la barra de direcciones › Configuración del sitio (o Permisos) › Micrófono › Permitir.", "Mira también que el sistema deje al navegador usar el micrófono (Windows: Configuración › Privacidad › Micrófono. macOS: Ajustes del Sistema › Privacidad y seguridad › Micrófono).", "Pulsa REINTENTAR."],
+            },
+            none: ["No se encontró micrófono", "El navegador no ve ningún micrófono. Conecta uno o mira que el micrófono del dispositivo no esté desactivado, y vuelve a intentarlo."],
+            busy: ["El micrófono está ocupado", "Otra app o pestaña lo está usando (una llamada, una grabadora, una videollamada). Ciérrala y vuelve a intentarlo."],
+            noapi: ["Este navegador no puede usar el micrófono", location.protocol === "http:" ? "Necesita https (o localhost)." : "Prueba con Chrome, Edge, Firefox o Safari."],
+            other: ["El micrófono no arrancó", "El navegador dijo: "],
+          },
+        };
+        let box;
+        const build = () => {
+          box = document.createElement("div");
+          box.id = "micWarn";
+          box.hidden = true;
+          box.setAttribute("role", "alertdialog");
+          box.innerHTML = '<div class="mw-card"><h3 id="mwT"></h3><p id="mwB"></p><ol id="mwL"></ol><div class="mw-s" id="mwS" aria-live="polite"></div><div class="mw-row"><button type="button" id="mwR" title="Check the permission again"></button><button type="button" id="mwX" title="Close this"></button></div></div>';
+          document.body.appendChild(box);
+          box.querySelector("#mwX").onclick = () => (box.hidden = true);
+          box.addEventListener("click", (e) => e.target === box && (box.hidden = true));
+          addEventListener("keydown", (e) => e.key === "Escape" && !box.hidden && (box.hidden = true));
+          box.querySelector("#mwR").onclick = async () => {
+            try {
+              if ((await navigator.permissions.query({ name: "microphone" })).state === "denied") return (box.querySelector("#mwS").textContent = T[lang()].still);
+            } catch {}
+            box.hidden = true; // not blocked (or the browser cannot say): the person taps the button again
+          };
+        };
+        window.micWarn = (code) => {
+          if (!box) build();
+          const t = T[lang()],
+            blocked = code === "NotAllowedError" || code === "SecurityError" || code === "PermissionDeniedError",
+            [h, b] = blocked ? t.blocked : code === "NotFoundError" || code === "OverconstrainedError" ? t.none : code === "NotReadableError" || code === "AbortError" ? t.busy : code === "NO_API" ? t.noapi : t.other;
+          box.querySelector("#mwT").textContent = h;
+          box.querySelector("#mwB").textContent = b + (h === t.other[0] ? String(code) : "");
+          const ol = box.querySelector("#mwL");
+          ol.textContent = "";
+          if (blocked) t.steps[plat].forEach((s) => ol.appendChild(Object.assign(document.createElement("li"), { textContent: s })));
+          ol.hidden = !blocked;
+          box.querySelector("#mwS").textContent = "";
+          box.querySelector("#mwR").textContent = t.ok;
+          box.querySelector("#mwX").textContent = t.x;
+          box.hidden = false;
+          box.querySelector("#mwR").focus();
+        };
+        // the apps built around the microphone look at the permission when they open: if it is already blocked, say so at once (once per visit)
+        if (app !== "trac" && navigator.permissions && navigator.permissions.query)
+          navigator.permissions.query({ name: "microphone" }).then((s) => {
+            let seen = false;
+            try { seen = sessionStorage.getItem("micwarn.seen") === "1"; } catch {}
+            if (s.state === "denied" && !seen) {
+              try { sessionStorage.setItem("micwarn.seen", "1"); } catch {}
+              setTimeout(() => window.micWarn("NotAllowedError"), 900);
+            }
+            s.onchange = () => s.state !== "denied" && box && !box.hidden && (box.hidden = true); // allowed in the settings: the warning goes away by itself
+          }).catch(() => {});
+      })();
+    </script>
+  <div style="position:fixed;left:4px;bottom:2px;z-index:99;font:700 9px monospace;opacity:.7;pointer-events:none;color:#ff5e7a">TEST BUILD · beta · 0dea2c0</div></body>
 </html>
