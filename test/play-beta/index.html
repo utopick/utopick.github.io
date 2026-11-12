@@ -489,6 +489,12 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
       #files .prow { margin-top: auto; }
       #files h3 { margin: 0 0 8px; font-size: 13px; letter-spacing: 1px; }
       #files h3 + .hint, #files .row + .hint { margin-bottom: 12px; }
+      .chrow { display: flex; gap: 6px; margin-bottom: 6px; }
+      .chrow .chopen { flex: 1; justify-content: space-between; text-align: left; display: flex; align-items: center; gap: 8px; }
+      .chrow .chopen small { color: var(--dim); font: 700 10px var(--mono); }
+      .chrow .chdel { width: 56px; flex: none; }
+      .chrow .chdel.sure { background: var(--hot); border-color: var(--hot); color: #fff; font-size: 11px; }
+      #chName { flex: 1; min-width: 0; }
       #files .row { display: flex; gap: 6px; margin-bottom: 8px; align-items: center; }
       #files .row > span { font: 800 11px var(--mono); width: 44px; }
       #files .row > b { font: 800 12px var(--mono); width: 64px; text-align: right; }
@@ -603,6 +609,7 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
       #mixer .kn .kb { fill: var(--panel2); stroke: var(--line); }
       #mixer .kn .kp { stroke: var(--text); stroke-width: 3; stroke-linecap: round; }
       #mixer .kn text { fill: var(--text); font: 800 11px var(--mono); text-anchor: middle; }
+      #synK { flex: 1; align-content: center; }
       .mkgrid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px 2px; margin: 6px; }
       .mkc { display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 0; }
       .mkc b { font: 900 10px var(--mono); letter-spacing: 0.5px; text-align: center; }
@@ -615,12 +622,13 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
       .mk .kb { fill: var(--panel2); stroke: var(--line); }
       .mk .kp { stroke: var(--text); stroke-width: 3; stroke-linecap: round; }
       .mk text { fill: var(--text); font: 800 11px var(--mono); text-anchor: middle; }
+      #synWave { display: block; flex: none; width: calc(100% - 12px); height: 76px; margin: 6px 6px 0; border: 1px solid var(--line); border-radius: 8px; background: var(--wave, var(--panel)); }
       #synSel { display: flex; gap: 6px; margin: 6px 6px 0; height: 52px; flex: none; }
       #synSel button { width: 52px; font-size: 20px; }
       #synSel b { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; border: 1px solid var(--line); border-radius: 6px; background: var(--panel2); font: 700 16px system-ui, sans-serif; cursor: pointer; text-align: center; }
       #synSel b small { font: 700 10px system-ui, sans-serif; color: var(--dim); letter-spacing: 1px; }
       #synth .hint, #voice .hint { margin: 4px 8px; font-size: 12px; line-height: 1.3; }
-      #synKeys { position: relative; flex: 1; min-height: 120px; margin: 6px; display: flex; touch-action: none; user-select: none; -webkit-user-select: none; }
+      #synKeys { position: relative; flex: none; height: 150px; margin: 6px; display: flex; touch-action: none; user-select: none; -webkit-user-select: none; }
       #synKeys .k { flex: 1; min-width: 0; border: 1px solid #222; border-radius: 0 0 6px 6px; background: #e8ecf1; position: relative; }
       #synKeys .k.down { background: var(--acc); }
       #synKeys .k.b { position: absolute; top: 0; height: 60%; width: 6.2%; z-index: 2; background: #15181d; border-radius: 0 0 4px 4px; flex: none; }
@@ -690,7 +698,7 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
       <button class="hv" id="hMix" data-v="mix" title="Mixer: the volume of the guitar, the test riff, the synth, the voice, the tracks, the loops, the click and the master, and effect pads on the whole mix">
         <svg class="ic" viewBox="0 0 24 24"><path d="M6 3v18M12 3v18M18 3v18" /><rect x="4" y="13" width="4" height="3" /><rect x="10" y="6" width="4" height="3" /><rect x="16" y="10" width="4" height="3" /></svg>
       </button>
-      <button class="hv" id="hSynth" data-v="synth" title="Synth: play a keyboard with a MIDI controller or the screen, with eight instruments made by the app">
+      <button class="hv" id="hSynth" data-v="synth" title="Synth: play a keyboard with a MIDI controller or the screen, with sixteen instruments made by the app">
         <svg class="ic" viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12" rx="1.5" /><path d="M8 18v-5M12 18v-5M16 18v-5M6.5 6v7h3V6M14.5 6v7h3V6" /></svg>
       </button>
       <button class="hv" id="hVoice" data-v="voice" title="Voice: change your voice with the microphone (pitch, robot, megaphone and more)">
@@ -782,6 +790,7 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
       </section>
       <!-- SYNTH: eight instruments made by the app, played from a MIDI controller or the keys on the screen -->
       <section id="synth">
+        <canvas id="synWave" title="The shape of this instrument's sound: grey (or colour when idle) is one note drawn from its oscillators, the colour line over it is what is playing now"></canvas>
         <div id="synSel">
           <button id="synPrev" title="Previous instrument" aria-label="Previous instrument">◁</button>
           <b id="synName" role="button" tabindex="0" title="Tap for the list of instruments"></b>
@@ -812,11 +821,13 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
       <!-- FILES -->
       <section id="files">
         <div class="card fpanel" data-fp="files" hidden>
-          <h3>Board</h3>
+          <h3>Pedal chains</h3>
+          <div class="row"><input id="chName" type="text" maxlength="40" placeholder="Name, e.g. Clean with chorus" title="A name for the pedal chain you have now" /><button id="chSave" class="on" style="flex: none" title="Keep the pedal board as it is now under this name (the same name replaces the old one)">SAVE</button></div>
+          <div id="chList"></div>
+          <div class="hint" id="chHint"></div>
           <div class="row"><button id="fExport" style="flex: 1" title="Save every unit's knobs and switches in a .json file">EXPORT BOARD</button><button id="fImport" style="flex: 1" title="Load a board saved with EXPORT">IMPORT BOARD</button></div>
           <input type="file" id="impFile" accept=".json,application/json" hidden />
           <div class="row"><button id="fReset" style="flex: 1" title="Every pedal, amp and cab back to its starting knobs and place, all switched off">RESET BOARD</button></div>
-          <div class="hint">EXPORT keeps the order of the board and the knobs and switches of every pedal, amp and cab in a small .json file, to share or keep; IMPORT loads one. Your board is also kept on this device by itself.</div>
         </div>
         <div class="card fpanel" data-fp="theme" hidden>
           <h3>Theme</h3>
@@ -1364,14 +1375,22 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
       // the synth's instruments: all made by the app (subtractive, FM and additive synthesis: no samples, no network, nothing to license).
       // Each has its start values for the eight knobs (0 to 1): cutoff, resonance, attack, decay, sustain, release, detune, brightness.
       const SYN = [
-        { id: "lead", name: "SAW LEAD", type: "sub", osc: [["sawtooth", -1, 0], ["sawtooth", 1, 0]], desc: "Two detuned saws through a low-pass filter: a bright, fat lead.", def: [0.62, 0.2, 0.04, 0.45, 0.7, 0.3, 0.35, 0.3] },
-        { id: "bass", name: "SQUARE BASS", type: "sub", osc: [["square", 0, 0], ["sine", 0, -1]], desc: "A square with a sub octave underneath, dark and round: play low.", def: [0.3, 0.25, 0.02, 0.35, 0.5, 0.15, 0.05, 0.45] },
-        { id: "pad", name: "WARM PAD", type: "sub", osc: [["sawtooth", -1, 0], ["sawtooth", 1, 0], ["sawtooth", 0, 0], ["triangle", 0, -1]], desc: "Four soft oscillators that swell slowly and fade slowly: hold chords.", def: [0.4, 0.15, 0.62, 0.6, 0.8, 0.7, 0.5, 0.1] },
-        { id: "organ", name: "DRAWBAR ORGAN", type: "organ", desc: "Nine sine drawbars added together, like a tonewheel organ. BRIGHT pulls the high ones out.", def: [0.9, 0.0, 0.02, 0.3, 1, 0.08, 0, 0.5] },
-        { id: "epiano", name: "E. PIANO", type: "fm", ratio: 1, idx: 3, desc: "Two-operator FM: a bell-like attack that mellows as it rings, like an electric piano.", def: [0.8, 0, 0.01, 0.7, 0.25, 0.4, 0, 0.45] },
-        { id: "bell", name: "GLASS BELLS", type: "fm", ratio: 3.5, idx: 4, desc: "FM with an off-beat ratio: inharmonic, glassy bells that ring on.", def: [0.9, 0, 0.01, 0.85, 0.1, 0.7, 0, 0.5] },
-        { id: "pluck", name: "SYNTH PLUCK", type: "sub", osc: [["sawtooth", -1, 0], ["square", 1, 0]], desc: "A short, bright pluck: the filter snaps shut as the note decays.", def: [0.35, 0.3, 0.0, 0.35, 0.0, 0.2, 0.2, 0.8] },
-        { id: "brass", name: "SYNTH BRASS", type: "sub", osc: [["sawtooth", -1, 0], ["sawtooth", 1, 0]], desc: "Saws with a filter that opens as you press, like a brass section.", def: [0.4, 0.15, 0.14, 0.5, 0.75, 0.2, 0.3, 0.7] },
+        { cat: "LEADS", id: "lead", name: "SAW LEAD", type: "sub", osc: [["sawtooth", -1, 0], ["sawtooth", 1, 0]], desc: "Two detuned saws through a low-pass filter: a bright, fat lead.", def: [0.62, 0.2, 0.04, 0.45, 0.7, 0.3, 0.35, 0.3] },
+        { cat: "LEADS", id: "super", name: "SUPERSAW", type: "sub", osc: [["sawtooth", -1, 0], ["sawtooth", -0.66, 0], ["sawtooth", -0.33, 0], ["sawtooth", 0, 0], ["sawtooth", 0.33, 0], ["sawtooth", 0.66, 0], ["sawtooth", 1, 0]], desc: "Seven detuned saws: the wide, shimmering trance and synthwave lead.", def: [0.7, 0.15, 0.03, 0.5, 0.8, 0.35, 0.7, 0.25] },
+        { cat: "LEADS", id: "swlead", name: "SYNTHWAVE LEAD", type: "sub", wob: 6, osc: [["sawtooth", -1, 0], ["sawtooth", 1, 0], ["square", 0, 0]], desc: "Saws and a square with a gentle vibrato and a resonant filter: the 80s film lead.", def: [0.55, 0.45, 0.05, 0.5, 0.75, 0.4, 0.45, 0.5] },
+        { cat: "LEADS", id: "chip", name: "CHIP LEAD", type: "sub", osc: [["square", 0, 0], ["square", 0, 1]], desc: "Plain square waves an octave apart: an 8-bit game lead.", def: [0.85, 0, 0, 0.2, 0.8, 0.05, 0, 0.1] },
+        { cat: "BASS", id: "bass", name: "SQUARE BASS", type: "sub", osc: [["square", 0, 0], ["sine", 0, -1]], desc: "A square with a sub octave underneath, dark and round: play low.", def: [0.3, 0.25, 0.02, 0.35, 0.5, 0.15, 0.05, 0.45] },
+        { cat: "BASS", id: "outrun", name: "OUTRUN BASS", type: "sub", osc: [["sawtooth", 0, 0], ["sawtooth", 0.4, -1]], desc: "Two saws, one an octave down, with a snappy filter: the driving synthwave bass.", def: [0.28, 0.35, 0, 0.25, 0.55, 0.12, 0.15, 0.7] },
+        { cat: "PADS", id: "pad", name: "WARM PAD", type: "sub", osc: [["sawtooth", -1, 0], ["sawtooth", 1, 0], ["sawtooth", 0, 0], ["triangle", 0, -1]], desc: "Four soft oscillators that swell slowly and fade slowly: hold chords.", def: [0.4, 0.15, 0.62, 0.6, 0.8, 0.7, 0.5, 0.1] },
+        { cat: "PADS", id: "swpad", name: "SYNTHWAVE PAD", type: "sub", osc: [["sawtooth", -1, 0], ["sawtooth", -0.4, 0], ["sawtooth", 0.4, 0], ["sawtooth", 1, 0], ["triangle", 0, -1]], desc: "A wide, bright saw pad with a slow swell: the neon background.", def: [0.5, 0.2, 0.55, 0.6, 0.85, 0.75, 0.6, 0.35] },
+        { cat: "PADS", id: "lofipad", name: "LO-FI PAD", type: "sub", wob: 16, osc: [["triangle", -1, 0], ["triangle", 1, 0], ["sine", 0, 1]], desc: "Soft triangles with a slow tape wobble and a dark filter: a lo-fi bed.", def: [0.28, 0.1, 0.5, 0.6, 0.8, 0.7, 0.4, 0.1] },
+        { cat: "KEYS", id: "epiano", name: "E. PIANO", type: "fm", ratio: 1, idx: 3, desc: "Two-operator FM: a bell-like attack that mellows as it rings, like an electric piano.", def: [0.8, 0, 0.01, 0.7, 0.25, 0.4, 0, 0.45] },
+        { cat: "KEYS", id: "lofikeys", name: "LO-FI KEYS", type: "fm", wob: 14, ratio: 1, idx: 2, desc: "A mellow electric piano that wobbles like a worn tape, with the top rolled off.", def: [0.5, 0, 0.01, 0.75, 0.2, 0.5, 0.1, 0.25] },
+        { cat: "KEYS", id: "organ", name: "DRAWBAR ORGAN", type: "organ", desc: "Nine sine drawbars added together, like a tonewheel organ. BRIGHT pulls the high ones out.", def: [0.9, 0, 0.02, 0.3, 1, 0.08, 0, 0.5] },
+        { cat: "KEYS", id: "bell", name: "GLASS BELLS", type: "fm", ratio: 3.5, idx: 4, desc: "FM with an off-beat ratio: inharmonic, glassy bells that ring on.", def: [0.9, 0, 0.01, 0.85, 0.1, 0.7, 0, 0.5] },
+        { cat: "KEYS", id: "kalimba", name: "KALIMBA", type: "fm", ratio: 4, idx: 1.5, desc: "A short, soft thumb-piano pluck.", def: [0.7, 0, 0, 0.45, 0, 0.35, 0, 0.3] },
+        { cat: "OTHER", id: "pluck", name: "SYNTH PLUCK", type: "sub", osc: [["sawtooth", -1, 0], ["square", 1, 0]], desc: "A short, bright pluck: the filter snaps shut as the note decays.", def: [0.35, 0.3, 0, 0.35, 0, 0.2, 0.2, 0.8] },
+        { cat: "OTHER", id: "brass", name: "SYNTH BRASS", type: "sub", osc: [["sawtooth", -1, 0], ["sawtooth", 1, 0]], desc: "Saws with a filter that opens as you press, like a brass section.", def: [0.4, 0.15, 0.14, 0.5, 0.75, 0.2, 0.3, 0.7] },
       ];
       // the voice changer: a pitch shifter and one "character" at a time, from the microphone to the VOICE fader
       const VOICES = [
@@ -1401,7 +1420,7 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
           k[I.id] = {};
           SYK.forEach((n, i) => (k[I.id][n] = Number.isFinite(+src[n]) ? clamp(+src[n], 0, 1) : I.def[i]));
         });
-        return { inst: clamp(Math.floor(+o.inst) || 0, 0, SYN.length - 1), oct: clamp(Math.round(+o.oct) || 0, -2, 2), thru: o.thru === true, k, bend: 0 };
+        return { inst: clamp(Math.floor(+o.inst) || 0, 0, SYN.length - 1), oct: clamp(Math.round(+o.oct) || 0, -2, 2), thru: o.thru !== false, k, bend: 0 };
       }
       const MIX0 = { syn: { v: 0.8, m: false }, voice: { v: 0.8, m: false }, gtr: { v: 1, m: false }, riff: { v: 0.8, m: false }, trk: { v: 0.8, m: false }, loop: { v: 1, m: false }, click: { v: 0.7, m: false }, master: { v: 0.8, m: false } };
       function vetMix(o) {
@@ -1939,6 +1958,7 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
         if (S.view === "loop") lpFrame();
         if (KINDS[S.view]) wavDraw();
         if (S.view === "voice") voiceMeter();
+        if (S.view === "synth" && SYV.voices.size) synWave();
         A.raf = requestAnimationFrame(meterLoop);
       }
       $$(".listenBtn").forEach((b) => (b.onclick = () => (A.mic ? (engineStop(), toast("Stopped listening")) : listenStart())));
@@ -2254,23 +2274,32 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
       function showView(v) {
         if (v === "live") v = S.kind; // the live play tab shows the last pedal, amp or cab you had
         S.view = v;
-        if (KINDS[v]) {
-          S.kind = v;
-          renderUnit();
-        }
-        if (v === "board") boardFace();
-        if (v === "mix") (mixFace(), mixMode());
-        if (v === "synth") (synFace(), synMidiConnect(true));
-        if (v === "voice") voiceFace();
-        A.voiceTab = v === "voice";
-        applyMix();
-        if (v === "loop") lpFace();
-        if (v === "tracks") trFace();
-        if (v === "files" && !fpOpen) filePanel("files"); // the tab opens on its first panel, like the sister apps' file tabs
+        // the screen changes first, so a failure while drawing one of them can never leave you stuck on another
         $$("main > section").forEach((s) => s.classList.toggle("show", s.id === (KINDS[v] ? "rig" : v)));
         $$("#vTabs [data-v], header [data-v]").forEach((b) => b.classList.toggle("on", b.dataset.v === v));
         $("#hLive").classList.toggle("on", !!KINDS[v]);
         $("#vTabs").hidden = !KINDS[v]; // the kind tabs and the test riff belong to the live play tab only
+        A.voiceTab = v === "voice";
+        const draw = (f) => {
+          try {
+            f();
+          } catch (e) {
+            console.error("PLAY: could not draw " + v, e);
+          }
+        };
+        if (KINDS[v]) {
+          S.kind = v;
+          draw(renderUnit);
+        }
+        if (v === "board") draw(boardFace);
+        if (v === "mix") draw(() => (mixFace(), mixMode()));
+        if (v === "synth") draw(() => (synFace(), synMidiConnect(true)));
+        if (v === "voice") draw(voiceFace);
+        draw(applyMix);
+        if (v === "loop") draw(lpFace);
+        if (v === "tracks") draw(trFace);
+        if (v === "files") draw(chFace);
+        if (v === "files" && !fpOpen) draw(() => filePanel("files")); // the tab opens on its first panel, like the sister apps' file tabs
       }
       $("#vTabs").addEventListener("click", (e) => {
         const b = e.target.closest("[data-v]");
@@ -2300,6 +2329,59 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
       $("#tTabs").addEventListener("click", (e) => {
         const b = e.target.closest("[data-fpb]");
         if (b) filePanel(b.dataset.fpb);
+      });
+      // ---- named pedal chains: the order of the board and every unit's knobs and switches, kept on this device
+      const CHAINS_KEY = "play-test.chains";
+      const chLoad = () => {
+        const a = load(CHAINS_KEY);
+        return (Array.isArray(a) ? a : []).slice(0, 60).filter((c) => c && typeof c.name === "string").map((c) => ({ name: c.name.slice(0, 40), slots: vetSlots(c.slots), fx: vetFx(c.fx) }));
+      };
+      function chFace() {
+        const L = chLoad(),
+          cur = S.sure;
+        $("#chList").innerHTML = L.length
+          ? L.map((c, i) => `<div class="chrow"><button class="chopen" data-o="${i}" title="Open this pedal chain: it replaces the board you have now">${esc(c.name)}<small>${c.slots.filter(Boolean).length} units</small></button><button class="chdel${cur === i ? " sure" : ""}" data-d="${i}" title="Delete this saved pedal chain (tap twice)">${cur === i ? "SURE?" : "✕"}</button></div>`).join("")
+          : "";
+        $("#chHint").textContent = L.length ? "OPEN replaces the board you have now (SAVE it first if you want to keep it). Chains are kept on this device." : "Nothing saved yet. Set up the pedal board, type a name and tap SAVE: the order and every knob and switch are kept, and you can bring them back whenever you like.";
+      }
+      $("#chSave").onclick = () => {
+        const name = $("#chName").value.trim().slice(0, 40);
+        if (!name) return toast("Type a name first", 1800);
+        const L = chLoad().filter((c) => c.name !== name);
+        L.unshift({ name, slots: S.slots.slice(), fx: JSON.parse(JSON.stringify(S.fx)) });
+        store(CHAINS_KEY, L.slice(0, 60));
+        $("#chName").value = "";
+        chFace();
+        toast("Pedal chain “" + name + "” saved");
+      };
+      $("#chList").addEventListener("click", (e) => {
+        const o = e.target.closest("[data-o]"),
+          d = e.target.closest("[data-d]"),
+          L = chLoad();
+        if (o && L[+o.dataset.o]) {
+          const c = L[+o.dataset.o];
+          S.fx = vetFx(c.fx);
+          S.slots = vetSlots(c.slots);
+          save();
+          rewire();
+          applyFx();
+          boardFace();
+          renderUnit();
+          toast("Pedal chain “" + c.name + "” opened");
+        } else if (d) {
+          const i = +d.dataset.d;
+          if (S.sure !== i) {
+            S.sure = i;
+            chFace();
+            setTimeout(() => S.sure === i && ((S.sure = -1), chFace()), 3000);
+            return;
+          }
+          S.sure = -1;
+          L.splice(i, 1);
+          store(CHAINS_KEY, L);
+          chFace();
+          toast("Pedal chain deleted");
+        }
       });
       $("#fExport").onclick = () => {
         const a = document.createElement("a");
@@ -2660,6 +2742,14 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
       $("#pName").onclick = () => pickOpen(-1);
       $("#pName").onkeydown = (e) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), pickOpen(-1));
       $("#pickL").onclick = (e) => {
+        const sb = e.target.closest("[data-s]");
+        if (sb) {
+          S.syn.inst = clamp(+sb.dataset.s || 0, 0, SYN.length - 1);
+          save();
+          synFace();
+          $("#pick").hidden = true;
+          return;
+        }
         const b = e.target.closest("[data-id]");
         if (!b) return;
         const id = b.dataset.id;
@@ -2801,6 +2891,17 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
           });
           sum.connect(flt).connect(amp);
         }
+        if (I.wob) {
+          // a slow wobble of the pitch (a little different for each note), like a worn tape
+          const lfo = c.createOscillator(),
+            lg = c.createGain();
+          lfo.frequency.value = 0.8 + (note % 7) * 0.09;
+          lg.gain.value = I.wob;
+          lfo.connect(lg);
+          v.oscs.forEach((o) => lg.connect(o.detune));
+          lfo.start(t);
+          v.lfo = lfo;
+        }
         SYV.voices.set(note, v);
         synLight(note, true);
       }
@@ -2817,6 +2918,7 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
         v.amp.gain.setValueAtTime(v.amp.gain.value, now);
         v.amp.gain.setTargetAtTime(0, now, R / 3);
         v.oscs.forEach((o) => o.stop(now + R * 1.5 + 0.1));
+        if (v.lfo) v.lfo.stop(now + R * 1.5 + 0.1);
         setTimeout(() => v.amp.disconnect(), (R * 1.5 + 0.3) * 1000);
       }
       function synOff(note) {
@@ -2865,17 +2967,12 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
         $("#synMidi").textContent = ins.length ? "MIDI: " + ins.map((i) => i.name || "controller").join(", ") + ". Notes, sustain pedal, pitch bend and the mod wheel (cutoff) work." : "No MIDI controller found: plug one in, or play the keys on the screen.";
         if (!quiet) toast(ins.length ? "MIDI connected" : "No MIDI controller found", 2200);
       }
+      // ten white keys from C (a little under two octaves) at a normal piano shape; the octave buttons move them
+      const SYW_ = [0, 2, 4, 5, 7, 9, 11, 12, 14, 16],
+        SYB_ = [[1, 0], [3, 1], [6, 3], [8, 4], [10, 5], [13, 7], [15, 8]];
       function synKeysBuild() {
-        const white = [0, 2, 4, 5, 7, 9, 11],
-          blk = { 1: 0, 3: 1, 6: 3, 8: 4, 10: 5 };
-        let h = "";
-        for (let i = 0; i < 15; i++) h += `<div class="k" data-n="${[0, 2, 4, 5, 7, 9, 11][i % 7] + 12 * Math.floor(i / 7)}">${i % 7 === 0 ? `<i>C${3 + Math.floor(i / 7) + S.syn.oct}</i>` : ""}</div>`;
-        for (let n = 0; n <= 24; n++) {
-          const m = n % 12;
-          if (blk[m] === undefined) continue;
-          const wi = [0, 2, 4, 5, 7, 9, 11].indexOf(m - 1) + 7 * Math.floor(n / 12);
-          h += `<div class="k b" data-n="${n}" style="left:${(((wi + 1) / 15) * 100 - 3.1).toFixed(2)}%"></div>`;
-        }
+        let h = SYW_.map((n, i) => `<div class="k" data-n="${n}">${n % 12 === 0 ? `<i>C${3 + n / 12 + S.syn.oct}</i>` : ""}</div>`).join("");
+        h += SYB_.map(([n, wi]) => `<div class="k b" data-n="${n}" style="left:${((wi + 1) * 10 - 3.2).toFixed(2)}%"></div>`).join("");
         $("#synKeys").innerHTML = h;
       }
       (() => {
@@ -2910,6 +3007,72 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
         keys.addEventListener("pointerup", up);
         keys.addEventListener("pointercancel", up);
       })();
+      // the shape of one note of this instrument (two cycles, drawn from the oscillators), and while keys are down the real output over it
+      const WAVES = { sawtooth: (p) => 2 * p - 1, square: (p) => (p < 0.5 ? 1 : -1), triangle: (p) => 4 * Math.abs(p - 0.5) - 1, sine: (p) => Math.sin(6.283185 * p) };
+      const WNAME = { sawtooth: "SAW", square: "SQUARE", triangle: "TRIANGLE", sine: "SINE" };
+      const SYW = { an: null, N: null, buf: new Float32Array(2048) };
+      function synShape(n) {
+        const I = SYN[S.syn.inst],
+          k = synPar(),
+          out = new Float32Array(n * 2);
+        for (let i = 0; i < n * 2; i++) {
+          const ph = i / n;
+          let y = 0;
+          if (I.type === "sub") I.osc.forEach(([ty, , oc]) => (y += WAVES[ty](((ph * Math.pow(2, oc)) % 1 + 1) % 1)) / 1), (y /= I.osc.length);
+          else if (I.type === "fm") y = Math.sin(6.283185 * ph + ((k.bri * I.idx) / I.ratio) * Math.sin(6.283185 * ph * I.ratio));
+          else [0.5, 1.5, 1, 2, 3, 4, 5, 6, 8].forEach((h, q) => (y += Math.sin(6.283185 * ph * h) * (q < 4 ? [0.8, 0.5, 1, 0.8][q] : 0.55 * k.bri * 2 * (1 - (q - 4) * 0.12))));
+          out[i] = y;
+        }
+        const m = Math.max(0.001, ...out.map(Math.abs));
+        return out.map((v) => v / m);
+      }
+      function synWave() {
+        const cv = $("#synWave"),
+          w = cv.clientWidth,
+          h = cv.clientHeight,
+          dpr = devicePixelRatio || 1;
+        if (!w || S.view !== "synth") return;
+        if (cv.width !== Math.round(w * dpr)) ((cv.width = Math.round(w * dpr)), (cv.height = Math.round(h * dpr)));
+        const g = cv.getContext("2d"),
+          cs = getComputedStyle(document.documentElement),
+          I = SYN[S.syn.inst];
+        g.setTransform(dpr, 0, 0, dpr, 0, 0);
+        g.clearRect(0, 0, w, h);
+        g.fillStyle = cs.getPropertyValue("--line");
+        g.fillRect(0, h / 2, w, 1);
+        const shape = synShape(160),
+          path = (get, n, col, lw) => {
+            g.beginPath();
+            for (let i = 0; i < n; i++) {
+              const x = (i / (n - 1)) * w,
+                y = h / 2 - get(i) * (h / 2 - 8);
+              i ? g.lineTo(x, y) : g.moveTo(x, y);
+            }
+            g.strokeStyle = col;
+            g.lineWidth = lw;
+            g.stroke();
+          };
+        const live = SYV.voices.size && A.nodes;
+        path((i) => shape[i], shape.length, live ? cs.getPropertyValue("--dim") : cs.getPropertyValue("--acc"), live ? 1.5 : 2.5);
+        if (live) {
+          if (!SYW.an || SYW.N !== A.nodes) {
+            SYW.an = A.ctx.createAnalyser();
+            SYW.an.fftSize = 2048;
+            A.nodes.chS.connect(SYW.an);
+            SYW.N = A.nodes;
+          }
+          SYW.an.getFloatTimeDomainData(SYW.buf);
+          let i0 = 1;
+          while (i0 < 900 && !(SYW.buf[i0 - 1] < 0 && SYW.buf[i0] >= 0)) i0++;
+          if (i0 >= 900) i0 = 0;
+          const pk = Math.max(0.02, ...SYW.buf.subarray(i0, i0 + 1000).map(Math.abs));
+          path((i) => SYW.buf[i0 + i] / pk, 1000, cs.getPropertyValue("--acc"), 2);
+        }
+        g.font = "700 10px " + (cs.getPropertyValue("--mono") || "monospace");
+        g.fillStyle = cs.getPropertyValue("--dim");
+        g.textAlign = "left";
+        g.fillText(I.type === "fm" ? "FM · ratio " + I.ratio : I.type === "organ" ? "9 SINES (DRAWBARS)" : I.osc.map((o) => WNAME[o[0]]).join(" + "), 8, 13);
+      }
       function synFace() {
         const I = SYN[S.syn.inst];
         $("#synName").innerHTML = `<small>INSTRUMENT ${S.syn.inst + 1}/${SYN.length}</small>${esc(I.name)}`;
@@ -2919,11 +3082,12 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
         $("#synOctD").disabled = S.syn.oct <= -2;
         $("#synOctU").disabled = S.syn.oct >= 2;
         $$("#synKeys .k i").forEach((e, i) => (e.textContent = "C" + (3 + i + S.syn.oct)));
+        synWave();
         synFaceKnobs = mkPanel(
           $("#synK"),
           [["cut", "CUTOFF", (v) => Math.round(80 * Math.pow(150, v)) + " Hz"], ["res", "RESO", (v) => Math.round(v * 100) + "%"], ["a", "ATTACK", (v) => (0.002 * Math.pow(1000, v)).toFixed(2) + " s"], ["d", "DECAY", (v) => (0.02 * Math.pow(100, v)).toFixed(2) + " s"], ["s", "SUSTAIN", (v) => Math.round(v * 100) + "%"], ["r", "RELEASE", (v) => (0.03 * Math.pow(100, v)).toFixed(2) + " s"], ["det", "DETUNE", (v) => Math.round(v * 35) + " ct"], ["bri", "BRIGHT", (v) => Math.round(v * 100) + "%"]],
           (k) => synK()[k],
-          (k, v) => ((synK()[k] = v), save()),
+          (k, v) => ((synK()[k] = v), save(), synWave()),
           (k) => SYN[S.syn.inst].def[SYK.indexOf(k)],
         );
       }
@@ -2935,7 +3099,13 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
       };
       $("#synPrev").onclick = () => synPick(-1);
       $("#synNext").onclick = () => synPick(1);
-      $("#synName").onclick = () => synPick(1);
+      $("#synName").onclick = () => {
+        pickAt = -2;
+        $("#pickT").textContent = "Choose an instrument";
+        const cats = [...new Set(SYN.map((q) => q.cat))];
+        $("#pickL").innerHTML = cats.map((c) => `<h3>${c}</h3><div class="pl">${SYN.map((q, i) => (q.cat === c ? `<button data-s="${i}" class="${i === S.syn.inst ? "on" : ""}" title="${esc(q.desc)}">${esc(q.name)}</button>` : "")).join("")}</div>`).join("");
+        $("#pick").hidden = false;
+      };
       $("#synOctD").onclick = () => ((S.syn.oct = Math.max(-2, S.syn.oct - 1)), save(), synFace(), toast("Octave " + (S.syn.oct >= 0 ? "+" : "") + S.syn.oct, 900));
       $("#synOctU").onclick = () => ((S.syn.oct = Math.min(2, S.syn.oct + 1)), save(), synFace(), toast("Octave " + (S.syn.oct >= 0 ? "+" : "") + S.syn.oct, 900));
       $("#synThru").onclick = () => {
@@ -4563,16 +4733,16 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
           b: {
             en: [
               "The keyboard icon at the top opens the **SYNTH**: play it from a MIDI keyboard or controller (plug it in, then tap **MIDI INPUT** if it is not found) or from the keys on the screen, where you can slide across the keys.",
-              "- **◁ ▷** (or tap the name) changes the instrument. All eight are made by the app, with no samples: SAW LEAD, SQUARE BASS, WARM PAD, DRAWBAR ORGAN, E. PIANO and GLASS BELLS (FM synthesis), SYNTH PLUCK and SYNTH BRASS.",
+              "- At the top, a drawing of the instrument's wave (saws, a square, an FM tone...) shows what it is made of; while you play, the real output is drawn over it. **◁ ▷** steps through the instruments and tapping the name opens the list: LEADS (SAW LEAD, SUPERSAW, SYNTHWAVE LEAD, CHIP LEAD), BASS (SQUARE BASS, OUTRUN BASS), PADS (WARM PAD, SYNTHWAVE PAD, LO-FI PAD), KEYS (E. PIANO, LO-FI KEYS, DRAWBAR ORGAN, GLASS BELLS, KALIMBA) and SYNTH PLUCK and SYNTH BRASS. All are made by the app (oscillators, FM and drawbars), with no samples.",
               "- The knobs shape the sound: **CUTOFF** and **RESO** (the filter), **ATTACK, DECAY, SUSTAIN, RELEASE** (how a note swells and fades), **DETUNE** and **BRIGHT**. Drag a knob up or down, tap it twice to put it back. Each instrument keeps its own settings.",
-              "- **OCTAVE − / +** moves the keys. **PEDALS OFF / ON** sends the synth straight to the mixer, or through the pedal board.",
+              "- **OCTAVE − / +** moves the ten keys. **PEDALS ON / OFF**: the synth goes through the pedal board by default, so your pedals and amp shape it; switch it off to send it straight to the mixer.",
               "- From MIDI it understands notes (with velocity), the sustain pedal, pitch bend (two semitones) and the mod wheel or CC 74 (the cutoff). Its volume is the SYNTH knob in the mixer.",
             ],
             es: [
               "El icono del teclado de arriba abre el **SYNTH**: tócalo con un teclado o controlador MIDI (conéctalo y toca **MIDI INPUT** si no aparece) o con las teclas de la pantalla, donde puedes deslizar el dedo por las teclas.",
-              "- **◁ ▷** (o toca el nombre) cambia el instrumento. Los ocho los hace la app, sin muestras: SAW LEAD, SQUARE BASS, WARM PAD, DRAWBAR ORGAN, E. PIANO y GLASS BELLS (síntesis FM), SYNTH PLUCK y SYNTH BRASS.",
+              "- Arriba, un dibujo de la onda del instrumento (sierras, un cuadrado, un tono FM...) muestra de qué está hecho; mientras tocas, se dibuja encima la salida real. **◁ ▷** pasa de un instrumento a otro y tocar el nombre abre la lista: LEADS (SAW LEAD, SUPERSAW, SYNTHWAVE LEAD, CHIP LEAD), BASS (SQUARE BASS, OUTRUN BASS), PADS (WARM PAD, SYNTHWAVE PAD, LO-FI PAD), KEYS (E. PIANO, LO-FI KEYS, DRAWBAR ORGAN, GLASS BELLS, KALIMBA) y SYNTH PLUCK y SYNTH BRASS. Todos los hace la app (osciladores, FM y drawbars), sin muestras.",
               "- Los potenciómetros dan forma al sonido: **CUTOFF** y **RESO** (el filtro), **ATTACK, DECAY, SUSTAIN, RELEASE** (cómo crece y se apaga una nota), **DETUNE** y **BRIGHT**. Arrastra uno hacia arriba o abajo, tócalo dos veces para devolverlo. Cada instrumento guarda sus ajustes.",
-              "- **OCTAVE − / +** mueve las teclas. **PEDALS OFF / ON** manda el synth directo al mixer, o por el pedal board.",
+              "- **OCTAVE − / +** mueve las diez teclas. **PEDALS ON / OFF**: el synth pasa por el pedal board de serie, así que tus pedales y tu ampli le dan forma; apágalo para mandarlo directo al mixer.",
               "- Desde MIDI entiende notas (con velocidad), el pedal de sustain, el pitch bend (dos semitonos) y la rueda de modulación o el CC 74 (el cutoff). Su volumen es el potenciómetro SYNTH del mixer.",
             ],
           },
@@ -4645,14 +4815,14 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
           b: {
             en: [
               "The icons at the top open BOARD, LOOPER, TRACKS, MIXER and, with the disk, the Files tab; tap the open one again to go back to the pedals.",
-              "- **FILES**: EXPORT BOARD saves the board's order and every pedal's, amp's and cab's knobs and switches in a .json file; IMPORT BOARD loads one; RESET BOARD puts everything back.",
+              "- **FILES** keeps your **pedal chains**: type a name and tap SAVE to keep the board as it is (the order and every pedal's, amp's and cab's knobs and switches). Tap a saved chain to bring it back (it replaces the board you have now), and tap ✕ twice to delete it. EXPORT BOARD saves the board in a .json file; IMPORT BOARD loads one; RESET BOARD puts everything back.",
               "- **THEME**: the look, shared with TRACK, TUNE and SING.Pocket.",
               "- **OPTIONS**: see Options, stats and the latency test.",
               "- **HELP**: this manual. The **PLAY.** logo opens it too.",
             ],
             es: [
               "Los iconos de arriba abren BOARD, LOOPER, TRACKS, MIXER y, con el disco, la pestaña Archivos; toca otra vez el que está abierto para volver a los pedales.",
-              "- **FILES**: EXPORT BOARD guarda el orden del board y los ajustes de todos los pedales, amplificadores y pantallas en un archivo .json; IMPORT BOARD lo carga; RESET BOARD lo devuelve todo al principio.",
+              "- **FILES** guarda tus **cadenas de pedales**: escribe un nombre y toca SAVE para guardar el board tal como está (el orden y los ajustes de todos los pedales, amplificadores y pantallas). Toca una cadena guardada para recuperarla (sustituye al board que tienes) y toca ✕ dos veces para borrarla. EXPORT BOARD guarda el board en un archivo .json; IMPORT BOARD lo carga; RESET BOARD lo devuelve todo al principio.",
               "- **THEME**: el aspecto, compartido con TRACK, TUNE y SING.Pocket.",
               "- **OPTIONS**: mira Opciones, datos y prueba de retraso.",
               "- **HELP**: este manual. El logo **PLAY.** también lo abre.",
@@ -4816,5 +4986,5 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
       lpFace();
       trLoad();
     </script>
-  <div style="position:fixed;left:4px;bottom:2px;z-index:99;font:700 9px monospace;opacity:.7;pointer-events:none;color:#ff5e7a">TEST BUILD · beta · 141a997</div></body>
+  <div style="position:fixed;left:4px;bottom:2px;z-index:99;font:700 9px monospace;opacity:.7;pointer-events:none;color:#ff5e7a">TEST BUILD · beta · 5d6697b</div></body>
 </html>
