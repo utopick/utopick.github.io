@@ -22,6 +22,7 @@
     IndexedDB     "sing-pocket": songs { id, name, artist, title, blob, lyrics, lyrOff, ref, refHop, guide }
                                  takes { id, kind, name, date, blob, mime, dur, song, key, tempo, pitch, score, segs }
                                  vox   { i (pad), name, rate, raw, data, fx, pitch, vol, loop }
+                                 voxsets { name, d (date), n (pads), bytes, pads: 16 x null | { name, rate, pcm (Int16Array of the raw voice), fx, pitch, vol, loop } }
 -->
 <html lang="en">
   <head>
@@ -1421,22 +1422,22 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
         min-height: 40px;
         font-size: 11px;
       }
-      #cexList .cx {
+      #cexList .cx, #vsList .cx {
         display: flex;
         gap: 6px;
         align-items: center;
         padding: 6px 0;
         border-top: 1px solid var(--line);
       }
-      #cexList .cx div {
+      #cexList .cx div, #vsList .cx div {
         flex: 1;
         min-width: 0;
       }
-      #cexList .cx b {
+      #cexList .cx b, #vsList .cx b {
         display: block;
         font-size: 13px;
       }
-      #cexList .cx small {
+      #cexList .cx small, #vsList .cx small {
         font: 600 10px var(--mono);
         color: var(--dim);
       }
@@ -1738,6 +1739,19 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
             Exercises you made in the warm-up editor (✎ on the warm-up bar). EXPORT saves them all in a .json file to
             share or keep; IMPORT adds the ones in a file. An exercise sung by a sample keeps the pad's number, not its
             sound: on another phone it uses that phone's pad, or the piano.
+          </div>
+          <h3 style="margin-top: 12px">Sample sets</h3>
+          <div id="vsList"></div>
+          <div class="row">
+            <input id="vsName" type="text" maxlength="40" placeholder="Name this set" title="A name for the 16 sampler pads as they are now" style="flex: 2; min-width: 0" />
+            <button id="vsSave" style="flex: 1" title="Keep the 16 sampler pads as a set with this name">SAVE SET</button>
+            <button id="vsImport" style="flex: 1" title="Add a sample set from a .json file">IMPORT</button>
+          </div>
+          <input type="file" id="vsFile" accept=".json,application/json" hidden />
+          <div class="hint">
+            A set is the sampler's 16 pads as they are now, kept by name. OPEN puts a set on the pads (what was there is
+            kept first as "Before opening"), EXPORT saves it as a .json file to share or keep, IMPORT adds the sets in
+            a file.
           </div>
           <h3 style="margin-top: 12px">Storage</h3>
           <div class="hint" id="storeTxt">—</div>
@@ -2359,11 +2373,12 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
       let dbP;
       function db() {
         return (dbP ||= new Promise((ok, bad) => {
-          const r = indexedDB.open("sing-pocket-test", 2);
+          const r = indexedDB.open("sing-pocket-test", 3);
           r.onupgradeneeded = () => {
             const d = r.result;
             for (const st of ["songs", "takes"]) if (!d.objectStoreNames.contains(st)) d.createObjectStore(st, { keyPath: "id" });
             if (!d.objectStoreNames.contains("vox")) d.createObjectStore("vox", { keyPath: "i" }); // version 2: the vox pads
+            if (!d.objectStoreNames.contains("voxsets")) d.createObjectStore("voxsets", { keyPath: "name" }); // version 3: sets of the 16 pads saved by name
           };
           r.onsuccess = () => ok(r.result);
           r.onerror = () => bad(r.error);
@@ -5260,6 +5275,7 @@ registerProcessor("autotune", AutoTune);
         fpOpen = fpOpen === k ? null : k;
         $$("#takes .fpanel").forEach((p) => (p.hidden = p.dataset.fp !== fpOpen));
         $$("#tTabs [data-fpb]").forEach((b) => b.classList.toggle("on", b.dataset.fpb === fpOpen));
+        if (fpOpen === "files") vsList();
       }
       $("#tTabs").addEventListener("click", (e) => {
         const b = e.target.closest("[data-fpb]");
@@ -6056,6 +6072,7 @@ registerProcessor("autotune", AutoTune);
               "Tap a pad to choose it. The wave is your voice as recorded, before the effects.",
               "- **VOLUME** of the pad, and **PITCH**, up to an octave up or down, keeping its length.",
               "- **OVERDUB** plays the sample and records another layer over it, to the end: sing the harmony. **CROP**: drag across the wave (or drag its handles) and keep that part. **REVERSE**, **NORM.** (normalize: as loud as it can be), **SAVE** (to Files, with its effects, to export), **CLEAR**.",
+              "- **Sample sets:** FILES ▸ Sample sets keeps all 16 pads by name (SAVE SET), puts a set back on the pads (OPEN, after keeping what was there as \"Before opening\"), and exports or imports a set as a .json file to share or keep.",
               "- **UNDO** (in the bar) takes back the last recording, layer, effect or edit.",
               "Samples are kept on this phone until you clear them. For OVERDUB use **headphones**, or set **OVERDUB: SILENT** at the top: the sample keeps quiet while you sing the new layer (it is still in time), so the speaker doesn't get into the recording.",
             ],
@@ -6069,6 +6086,7 @@ registerProcessor("autotune", AutoTune);
               "Toca un pad para elegirlo. La onda es tu voz tal como se grabó, antes de los efectos.",
               "- **VOLUME** del pad, y **PITCH**, hasta una octava arriba o abajo, sin cambiar su duración.",
               "- **OVERDUB** reproduce la muestra y graba otra capa encima, hasta el final: canta la armonía. **CROP**: arrastra por la onda (o mueve sus extremos) y quédate con esa parte. **REVERSE** (al revés), **NORM.** (normalizar: tan fuerte como se pueda), **SAVE** (a Archivos, con sus efectos, para exportarla), **CLEAR** (borrar).",
+              "- **Conjuntos de muestras:** ARCHIVOS ▸ Conjuntos de muestras guarda los 16 pads con un nombre (SAVE SET), vuelve a poner un conjunto en los pads (OPEN, tras guardar lo que había como \"Before opening\") y exporta o importa un conjunto como archivo .json para compartir o conservar.",
               "- **UNDO** (en la barra) deshace la última grabación, capa, efecto o edición.",
               "Las muestras se guardan en el teléfono hasta que las borras. Para OVERDUB usa **auriculares**, o pon **OVERDUB: SILENT** arriba: la muestra calla mientras cantas la capa nueva (sigue a tiempo), así el altavoz no se cuela en la grabación.",
             ],
@@ -6180,6 +6198,7 @@ registerProcessor("autotune", AutoTune);
             b: {
               en: [
                 "## Version 1.4.0",
+                "- **Sample sets:** FILES ▸ Sample sets keeps the sampler's 16 pads by name, opens a set again (what was on the pads is kept as \"Before opening\") and exports or imports it as a .json file.",
                 "- **Lists:** every dropdown now opens as a list of big buttons, grouped like the dropdown was, instead of the browser's own list. Tap one to choose, tap outside or CLOSE to leave.",
                 "- **Air:** a new view (the wind icon) that listens to your tone and says how much of it is clean, mixed or airy, live and as a result you can compare over time, with a side-view diagram of the tongue, soft palate and larynx for five mouth shapes (hum, nay, oo, ah, yawn).",
                 "- **Microphone setup (OPTIONS):** pick the input, its channel, the gain, a gate, a high-pass and your range, per input. **TESTS** measures noise, level, pops, range and the browser processing, and **AUTO SETUP** sets everything from them. The recording, autotune and the sampler use the same cleaned input.",
@@ -6194,6 +6213,7 @@ registerProcessor("autotune", AutoTune);
               ],
               es: [
                 "## Versión 1.4.0",
+                "- **Conjuntos de muestras:** ARCHIVOS ▸ Conjuntos de muestras guarda los 16 pads del sampler con un nombre, abre un conjunto otra vez (lo que había en los pads se guarda como \"Before opening\") y lo exporta o importa como archivo .json.",
                 "- **Listas:** cada desplegable ahora se abre como una lista de botones grandes, agrupada como estaba el desplegable, en vez de la lista del navegador. Toca uno para elegir, toca fuera o CLOSE para salir.",
                 "- **Aire:** una vista nueva (el icono del viento) que escucha tu tono y dice qué parte es limpia, mixta o con aire, en directo y como resultado que puedes comparar con el tiempo, con un diagrama lateral de la lengua, el paladar blando y la laringe para cinco formas de la boca (hum, nay, oo, ah, bostezo).",
                 "- **Configurar el micrófono (OPCIONES):** elige la entrada, su canal, la ganancia, una puerta, un filtro de graves y tu rango, por entrada. **TESTS** mide ruido, nivel, golpes de aire, rango y el procesado del navegador, y **AUTO SETUP** lo configura todo. La grabación, el autotune y el sampler usan la misma entrada ya limpia.",
@@ -8135,6 +8155,172 @@ registerProcessor("autotune", AutoTune);
         toast("Saved in Files, with its effects");
       };
 
+      // ---- sample sets: the 16 pads kept by name (Files), like the loop sessions in TUNE.Pocket
+      // a pad is kept as its raw voice in 16 bit PCM plus its settings: the effects are baked again when a set is opened
+      const vsPcm16 = (f) => {
+        const o = new Int16Array(f.length);
+        for (let i = 0; i < f.length; i++) o[i] = Math.max(-1, Math.min(1, f[i])) * 32767;
+        return o;
+      };
+      const vsB64 = (a) => {
+        const u = new Uint8Array(a.buffer, a.byteOffset, a.byteLength);
+        let t = "";
+        for (let i = 0; i < u.length; i += 0x8000) t += String.fromCharCode.apply(null, u.subarray(i, i + 0x8000));
+        return btoa(t);
+      };
+      const vsFromB64 = (t) => {
+        const b = atob(t),
+          u = new Uint8Array(b.length);
+        for (let i = 0; i < b.length; i++) u[i] = b.charCodeAt(i);
+        return new Int16Array(u.buffer, 0, u.length >> 1);
+      };
+      const vsName = (n) => String(n ?? "").replace(/[<>&"'`]/g, "").trim().slice(0, 40);
+      const vsHas = () => VX.s.some(Boolean);
+      const vsPack = () => ({ app: "SING.", v: 1, pads: VX.s.map((x) => x && { name: x.name, rate: x.rate, pcm: vsPcm16(x.raw), fx: x.fx, pitch: x.pitch, vol: x.vol, loop: x.loop }) });
+      // a file or a stored set is checked before it touches the pads: it throws and changes nothing
+      function vsVet(o) {
+        if (!o || typeof o !== "object" || !Array.isArray(o.pads) || o.pads.length > 16) throw new Error("This file has no sample set");
+        const ids = VFX.map((f) => f[0]),
+          out = { app: "SING.", v: 1, pads: [] };
+        let total = 0;
+        for (let i = 0; i < 16; i++) {
+          const x = o.pads[i];
+          if (!x || typeof x !== "object") {
+            out.pads.push(null);
+            continue;
+          }
+          const pcm = typeof x.pcm === "string" ? vsFromB64(x.pcm) : x.pcm,
+            rate = Math.round(+x.rate);
+          if (!(pcm instanceof Int16Array) || !pcm.length) throw new Error("A pad in this file is damaged");
+          if (!(rate >= 8000 && rate <= 192000) || pcm.length > rate * 120) throw new Error("A pad in this file is too long or has a wrong rate");
+          if ((total += pcm.length) > 192000 * 600) throw new Error("This file is too big");
+          out.pads.push({
+            name: vsName(x.name).slice(0, 24) || "SAMPLE " + (i + 1),
+            rate,
+            pcm,
+            fx: (Array.isArray(x.fx) ? x.fx : []).filter((f) => ids.includes(f)).slice(0, 15),
+            pitch: clamp(Math.round(+x.pitch) || 0, -24, 24),
+            vol: Number.isFinite(+x.vol) ? clamp(+x.vol, 0, 1.5) : 1,
+            loop: x.loop === true,
+          });
+        }
+        return out;
+      }
+      async function vsPut(name, o) {
+        const ps = o.pads.filter(Boolean);
+        await dbPut("voxsets", { name, d: Date.now(), n: ps.length, bytes: ps.reduce((a, x) => a + x.pcm.byteLength, 0), ...o });
+      }
+      // the pads take the samples of a vetted set
+      function vsLoad(o) {
+        if (VX.rec) return toast("Finish the recording first");
+        vxStopAll();
+        VX.undo = [];
+        VX.crop = null;
+        o.pads.forEach((x, i) => {
+          if (!x) VX.s[i] = null;
+          else {
+            const raw = new Float32Array(x.pcm.length);
+            for (let k = 0; k < raw.length; k++) raw[k] = x.pcm[k] / 32767;
+            VX.s[i] = { name: x.name, rate: x.rate, raw, data: raw, fx: x.fx, pitch: x.pitch, vol: x.vol, loop: x.loop };
+          }
+          vxSave(i);
+          if (x && (x.fx.length || x.pitch)) vxRender(i);
+        });
+        VX.sel = Math.max(0, VX.s.findIndex(Boolean));
+        vxFace();
+        playFace();
+      }
+      async function vsSave() {
+        const name = vsName($("#vsName").value);
+        if (!name) return toast("Give the set a name");
+        if (!vsHas()) return toast("No samples on the pads yet");
+        if (VX.rec) return toast("Finish the recording first");
+        try {
+          await vsPut(name, vsPack());
+          $("#vsName").value = "";
+          toast("Saved: " + name);
+          vsList();
+        } catch (e) {
+          toast("Could not save: " + (e && e.name === "QuotaExceededError" ? "not enough free space on this device" : e.message || e), 3000);
+        }
+      }
+      async function vsOpen(name) {
+        try {
+          const o = vsVet(await dbGet("voxsets", name));
+          if (vsHas() && !VX.rec) await vsPut("Before opening", vsPack()); // what was on the pads is not lost
+          vsLoad(o);
+          toast("Opened: " + name);
+          vsList();
+        } catch (e) {
+          toast("Could not open it: " + (e.message || e), 3000);
+        }
+      }
+      async function vsExport(name) {
+        try {
+          const o = await dbGet("voxsets", name),
+            j = JSON.stringify({ app: "SING.", v: 1, name, pads: o.pads.map((x) => x && { ...x, pcm: vsB64(x.pcm) }) });
+          download(new Blob([j], { type: "application/json" }), "sing-samples-" + name.replace(/[^\w.-]+/g, "_") + ".json");
+        } catch (e) {
+          toast("Could not export: " + (e.message || e), 3000);
+        }
+      }
+      async function vsImport(file) {
+        try {
+          if (file.size > 400e6) throw new Error("This file is too big");
+          const j = JSON.parse(await file.text()),
+            o = vsVet(j),
+            name = vsName(j.name) || vsName(file.name.replace(/\.json$/i, "")) || "Imported";
+          await vsPut(name, o);
+          toast("Imported: " + name);
+          vsList();
+        } catch (e) {
+          toast("That file does not work: " + (e.message || e), 3000);
+        }
+      }
+      async function vsList() {
+        let all = [];
+        try {
+          all = await dbAll("voxsets");
+        } catch {
+          $("#vsList").innerHTML = `<div class="hint">Saving needs browser storage, and it is not available here (a private window?).</div>`;
+          return;
+        }
+        $("#vsList").innerHTML = all.length
+          ? all
+              .sort((a, b) => b.d - a.d)
+              .map((x) => `<div class="cx" data-n="${esc(x.name)}"><div><b>${esc(x.name)}</b><small>${x.n} pad${x.n === 1 ? "" : "s"} · ${(x.bytes / 1048576).toFixed(1)} MB · ${new Date(x.d).toLocaleDateString()}</small></div><button data-a="open" title="Put this set on the pads">OPEN</button><button data-a="exp" title="Save this set as a .json file">EXPORT</button><button data-a="del" title="Delete this set">✕</button></div>`)
+              .join("")
+          : `<div class="hint">None yet: name the pads as they are now and tap SAVE SET.</div>`;
+      }
+      $("#vsSave").onclick = vsSave;
+      $("#vsName").onkeydown = (e) => e.key === "Enter" && vsSave();
+      $("#vsImport").onclick = () => $("#vsFile").click();
+      $("#vsFile").onchange = (e) => {
+        const f = e.target.files[0];
+        e.target.value = "";
+        if (f) vsImport(f);
+      };
+      $("#vsList").onclick = async (e) => {
+        const b = e.target.closest("button[data-a]"),
+          n = b && b.closest(".cx").dataset.n;
+        if (!b) return;
+        if (b.dataset.a === "open") return vsOpen(n);
+        if (b.dataset.a === "exp") return vsExport(n);
+        if (!b.classList.contains("arm")) {
+          // delete asks once more
+          b.classList.add("arm", "rec");
+          return setTimeout(() => b.classList.remove("arm", "rec"), 2500);
+        }
+        try {
+          await dbDel("voxsets", n);
+          toast("Deleted: " + n);
+        } catch {
+          toast("Could not delete it");
+        }
+        vsList();
+      };
+      vsList();
+
       // ---- MIDI
       const MI_KEY = "sing-test.midi";
       // ---------------------------------------------------------------------------------------------
@@ -9357,5 +9543,5 @@ registerProcessor("autotune", AutoTune);
         addEventListener("keydown", (e) => e.key === "Escape" && !box.hidden && close());
       })();
     </script>
-  <div style="position:fixed;left:4px;bottom:2px;z-index:99;font:700 9px monospace;opacity:.7;pointer-events:none;color:#ff5e7a">TEST BUILD · beta · 33b2f61</div></body>
+  <div style="position:fixed;left:4px;bottom:2px;z-index:99;font:700 9px monospace;opacity:.7;pointer-events:none;color:#ff5e7a">TEST BUILD · beta · 59a903d</div></body>
 </html>
