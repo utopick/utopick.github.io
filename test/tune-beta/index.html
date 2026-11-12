@@ -817,6 +817,10 @@
       .dia .nb.done .nm {
         display: block;
       }
+      /* the lit dot is --hi (white in the dark theme): its name takes the page colour so it reads in every theme (passing dots keep their dark dot) */
+      .dia .nb.lit:not(.pass):not(.root) .nm {
+        fill: var(--bg);
+      }
       .dia .nb.tgt circle {
         stroke: var(--hot);
         stroke-width: 3;
@@ -10759,5 +10763,5 @@
         addEventListener("keydown", (e) => e.key === "Escape" && !box.hidden && close());
       })();
     </script>
-  <div style="position:fixed;left:4px;bottom:2px;z-index:99;font:700 9px monospace;opacity:.7;pointer-events:none;color:#ff5e7a">TEST BUILD · beta · 2716101</div></body>
+  <div style="position:fixed;left:4px;bottom:2px;z-index:99;font:700 9px monospace;opacity:.7;pointer-events:none;color:#ff5e7a">TEST BUILD · beta · 3ceb2cf</div></body>
 </html>
