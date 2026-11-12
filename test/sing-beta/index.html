@@ -120,14 +120,14 @@ body.pocket .bpm input { width: 52px; min-height: 32px; padding: 1px; font-size:
 #hViews { flex: 1; min-width: 0; gap: 2px; justify-content: center; }
 #hViews button { flex: 1 1 0; min-width: 0; max-width: 38px; height: 44px; min-height: 0; padding: 0; border-radius: 6px; display: flex; align-items: center; justify-content: center; }
 #hViews button.on { background: var(--acc); border-color: var(--acc); color: var(--ink); }
-body.pocket #play, body.pocket #rec { height: 44px; min-height: 0; min-width: 0; padding: 0; border-radius: 6px; align-items: center; justify-content: center; flex: none; }
-body.pocket #play, body.pocket #rec { width: 34px; font-size: 17px; }
+body.pocket #play { height: 44px; min-height: 0; min-width: 0; padding: 0; border-radius: 6px; align-items: center; justify-content: center; flex: none; }
+body.pocket #play { width: 34px; font-size: 17px; }
+#play.dis { opacity: 0.35; pointer-events: none; }
 body.pocket #play { order: 1; }
-body.pocket #rec { order: 2; }
 @media (max-width: 370px) {
   body.pocket .mark .sub { display: none; }
   body.pocket header { gap: 3px; padding: 6px 4px; }
-  body.pocket #play, body.pocket #rec { width: 31px; }
+  body.pocket #play { width: 31px; }
   body.pocket .bpm input { width: 40px; appearance: textfield; }
   body.pocket .bpm input::-webkit-inner-spin-button, body.pocket .bpm input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
   body.pocket .bpm { margin-left: 4px; }
@@ -1555,7 +1555,6 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
           <svg class="ic" viewBox="0 0 24 24"><path d="M3 20h18" /><path d="M6 16v-4M11 16V7M16 16v-6M21 16V4" /></svg>
         </button>
       </div>
-      <button id="rec" class="rec" title="Record a take">●</button>
       <button id="play" class="big" title="Play / stop">▶</button>
       <!-- a view button like the ones in #hViews, kept apart so it can sit last in the header -->
       <button id="hTakes" data-v="takes" title="Files: songs and recordings, theme, help">
@@ -1580,7 +1579,7 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
           <label class="knob"><i>TEMPO</i><b id="bpmTxt">90</b><input id="wBpm" type="range" min="50" max="160" step="2" value="90" /></label>
         </div>
         <div class="prow rib">
-          <button id="wPlay"></button><button id="wListen"></button><button id="wDir"></button><button id="wCue"></button
+          <button id="wPlay"></button><button id="wRec" title="Record this warm-up: your voice and the piano, saved in Files"></button><button id="wListen"></button><button id="wDir"></button><button id="wCue"></button
           ><button id="wNotes"></button><button id="wRange"></button><button id="wEdit"></button>
         </div>
       </section>
@@ -1614,7 +1613,7 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
         <div class="ovw" id="ovw"><canvas id="oCv"></canvas></div>
         <div class="prow rib">
           <button id="sOpen"></button><button id="sA"></button><button id="sB"></button><button id="sLoop"></button
-          ><button id="sLyr"></button><button id="sGuide"></button>
+          ><button id="sLyr"></button><button id="sGuide"></button><button id="sRec" title="Sing along with the song and be recorded and scored"></button>
         </div>
         <input type="file" id="songFile" accept="audio/*,video/*,.mp3,.m4a,.aac,.wav,.ogg,.oga,.opus,.flac,.webm,.mp4" hidden />
         <input type="file" id="guideFile" accept="audio/*,video/*,.mp3,.m4a,.aac,.wav,.ogg,.opus,.flac,.webm,.mp4" hidden />
@@ -2874,6 +2873,7 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
         MIC.on = false;
         if (MIC.stream) MIC.stream.getTracks().forEach((t) => t.stop());
         MIC.stream = MIC.src = MIC.an = MIC.hp = MIC.gn = null;
+        if (S.view === "warm") loop(); // one more frame: the hint says to tap to listen
       }
       function micError(code) {
         window.micWarn(code); // the shared microphone dialog (id micwarn)
@@ -3544,14 +3544,14 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
                 `</div>`
               );
             })
-            .join("") || '<div class="hint">Record a take over a song (● in the Song view) to follow its score here.</div>';
+            .join("") || '<div class="hint">Record a take over a song (REC in the Song view) to follow its score here.</div>';
         progExtra();
         // the lists below decide how tall the chart can be: draw it once more at its final size
         const b2 = $("#pgChart").getBoundingClientRect();
         if (!again && b2.width > 0 && Math.abs(Math.round((W * b2.height) / b2.width) - 14 - H) > 2) renderProg(true);
       }
       function recFace() {
-        $("#rec").classList.toggle("on", REC.on);
+        ribFace();
         $("#recCard").hidden = !(REC.on && REC.kind === "session");
       }
       function wavBlob(pcm, rate) {
@@ -3796,6 +3796,21 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
       }
       // the phrase cue, to draw it in the lane (the chord cue is not drawn: three notes at once)
       const warmGhost = (t) => warmTarget(t, W.cues || []);
+      // ---- the tone detector: with no exercise running, the warm-up screen listens and shows the note you sing, like the tuner in TUNE.
+      // It starts by itself when the browser already lets the app use the microphone (else a tap on the lane asks), and comes back when an exercise stops.
+      const DET = { live: false, t0: 0, voice: [], center: {}, tap: false };
+      async function detOn() {
+        const go = () => S.view === "warm" && !W.on && !MIC.on && S.listen && !document.hidden;
+        if (!go()) return;
+        let ok = DET.tap;
+        if (!ok) try { ok = (await navigator.permissions.query({ name: "microphone" })).state === "granted"; } catch {}
+        if (!ok || !go()) return;
+        DET.tap = false;
+        if (await micStart()) {
+          if (S.view !== "warm" && !W.on) micStop();
+          loop();
+        }
+      }
       async function warmStart() {
         const c = await getCtx();
         songStop();
@@ -3878,8 +3893,9 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
           W.out.disconnect();
         } catch {}
         if (REC.on && REC.kind === "warm") recStop();
-        if (!REC.on && S.view !== "song") micStop();
+        if (!REC.on && S.view !== "song" && S.view !== "warm") micStop(); // in the warm-up view the mic stays: it is the tone detector now
         warmFace();
+        detOn();
         const done = W.reps.filter((r) => r.n > 8),
           ex = EXS.find((e) => e.id === S.ex);
         logAdd("warm", Math.min(ctx.currentTime - W.t0, W.end), done.length ? done.reduce((a, r) => a + r.ok / r.n, 0) / done.length : null, ex && ex.name);
@@ -3902,12 +3918,25 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
           }
           if (REC.on) REC.pitch.push(+tv.toFixed(3), v.m === v.m ? +v.m.toFixed(2) : null);
         }
-        const now = W.on ? t : 0;
-        drawLane($("#wCv"), { now, span: 6, head: 0.35, target: W.on ? warmTarget : () => NaN, ghost: W.on && S.wcue === "phrase" ? warmGhost : null, voice: W.voice, center: W.center });
+        const det = !W.on && MIC.on; // the tone detector
+        if (det) {
+          if (!DET.live) Object.assign(DET, { live: true, t0: ctx.currentTime, voice: [], center: {} });
+          const td = ctx.currentTime - DET.t0;
+          DET.voice.push({ t: td, m: v.m });
+          if (DET.voice.length > 600) DET.voice.splice(0, 200);
+          if (v.m === v.m) DET.center.v = DET.center.v == null ? v.m : DET.center.v + (v.m - DET.center.v) * 0.08;
+        } else DET.live = false;
+        const now = W.on ? t : det ? ctx.currentTime - DET.t0 : 0;
+        drawLane($("#wCv"), { now, span: 6, head: 0.35, target: W.on ? warmTarget : () => NaN, ghost: W.on && S.wcue === "phrase" ? warmGhost : null, voice: det ? DET.voice : W.voice, center: det ? DET.center : W.center });
         hud($("#wLane"), $("#wNote"), $("#wCents"), W.on ? warmTarget(tv) : NaN, v.m);
+        if (det && v.m === v.m) {
+          const c = Math.round((v.m - Math.round(v.m)) * 100);
+          $("#wCents").textContent = (c >= 0 ? "+" : "−") + Math.abs(c) + "¢";
+          $("#wLane").className = "lane " + (Math.abs(c) <= 15 ? "ok" : c < 0 ? "flat" : "sharp");
+        }
         const listening = W.on && S.wcue === "phrase" && W.reps.some((r) => t >= r.cue && t < r.a - 60 / S.bpm);
         $("#wHint").textContent =
-          REC.on && REC.kind === "warm" ? "● REC " + mmss(ctx.currentTime - REC.t0) : listening ? "♪ LISTEN" : (EXS.find((e) => e.id === S.ex) || EXS[1]).hint;
+          REC.on && REC.kind === "warm" ? "● REC " + mmss(ctx.currentTime - REC.t0) : listening ? "♪ LISTEN" : !W.on ? (MIC.on ? "♪ sing a note, or pick an exercise" : S.listen ? "TAP HERE TO LISTEN" : "MIC OFF: LISTEN in the ribbon") : (EXS.find((e) => e.id === S.ex) || EXS[1]).hint;
         if (W.on) {
           const cur = W.reps.findIndex((x) => t < x.b);
           $$("#wChips .chip").forEach((ch, i) => {
@@ -3949,6 +3978,15 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
         if (W.on) warmStop();
         renderWarm();
       };
+      $("#wLane").addEventListener("click", () => {
+        if (W.on || MIC.on) return;
+        S.listen = true;
+        DET.tap = true; // a tap: the browser may ask for the microphone now
+        saveState();
+        ribFace();
+        getCtx().then((c) => c.resume()).catch(() => {});
+        detOn();
+      });
       $("#exPads").onclick = (e) => {
         const p = e.target.closest("[data-ex]");
         if (!p) return;
@@ -5547,7 +5585,7 @@ registerProcessor("autotune", AutoTune);
         }
         return { blob, dur: n / sr };
       }
-      // free session: ● in this view
+      // free session (kept for the recording code; nothing in the interface starts one now)
       function sessionFrame() {
         if (!(REC.on && REC.kind === "session")) return;
         const v = voiceNow();
@@ -5635,7 +5673,9 @@ registerProcessor("autotune", AutoTune);
         $("#wm").textContent = WM[v];
         wmFit();
         if (v === "takes") renderList();
+        if (prev === "warm" && v !== "warm") micStop(); // the tone detector listens only in the warm-up view
         tabsShow(v, prev);
+        if (v === "warm") detOn();
         playFace();
         saveState();
         loop();
@@ -5649,8 +5689,8 @@ registerProcessor("autotune", AutoTune);
       }
       addEventListener("resize", wmFit);
       addEventListener("resize", () => S.view === "prog" && renderProg());
-      // header ●: a take of what this view does; ▶: play / stop what this view plays
-      $("#rec").onclick = async () => {
+      // REC (warm-up and song ribbons): a take of what the view does; ▶ in the header: play / stop what the view plays
+      const recBtn = async () => {
         if (REC.on) {
           if (REC.kind === "song") return songStop();
           if (REC.kind === "warm") return warmStop();
@@ -5672,6 +5712,7 @@ registerProcessor("autotune", AutoTune);
           toast("Recording a free session. ● again to stop");
         }
       };
+      $("#wRec").onclick = $("#sRec").onclick = recBtn;
       $("#play").onclick = () => {
         if (tabPlay()) return;
         if (S.view === "song") return P.on ? songStop() : songPlay();
@@ -5697,6 +5738,7 @@ registerProcessor("autotune", AutoTune);
         cue: IC('<path d="M6 8.5a6.5 6.5 0 1 1 13 0c0 6-6 6-6 10a3.5 3.5 0 1 1-7 0"/><path d="M15 8.5a2.5 2.5 0 0 0-5 0v1a2 2 0 1 1 0 4"/>'),
         piano: IC('<rect x="3" y="5" width="18" height="14" rx="1"/><path d="M8 5v9M13 5v9M18 5v9"/>'),
         open: IC('<path d="M3 7h6l2 2h10v10H3z"/>'),
+        rec: IC('<circle cx="12" cy="12" r="6" fill="currentColor"/>'),
         a: '<span style="font:900 17px var(--mono)">A</span>',
         b: '<span style="font:900 17px var(--mono)">B</span>',
         loop: IC('<path d="M17 2l3 3-3 3"/><path d="M4 11V9a4 4 0 0 1 4-4h12M7 22l-3-3 3-3"/><path d="M20 13v2a4 4 0 0 1-4 4H4"/>'),
@@ -5711,6 +5753,7 @@ registerProcessor("autotune", AutoTune);
       }
       function ribFace() {
         rib("wPlay", W.on ? "stop" : "play", W.on ? "STOP" : "START", W.on);
+        rib("wRec", "rec", REC.on ? "STOP REC" : "REC", REC.on);
         rib("wListen", "mic", S.listen ? "LISTEN" : "NO MIC", S.listen);
         rib("wDir", S.updown ? "updown" : "up", S.updown ? "UP + DOWN" : "UP ONLY", false);
         rib("wCue", "cue", CUE_NAME[S.wcue] || CUE_NAME.phrase, S.wcue !== "off");
@@ -5724,6 +5767,7 @@ registerProcessor("autotune", AutoTune);
         rib("sLoop", "loop", "LOOP", SONG.loop);
         rib("sLyr", "lyr", "LYRICS", !!SONG.lyr);
         rib("sGuide", "guide", "VOCAL REF", SONG.rec && SONG.rec.guide);
+        rib("sRec", "rec", REC.on ? "STOP REC" : "REC", REC.on);
       }
       $("#wPlay").onclick = () => (W.on ? warmStop() : warmStart());
       // ---- karaoke
@@ -5754,6 +5798,8 @@ registerProcessor("autotune", AutoTune);
       $("#wListen").onclick = () => {
         S.listen = !S.listen;
         if (W.on) S.listen ? micStart() : micStop();
+        else if (S.listen) detOn();
+        else micStop();
         saveState();
         ribFace();
       };
@@ -6217,7 +6263,7 @@ registerProcessor("autotune", AutoTune);
               "## The header",
               "- **SING.** opens this manual.",
               "- The view buttons: **Warm-up**, **Song**, **Range**, **Autotune**, **Sampler** (your vocal samples), **Plane** (the singing game), **History**, and **Files** (the disk) at the far right.",
-              "- **●** records what the view does: the warm-up, you singing along with the song, a new sample in the Sampler, or a free session anywhere else. Tap it again to stop and keep the recording, compressed, in Files.",
+              "- **REC** (in the Warm-up and Song ribbons) records what the view does: the warm-up or you singing along with the song. In the Sampler, tap an empty pad. Tap REC again to stop and keep the recording, compressed, in Files. With no exercise running, the Warm-up screen is a **tone detector**: it shows the note you sing, like the tuner in TUNE.",
               "- **▶** plays and stops what the view plays: the warm-up, the song, live autotune, every Sampler pad, a flight of the plane, or the measure in Range.",
               "- The **Autotune** button (the steps) glows while live autotune is on, whatever view you are in.",
               "## Microphone and headphones",
@@ -6229,7 +6275,7 @@ registerProcessor("autotune", AutoTune);
               "## La cabecera",
               "- **SING.** abre este manual.",
               "- Los botones de vista: **Calentamiento**, **Canción**, **Rango**, **Autotune**, **Sampler** (tus muestras de voz), **Avión** (el juego de cantar), **Historial**, y **Archivos** (el disco) a la derecha del todo.",
-              "- **●** graba lo que hace la vista: el calentamiento, tú cantando con la canción, una muestra nueva en el Sampler, o una sesión libre en las demás. Tócalo otra vez para parar y guardar la grabación, comprimida, en Archivos.",
+              "- **REC** (en las barras de Calentamiento y Canción) graba lo que hace la vista: el calentamiento o tú cantando con la canción. En el Sampler, toca un pad vacío. Toca REC otra vez para parar y guardar la grabación, comprimida, en Archivos. Sin ejercicio en marcha, la pantalla de Calentamiento es un **detector de tono**: muestra la nota que cantas, como el afinador de TUNE.",
               "- **▶** reproduce y para lo que suena en la vista: el calentamiento, la canción, el autotune en directo, todos los pads del Sampler, un vuelo del avión, o la medida en Rango.",
               "- El botón del **Autotune** (los escalones) brilla mientras el autotune en directo está activo, estés en la vista que estés.",
               "## Micrófono y auriculares",
@@ -6400,7 +6446,7 @@ registerProcessor("autotune", AutoTune);
           b: {
             en: [
               "The **Sampler** is for your voice: 16 pads to record a verse, a hook or a harmony, layer it, cut it and dress it with effects. The same pads, FX and EDIT as TRACK.Pocket's sampler and TUNE.Pocket's looper.",
-              "- **Tap an empty pad** to record into it: three short clicks (**COUNT-IN**, at the top, turns them off), then sing. **Tap the red pad** to stop (up to a minute). **REC** in the bar, or **●** in the header, records into the next empty pad.",
+              "- **Tap an empty pad** to record into it: three short clicks (**COUNT-IN**, at the top, turns them off), then sing. **Tap the red pad** to stop (up to a minute). **REC** in the bar records into the next empty pad.",
               "- **Tap a sample** to play it, again to stop it. Play as many as you like at once. **THIS PAD** at the top: **PLAYS ONCE** or **LOOPS**. **PLAY ALL** (or **▶**) starts or stops every pad.",
               "## FX",
               "Effects baked into the chosen pad: **Reverb**, **Echo**, **Double** (a second you, a hair late), **Chorus**, **Third** and **Fifth** (a harmony above you), **Low voice** (an octave below), **Autotune** (with the key and style of the Autotune view), **Octave ↑ / ↓**, **Radio**, **Lo-fi**, **Drive**, **Filter ↓**. Tap to add or take away; **Original** removes them all. The harmonies and octaves keep the length: only the pitch moves.",
@@ -6414,7 +6460,7 @@ registerProcessor("autotune", AutoTune);
             ],
             es: [
               "El **Sampler** es para tu voz: 16 pads para grabar una estrofa, un estribillo o una armonía, superponer capas, cortarla y vestirla con efectos. Los mismos pads, FX y EDIT que el sampler de TRACK.Pocket y el looper de TUNE.Pocket.",
-              "- **Toca un pad vacío** para grabar en él: tres clics cortos (**COUNT-IN**, arriba, los quita) y canta. **Toca el pad rojo** para parar (hasta un minuto). **REC** en la barra, o **●** en la cabecera, graba en el siguiente pad vacío.",
+              "- **Toca un pad vacío** para grabar en él: tres clics cortos (**COUNT-IN**, arriba, los quita) y canta. **Toca el pad rojo** para parar (hasta un minuto). **REC** en la barra graba en el siguiente pad vacío.",
               "- **Toca una muestra** para oírla, otra vez para pararla. Toca todas las que quieras a la vez. **THIS PAD** arriba: **PLAYS ONCE** (una vez) o **LOOPS** (en bucle). **PLAY ALL** (o **▶**) inicia o para todos los pads.",
               "## FX",
               "Efectos fijados en el pad elegido: **Reverb**, **Echo**, **Double** (otro tú, un pelo tarde), **Chorus**, **Third** y **Fifth** (una armonía por encima), **Low voice** (una octava por debajo), **Autotune** (con la tonalidad y el estilo de la vista Autotune), **Octave ↑ / ↓**, **Radio**, **Lo-fi**, **Drive**, **Filter ↓**. Toca para añadir o quitar; **Original** los quita todos. Las armonías y octavas mantienen la duración: solo se mueve el tono.",
@@ -6484,7 +6530,6 @@ registerProcessor("autotune", AutoTune);
               "The last view (the disk) lists your **songs** and your **recordings**, newest first.",
               "- **OPEN** reopens a song in the Song view, **SAVE** exports its audio (for a video, the sound taken from it). **✕** deletes, after a second tap.",
               "- **▶** plays a recording, **TUNE** opens it in the Autotune view, **SAVE** exports it as a compressed audio file. **Tap a name to rename it.** Song recordings show their pitch score.",
-              "- **●** in this view records a **free session**: sing anything.",
               "## The bottom bar",
               "- **FILES**: open a song, **import** a recording (any audio file), and how much space the app uses.",
               "- **OPTIONS**: **note names** in letters (**A B C**) or solfège (**Do Re Mi**), shared with TRACK.Pocket and TUNE.Pocket; **BACKING IN RECORDINGS** (on: warm-ups and song takes record the piano or the song with your voice, like a performance; off: only your voice); **OCTAVE-FREE** for the pitch test.",
@@ -6498,7 +6543,6 @@ registerProcessor("autotune", AutoTune);
               "La última vista (el disco) lista tus **canciones** y tus **grabaciones**, las más recientes primero.",
               "- **OPEN** vuelve a abrir una canción en la vista Canción, **SAVE** exporta su audio (de un vídeo, el sonido extraído). **✕** borra, tras un segundo toque.",
               "- **▶** reproduce una grabación, **TUNE** la abre en la vista Autotune, **SAVE** la exporta como archivo de audio comprimido. **Toca un nombre para cambiarlo.** Las grabaciones de canción muestran su nota de afinación.",
-              "- **●** en esta vista graba una **sesión libre**: canta lo que quieras.",
               "## La barra inferior",
               "- **FILES**: abrir una canción, **importar** una grabación (cualquier archivo de audio), y cuánto espacio usa la app.",
               "- **OPTIONS**: **nombres de las notas** en letras (**A B C**) o solfeo (**Do Re Mi**), compartido con TRACK.Pocket y TUNE.Pocket; **BACKING IN RECORDINGS** (activado: los calentamientos y tomas de canción graban el piano o la canción junto a tu voz, como una actuación; desactivado: solo tu voz); **OCTAVE-FREE** para la prueba de afinación.",
@@ -6534,6 +6578,7 @@ registerProcessor("autotune", AutoTune);
             b: {
               en: [
                 "## Version 1.4.0",
+                "- **Tone detector:** with no exercise running, the Warm-up screen listens and shows the note you sing (and how many cents off), like the tuner in TUNE. It starts by itself when the browser already allows the microphone (else tap the lane), and it comes back when an exercise stops. The header ● is gone: **REC** is now in the Warm-up and Song ribbons, and ▶ stays in place in every view (dimmed in History).",
                 "- **MOD key:** MAP asks if you want a MOD key (the sustain pedal is a good one, and keeps its own job). While it is held, the pads and knobs become a second set: knob 1 acts as knob 9, and so on, so a few controls do double duty. The leftmost and rightmost keys cannot be the MOD key.",
                 "- **MAP:** the old MIDI TEST is now a step-by-step mapper, like an emulator's. Press any key, then the leftmost and the rightmost key (it counts the physical keys, whatever octave is selected), every pad and every knob in order, the sustain pedal, the bend, the mod, play, stop, record and any other function button (a list ends with the rightmost key and then the leftmost key). The map is saved for the controller (shared by the apps), and can be exported and imported as a file. It also shows the MIDI clock (BPM), start and stop, COPY REPORT, and a LIGHT TEST that sends notes to the device.",
                 "- **MIDI, Akai MPK mini Play mk3:** its pads (a drum kit, in both banks) and its knobs (their own CC numbers) are now matched in order, from a real report. Before, the panel saw one knob and the pads out of order.",
@@ -6553,6 +6598,7 @@ registerProcessor("autotune", AutoTune);
               ],
               es: [
                 "## Versión 1.4.0",
+                "- **Detector de tono:** sin ejercicio en marcha, la pantalla de Calentamiento escucha y muestra la nota que cantas (y cuántos cents te desvías), como el afinador de TUNE. Arranca sola si el navegador ya permite el micrófono (si no, toca el carril) y vuelve cuando para un ejercicio. El ● de la cabecera ya no está: **REC** está ahora en las barras de Calentamiento y Canción, y ▶ se queda en su sitio en todas las vistas (atenuado en Historial).",
                 "- **Tecla MOD:** MAP pregunta si quieres una tecla MOD (el pedal de sustain es buena opción y sigue haciendo su trabajo). Mientras se mantiene pulsada, los pads y potes pasan a ser un segundo juego: el pote 1 actúa como el 9, y así, para que pocos controles hagan doble trabajo. La tecla de más a la izquierda y la de más a la derecha no pueden ser la tecla MOD.",
                 "- **MAP:** el antiguo MIDI TEST ahora es un mapeador paso a paso, como el de los emuladores. Pulsa una tecla, luego la tecla de más a la izquierda y la de más a la derecha (cuenta las teclas físicas, sea cual sea la octava), cada pad y cada pote en orden, el pedal de sustain, el bend, el mod, play, stop, record y cualquier otro botón de función (una lista termina con la tecla de la derecha y luego la de la izquierda). El mapa se guarda para el controlador (compartido por las apps) y se puede exportar e importar como archivo. También muestra el reloj MIDI (BPM), start y stop, COPY REPORT y un LIGHT TEST que envía notas al dispositivo.",
                 "- **MIDI, Akai MPK mini Play mk3:** sus pads (un kit de batería, en los dos bancos) y sus potenciómetros (con sus propios números de CC) ahora se reconocen en orden, a partir de un informe real. Antes el panel veía un solo potenciómetro y los pads desordenados.",
@@ -9787,7 +9833,8 @@ registerProcessor("autotune", AutoTune);
           if (prev === "game") gameStop(false);
           if (prev === "vox" && VX.rec) vxRecCancel();
         }
-        $("#play").hidden = v === "prog";
+        $("#play").classList.toggle("dis", v === "prog"); // it stays where it is: hiding it moved the other header buttons
+        $("#play").disabled = v === "prog";
         if (v === "range") rangeFace();
         if (v === "air") airFace();
         if (v === "at") atTakesFill();
@@ -9989,5 +10036,5 @@ registerProcessor("autotune", AutoTune);
           }).catch(() => {});
       })();
     </script>
-  <div style="position:fixed;left:4px;bottom:2px;z-index:99;font:700 9px monospace;opacity:.7;pointer-events:none;color:#ff5e7a">TEST BUILD · beta · 172d31b</div></body>
+  <div style="position:fixed;left:4px;bottom:2px;z-index:99;font:700 9px monospace;opacity:.7;pointer-events:none;color:#ff5e7a">TEST BUILD · beta · fb18ec8</div></body>
 </html>
