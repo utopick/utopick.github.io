@@ -562,14 +562,24 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
       #pick .pl button b { color: var(--acc); }
       #pick .pl button.on b { color: var(--ink); }
       /* MIXER: one strip per source, then the master */
-      #mixer { margin: 6px; display: flex; flex-direction: column; gap: 10px; }
-      .strip { display: grid; grid-template-columns: 74px 1fr 52px 44px; grid-template-rows: auto 6px; gap: 4px 8px; align-items: center; }
-      .strip b { font: 900 11px var(--mono); letter-spacing: 1px; }
-      .strip small { font: 700 11px var(--mono); text-align: right; }
-      .strip .mt { grid-column: 1 / -1; height: 6px; border: 1px solid var(--line); border-radius: 3px; overflow: hidden; }
-      .strip .mt i { display: block; height: 100%; width: 0; background: var(--acc); }
-      .strip .mute { min-height: 0; height: 36px; padding: 0; }
-      .strip .mute.on { background: var(--hot); border-color: var(--hot); color: #fff; }
+      #mixer { margin: 6px; }
+      /* the mixer as knobs, the same as TRACK.Pocket's: drag a knob up or down, tap it twice to put it back */
+      #mixer { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px 6px; }
+      #mixer .strip { display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 0; }
+      #mixer .strip b { font: 900 11px var(--mono); letter-spacing: 1px; text-align: center; }
+      #mixer .strip small { font: 700 11px var(--mono); color: var(--dim); }
+      #mixer .kn { width: 84px; height: 84px; touch-action: none; cursor: ns-resize; user-select: none; -webkit-user-select: none; }
+      #mixer .kn:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; border-radius: 50%; }
+      #mixer .kn svg { width: 100%; height: 100%; pointer-events: none; }
+      #mixer .kn .kt { fill: none; stroke: var(--line); stroke-width: 5; stroke-linecap: round; }
+      #mixer .kn .kv { fill: none; stroke: var(--acc); stroke-width: 5; stroke-linecap: round; }
+      #mixer .kn .kb { fill: var(--panel2); stroke: var(--line); }
+      #mixer .kn .kp { stroke: var(--text); stroke-width: 3; stroke-linecap: round; }
+      #mixer .kn text { fill: var(--text); font: 800 11px var(--mono); text-anchor: middle; }
+      #mixer .strip .mt { width: 84px; height: 6px; border: 1px solid var(--line); border-radius: 3px; overflow: hidden; }
+      #mixer .strip .mt i { display: block; height: 100%; width: 0; background: var(--acc); }
+      #mixer .strip .mute { min-height: 0; height: 32px; width: 84px; padding: 0; }
+      #mixer .strip .mute.on { background: var(--hot); border-color: var(--hot); color: #fff; }
       #mix .hint { margin: 0 6px; }
       #mRib { margin-top: auto; }
       /* latency test: a ball bounces between the walls; pick the string when it crosses the middle (and the click sounds) */
@@ -685,10 +695,10 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
       <!-- MIXER -->
       <section id="mix">
         <div class="card" id="mixer"></div>
-        <div class="hint">Each source has its volume and a mute (M); the master sets what reaches your headphones. The bars move while sound plays. The speaker at the end of the board opens this tab.</div>
+        <div class="hint">Each source has a volume knob (drag it up or down, tap it twice to put it back) and a mute (M); the master sets what reaches your headphones. The bars move while sound plays. The speaker at the end of the pedal board opens this tab.</div>
         <div class="prow" id="mRib">
           <button class="riffBtn" title="Play a test riff through the board. Tap again to stop."><i>TEST</i>RIFF ▶</button>
-          <button data-go="board" title="Back to the board"><i>CHAIN</i>BOARD</button>
+          <button data-go="board" title="Back to the board"><i>PEDAL</i>BOARD</button>
         </div>
       </section>
       <!-- FILES -->
@@ -2460,15 +2470,30 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
       $("#pickClose").onclick = () => ($("#pick").hidden = true);
 
       // ======================================================================
-      // MIXER: a fader and a mute for each source, and the master
+      // MIXER: a knob and a mute for each source, and the master
       // ======================================================================
       const MIXCH = [["gtr", "GUITAR"], ["riff", "TEST RIFF"], ["trk", "TRACKS"], ["loop", "LOOPS"], ["click", "CLICK"], ["master", "MASTER"]];
       const dbTxt = (v) => (v <= 0.001 ? "-∞" : db(20 * Math.log10(v)));
+      // a knob drawn as TRACK.Pocket's mixer knobs: a track, the value arc, the cap with a pointer, the value inside
+      function mixKnobSvg(f, txt) {
+        const a0 = 0.75 * Math.PI,
+          a = a0 + clamp(f, 0, 1) * 1.5 * Math.PI,
+          P = (ang, rr) => [32 + Math.cos(ang) * rr, 32 + Math.sin(ang) * rr].map((x) => x.toFixed(1)).join(" "),
+          arc = (from, to, rr) => `M${P(from, rr)} A${rr} ${rr} 0 ${to - from > Math.PI ? 1 : 0} 1 ${P(to, rr)}`;
+        return `<svg viewBox="0 0 64 64"><path class="kt" d="${arc(a0, a0 + 1.5 * Math.PI, 26)}"/>${f > 0.005 ? `<path class="kv" d="${arc(a0, a, 26)}"/>` : ""}<circle class="kb" cx="32" cy="32" r="18"/><path class="kp" d="M${P(a, 8)} L${P(a, 17)}"/><text x="32" y="36.5">${txt}</text></svg>`;
+      }
+      const mixKnobFace = (st) => {
+        const v = S.mix[st.dataset.ch].v;
+        st.querySelector(".kn").innerHTML = mixKnobSvg(v / 1.5, Math.round(v * 100));
+        st.querySelector(".kn").setAttribute("aria-valuenow", Math.round(v * 100));
+        st.querySelector("small").textContent = dbTxt(v);
+      };
       function mixFace() {
         $("#mixer").innerHTML = MIXCH.map(
           ([k, n]) =>
-            `<div class="strip" data-ch="${k}"><b>${n}</b><input type="range" min="0" max="1.5" step="0.01" value="${S.mix[k].v}" title="${n} volume" aria-label="${n} volume" /><small>${dbTxt(S.mix[k].v)}</small><button class="mute${S.mix[k].m ? " on" : ""}" title="Mute ${n}" aria-pressed="${S.mix[k].m}">M</button><div class="mt"><i></i></div></div>`,
+            `<div class="strip" data-ch="${k}"><b>${n}</b><div class="kn" role="slider" tabindex="0" aria-label="${n} volume" aria-valuemin="0" aria-valuemax="150" title="${n} volume: drag up or down, tap twice to put it back to the start value (arrow keys too)"></div><small></small><button class="mute${S.mix[k].m ? " on" : ""}" title="Mute ${n}" aria-pressed="${S.mix[k].m}">M</button><div class="mt"><i></i></div></div>`,
         ).join("");
+        $$("#mixer .strip").forEach(mixKnobFace);
       }
       function mixMeters() {
         $$("#mixer .strip").forEach((st) => {
@@ -2477,14 +2502,43 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
         });
         $("#cable")?.classList.toggle("live", !!A.ctx);
       }
-      $("#mixer").addEventListener("input", (e) => {
-        const st = e.target.closest(".strip");
-        if (!st || e.target.type !== "range") return;
-        S.mix[st.dataset.ch].v = clamp(+e.target.value, 0, 1.5);
-        st.querySelector("small").textContent = dbTxt(S.mix[st.dataset.ch].v);
+      const mixSet = (st, v) => {
+        S.mix[st.dataset.ch].v = clamp(v, 0, 1.5);
+        mixKnobFace(st);
         applyMix();
         save();
-      });
+      };
+      // drag a knob up or down (the whole range is about 160 px); two quick taps put it back to its start value
+      (() => {
+        let d = null;
+        const root = $("#mixer");
+        root.addEventListener("pointerdown", (e) => {
+          const k = e.target.closest(".kn");
+          if (!k) return;
+          e.preventDefault();
+          k.setPointerCapture(e.pointerId);
+          const st = k.closest(".strip"),
+            now = performance.now();
+          if (d && d.st === st && now - d.t < 300) {
+            mixSet(st, MIX0[st.dataset.ch].v);
+            d = null;
+            return;
+          }
+          d = { st, y: e.clientY, v: S.mix[st.dataset.ch].v, t: now };
+        });
+        root.addEventListener("pointermove", (e) => {
+          if (!d || !e.buttons) return;
+          mixSet(d.st, d.v + ((d.y - e.clientY) / 160) * 1.5);
+        });
+        root.addEventListener("keydown", (e) => {
+          const k = e.target.closest(".kn"),
+            dir = { ArrowUp: 1, ArrowRight: 1, ArrowDown: -1, ArrowLeft: -1 }[e.key];
+          if (!k || !dir) return;
+          e.preventDefault();
+          const st = k.closest(".strip");
+          mixSet(st, S.mix[st.dataset.ch].v + dir * 0.05);
+        });
+      })();
       $("#mixer").addEventListener("click", (e) => {
         const b = e.target.closest(".mute");
         if (!b) return;
@@ -3703,12 +3757,12 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
           t: { en: "MIXER", es: "MIXER" },
           b: {
             en: [
-              "The faders icon at the top (or the speaker on the board) opens the **MIXER**: a strip for the **GUITAR** (your input), the **TEST RIFF**, the **TRACKS**, the **LOOPS** and the **CLICK**, and the **MASTER**, which sets what reaches your headphones.",
+              "The faders icon at the top (or the speaker on the board) opens the **MIXER**: a strip for the **GUITAR** (your input), the **TEST RIFF**, the **TRACKS**, the **LOOPS** and the **CLICK**, and the **MASTER**, which sets what reaches your headphones. Each one is a **knob** like TRACK.Pocket's mixer: drag it up or down, tap it twice to put it back, and **M** mutes it.",
               "- Slide a fader to set its volume (0 dB is unchanged); **M** mutes it. The bar under each one shows its level while sound plays.",
               "- A soft limiter after the master keeps a loud board from clipping harshly.",
             ],
             es: [
-              "El icono de faders de arriba (o el altavoz del board) abre el **MIXER**: una tira para la **GUITAR** (tu entrada), el **TEST RIFF**, las **TRACKS**, los **LOOPS** y el **CLICK**, y el **MASTER**, que decide lo que llega a tus auriculares.",
+              "El icono de faders de arriba (o el altavoz del board) abre el **MIXER**: una tira para la **GUITAR** (tu entrada), el **TEST RIFF**, las **TRACKS**, los **LOOPS** y el **CLICK**, y el **MASTER**, que decide lo que llega a tus auriculares. Cada una es un **potenciómetro** como el mezclador de TRACK.Pocket: arrástralo arriba o abajo, tócalo dos veces para devolverlo a su sitio, y **M** lo silencia.",
               "- Desliza un fader para su volumen (0 dB es sin cambio); **M** lo silencia. La barra de debajo muestra su nivel mientras suena.",
               "- Un limitador suave después del master evita que un board muy fuerte sature de forma áspera.",
             ],
@@ -3855,5 +3909,5 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
       lpFace();
       trLoad();
     </script>
-  <div style="position:fixed;left:4px;bottom:2px;z-index:99;font:700 9px monospace;opacity:.7;pointer-events:none;color:#ff5e7a">TEST BUILD · beta · a63eff3</div></body>
+  <div style="position:fixed;left:4px;bottom:2px;z-index:99;font:700 9px monospace;opacity:.7;pointer-events:none;color:#ff5e7a">TEST BUILD · beta · 5d792f4</div></body>
 </html>
