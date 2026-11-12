@@ -2,7 +2,7 @@
 <!--
   PLAY.Pocket - pocket guitar rig: plug an instrument into the phone or an audio interface and play it through
   pedals, amps and cabs laid out on a board, with backing tracks and a looper. Sister app of TRACK.Pocket, TUNE.Pocket and SING.Pocket. One
-  self-contained file, no network requests. PROTOTYPE.
+  self-contained file, no network requests. BETA. manifest.webmanifest, sw.js and icons/ only make it installable (PWA).
   The base styles, the six themes and the help dialog are shared with the sister apps (copied from SING.Pocket).
 
   Layout of this file
@@ -37,13 +37,36 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="theme-color" content="#0d0f12" />
+    <meta name="apple-mobile-web-app-title" content="PLAY.Pocket" />
+    <script>
+      // the browser's install prompt can come before the app has started: keep it for the INSTALL button
+      addEventListener("beforeinstallprompt", (e) => {
+        e.preventDefault();
+        window.pocketInstall = e;
+        dispatchEvent(new Event("pocketinstall"));
+      });
+    </script>
+    <script>
+      if ("serviceWorker" in navigator && !location.pathname.includes("/@") &&
+          ((location.protocol === "https:" && location.hostname !== "localhost") ||
+           (location.protocol === "http:" && ["localhost", "127.0.0.1"].includes(location.hostname)))) {
+        addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(console.warn));
+      }
+    </script>
     <script>
       try {
         document.documentElement.dataset.theme = localStorage.getItem("play-test.theme") || "dark";
       } catch {}
     </script>
     <title>TEST · PLAY.Pocket guitar rig</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20108%20108%22%3E%3Crect%20width%3D%22108%22%20height%3D%22108%22%20rx%3D%2224%22%20fill%3D%22%230d0f12%22%2F%3E%3Cpath%20d%3D%22M37.64%2076.37L25.31%2076.37L25.31%2030.90L44.90%2030.90Q49.96%2030.90%2053.76%2032.74Q57.56%2034.59%2059.68%2038.05Q61.81%2041.52%2061.81%2046.34Q61.81%2051.10%2059.68%2054.52Q57.56%2057.94%2053.76%2059.65Q49.96%2061.35%2044.90%2061.35L37.64%2061.35L37.64%2076.37ZM37.64%2040.79L37.64%2051.77L41.97%2051.77Q44.17%2051.77%2045.72%2051.22Q47.28%2050.67%2048.10%2049.48Q48.93%2048.29%2048.93%2046.34Q48.93%2044.39%2048.10%2043.17Q47.28%2041.95%2045.72%2041.37Q44.17%2040.79%2041.97%2040.79L41.97%2040.79L37.64%2040.79Z%22%20fill%3D%22%23e8ecf1%22%2F%3E%3Cpath%20d%3D%22M76.41%2077.10L76.41%2077.10Q73.72%2077.10%2071.92%2075.33Q70.12%2073.56%2070.12%2070.91L70.12%2070.91Q70.12%2068.25%2071.92%2066.48Q73.72%2064.71%2076.41%2064.71L76.41%2064.71Q79.09%2064.71%2080.89%2066.48Q82.69%2068.25%2082.69%2070.91L82.69%2070.91Q82.69%2073.56%2080.89%2075.33Q79.09%2077.10%2076.41%2077.10Z%22%20fill%3D%22%23ff9f1c%22%2F%3E%3C%2Fsvg%3E" />
+    <link rel="icon" type="image/png" sizes="32x32" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAACIElEQVR4AcSUO0/DMBSFb1wqGEJ5DDAjYENihAF2xMTKY0dCQFmZgImVl0DsPFYWED+AoWECqSP8gHZBqlIJqY9wT6QUx4qSuDSm8lFyr91zvrpOBEkf2x4fKwyPHg4Ojb6xmiyvR4LXG7yRIUVSB6BQGFmzco1Pz6MDXjDLyrF6NeA1C29kICsw9gHQ8Czrlps2K+thIwuZCBLYEm5cozApZCJbiL7GFgeb+OUcExo2sgX/LyuhtsEC2TgDMwYz1agZAOCEqhOm6hwATIVF5sQC7Bb36ObuPlKYgyJdNZqxAPCZm5unKO3sFgkCINZ1q0SAJGPA/QVCC2BjbZWmJyfo/Ow0xAWIUEOj0AIIfM9OT8hxSkHpX7uF6AoAia+Og0tHKlBnIuFGC2CnWOw8ETiACd6pprUAsM2BZHf1TMhzSfdaAKoZth0HE2dCnUtbawHglyIQwtOAKyDShkWt0wJwSiX/9CeFLk7l6Gl7gPaX8lGZoZ4WQOibMcXjdj8tTAkfADAxSykTADkQIHKt3scCyFuetO2y8fFzg14+2oQrJM+p9/EA/LbDQQuUFgKhyxffPoAaqNaxAOriLGoAtLIwTunZAkA55eIslpWFZdED/dMH2aLdzF9yvssyPdxWo+9KuG6lannepul0ZNbr1QrOANVqX3fcWGcIEzvhIguZnPf7JkTDa+Un+X854ol3Vk+eDvbBgNc7vJGBLDShHwAAAP//ALVDDQAAAAZJREFUAwAp/Nelv0MF0QAAAABJRU5ErkJggg==" />
+    <link rel="apple-touch-icon" href="data:image/png;base64,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" />
+    <link rel="apple-touch-icon" sizes="192x192" href="icons/icon-192.png" />
     <style>
       /* ===================== shared with the sister apps (copied from SING.Pocket: base, pocket layout, themes, help) ===================== */
 :root { --bg: #0d0f12; --panel: #161a20; --panel2: #1d222a; --line: #2a313b; --text: #e8ecf1; --dim: #8a94a3; --acc: #7cf29a; --acc2: #ffb347; --hot: #ff5e7a; --blue: #6ab7ff; --r: 10px; --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace; --ink: #082012; --ink2: #1b1000; --beat: #1a1f27; --playbg: #24402e; --playbg2: #1f5133; --wave: #0a0c0f; --scope: #ffb347; --tie: #1d2a22; --lcn: #232a35; --hi: #fff; --blink: #35404f; }
@@ -637,6 +660,7 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
       #ltRes big { display: block; font: 900 30px var(--mono); color: var(--acc); }
       #lt .row { display: flex; gap: 6px; }
       #lt .row button { flex: 1; }
+      #instBtn:disabled { opacity: 0.6; color: var(--text); }
     </style>
   </head>
   <body class="pocket">
@@ -663,7 +687,7 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
       <button class="hv" id="hTracks" data-v="tracks" title="Tracks: your own backing tracks to play along with">
         <svg class="ic" viewBox="0 0 24 24"><path d="M9 18V5l11-2v13" /><circle cx="6" cy="18" r="3" /><circle cx="17" cy="16" r="3" /></svg>
       </button>
-      <button class="hv" id="hMix" data-v="mix" title="Mixer: the volume of the guitar, the test riff and the master">
+      <button class="hv" id="hMix" data-v="mix" title="Mixer: the volume of the guitar, the test riff, the synth, the voice, the tracks, the loops, the click and the master, and effect pads on the whole mix">
         <svg class="ic" viewBox="0 0 24 24"><path d="M6 3v18M12 3v18M18 3v18" /><rect x="4" y="13" width="4" height="3" /><rect x="10" y="6" width="4" height="3" /><rect x="16" y="10" width="4" height="3" /></svg>
       </button>
       <button class="hv" id="hSynth" data-v="synth" title="Synth: play a keyboard with a MIDI controller or the screen, with eight instruments made by the app">
@@ -736,7 +760,7 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
       <!-- TRACKS: your own backing tracks -->
       <section id="tracks">
         <div id="trList"></div>
-        <div class="hint">Add songs or backing tracks from this device (MP3, WAV, OGG, M4A...). They are kept here, never uploaded. Tap one to play it, again to stop. They go to the TRACKS fader in the MIXER, not through the board.</div>
+        <div class="hint">Add songs or backing tracks from this device (MP3, WAV, OGG, M4A...). They are kept here, never uploaded. Tap one to play it, again to stop. They go to the TRACKS knob in the MIXER, not through the board.</div>
         <div class="prow" id="tRib">
           <button id="trAdd" title="Add audio files from this device"><i>FILES</i>ADD</button>
           <button id="trLoop" title="Repeat the track when it ends"></button>
@@ -797,7 +821,7 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
         <div class="card fpanel" data-fp="theme" hidden>
           <h3>Theme</h3>
           <div id="themeBar">
-            <button data-th="dark" title="Dark theme">DARK</button><button data-th="light" title="Light theme">LIGHT</button><button data-th="demo">DEMO</button
+            <button data-th="dark" title="Dark theme">DARK</button><button data-th="light" title="Light theme">LIGHT</button><button data-th="demo" title="Demo theme">DEMO</button
             ><button data-th="term" title="Term theme">TERM</button><button data-th="dungeon" title="Dungeon theme">DUNGEON</button><button data-th="dmg" title="Dmg theme">DMG</button>
           </div>
         </div>
@@ -826,6 +850,9 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
           </div>
           <div class="row"><button id="oRaw" style="flex: 1" title="The browser's echo cancelling, noise reduction and auto gain: off is faster and keeps your tone"></button></div>
           <div class="hint">The defaults are the fastest found in our tests. If the sound crackles, try a bigger buffer. Changing the rate, the buffer or the raw input restarts listening.</div>
+          <h3>Install as an app</h3>
+          <div class="row"><button id="instBtn" style="flex: 1" title="Install the app: its own window on your home screen or computer, and it works offline"></button></div>
+          <div class="hint" id="instHint"></div>
         </div>
         <div class="prow" id="tTabs">
           <button data-fpb="files" title="Save and load your board"><i>BOARD</i>FILES</button>
@@ -878,7 +905,8 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
 
     <script>
       "use strict";
-      const APP_VERSION = "0.4.0";
+      // The version of the app: change it here (and add its notes to the last help section, "What's new").
+      const APP_VERSION = "0.5.0-beta";
       // ======================================================================
       // helpers
       // ======================================================================
@@ -2668,7 +2696,7 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
           c.querySelector("small").textContent = it[2](v);
         };
         const put = (c, v) => (set(c.dataset.k, clamp(v, 0, 1)), face(c));
-        $$(".mkc", root).forEach(face);
+        [...root.querySelectorAll(".mkc")].forEach(face);
         let d = null;
         root.onpointerdown = (e) => {
           const k = e.target.closest(".mk");
@@ -2693,7 +2721,7 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
           const c = k.closest(".mkc");
           put(c, get(c.dataset.k) + dir * 0.05);
         };
-        return () => $$(".mkc", root).forEach(face);
+        return () => [...root.querySelectorAll(".mkc")].forEach(face);
       }
       const SYV = { voices: new Map(), sustain: false, held: new Set(), midi: null, lit: new Map() };
       const synK = () => S.syn.k[SYN[S.syn.inst].id];
@@ -3786,7 +3814,7 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
               if (!ok || LP.loops[r.id]) return;
               const buf = new AudioBuffer({ length: r.data.length, sampleRate: r.sr });
               buf.copyToChannel(r.data, 0);
-              LP.loops[r.id] = lpMake({ buf, bars: [1, 2, 4, 8].includes(r.bars) ? r.bars : 2, a: clamp(Math.round(+r.a) || 0, 0, 9999), o: clamp(Math.round(+r.o) || 0, 0, 999), vol: clamp(+r.vol || 1, 0, 1.5) });
+              LP.loops[r.id] = lpMake({ buf, bars: [1, 2, 4, 8].includes(r.bars) ? r.bars : 2, a: clamp(Math.round(+r.a) || 0, 0, 9999), o: clamp(Math.round(+r.o) || 0, 0, 999), vol: Number.isFinite(+r.vol) ? clamp(+r.vol, 0, 1.5) : 1 });
             });
             lpFace();
           })
@@ -3981,7 +4009,7 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
         save();
         toast(S.loop.latch ? "Latch on: tap an effect to turn it on or off" : "Latch off: effects play while you hold them");
       };
-      $("#lFxOff").onclick = () => [...LP.fxOn].forEach((id) => lpFxSet(id, false));
+      $("#lFxOff").onclick = () => ([...LP.fxOn].forEach((id) => lpFxSet(id, false)), toast("Loop effects off"));
       // the bars, the bottom bar and the edit tools
       $("#lLen").onclick = (e) => {
         const b = e.target.closest("[data-bars]");
@@ -3989,6 +4017,7 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
         S.loop.bars = +b.dataset.bars;
         lpFace();
         save();
+        toast("New loops: " + S.loop.bars + (S.loop.bars > 1 ? " bars" : " bar"));
       };
       $("#lAll").onclick = lpAll;
       $("#lRec").onclick = () => {
@@ -4020,6 +4049,7 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
         lpSetBuf(L, lpRev(L).getChannelData(0).slice());
         lpFace();
         lpSaveSoon();
+        toast("Loop reversed");
       };
       $("#lNorm").onclick = () => {
         const L = LP.loops[LP.sel];
@@ -4032,6 +4062,7 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
         lpSetBuf(L, d.map((v) => (v / p) * 0.95));
         lpFace();
         lpSaveSoon();
+        toast("Loop normalized");
       };
       $("#lClr").onclick = () => {
         if (!LP.loops[LP.sel]) return;
@@ -4094,7 +4125,7 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
       [["lNudL", -10], ["lNudR", 10]].forEach(([id, ms]) => {
         let t = 0;
         const go = () => (lpNudge(ms), (t = setTimeout(go, t ? 90 : 450)));
-        $("#" + id).addEventListener("pointerdown", (e) => (e.preventDefault(), (t = 0), go()));
+        $("#" + id).addEventListener("pointerdown", (e) => (e.preventDefault(), (t = 0), go(), LP.loops[LP.sel] && toast("Loop 10 ms " + (ms < 0 ? "earlier" : "later") + " (hold to repeat)")));
         ["pointerup", "pointerleave", "pointercancel"].forEach((ev) => $("#" + id).addEventListener(ev, () => (clearTimeout(t), (t = 0))));
       });
       // a new tempo: loops recorded at another one keep their length, so everything stops and starts again on the new clock
@@ -4401,7 +4432,7 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
           t: { en: "Pedals", es: "Pedales" },
           b: {
             en: [
-              "**PLAY.Pocket** turns your phone or computer into a small guitar rig. This is a prototype: 16 pedals, 4 amps and 4 cabs.",
+              "**PLAY.Pocket** turns your phone or computer into a small guitar rig. This is a beta: 16 pedals, 4 amps and 4 cabs.",
               "- **◁ ▷** at the top (or a swipe on the pedal) changes the pedal you see.",
               "- **Knobs**: drag up to turn them up, down to turn them down. With a keyboard, the arrow keys.",
               "- The **footswitch** turns the pedal on or off; the red light shows it is on. A unit that is off lets the sound through untouched.",
@@ -4410,7 +4441,7 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
               "- Your knobs and switches are kept on this device.",
             ],
             es: [
-              "**PLAY.Pocket** convierte tu móvil u ordenador en un pequeño equipo de guitarra. Es un prototipo: 16 pedales, 4 amplificadores y 4 pantallas.",
+              "**PLAY.Pocket** convierte tu móvil u ordenador en un pequeño equipo de guitarra. Es una beta: 16 pedales, 4 amplificadores y 4 pantallas.",
               "- **◁ ▷** arriba (o deslizar sobre el pedal) cambia el pedal que ves.",
               "- **Potenciómetros**: arrastra hacia arriba para subirlos y hacia abajo para bajarlos. Con teclado, las flechas.",
               "- El **pulsador** enciende o apaga el pedal; la luz roja indica que está encendido. Una unidad apagada deja pasar el sonido sin tocarlo.",
@@ -4441,7 +4472,7 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
           t: { en: "BOARD and the test riff", es: "BOARD y el riff de prueba" },
           b: {
             en: [
-                            "The squares icon at the top opens the **PEDAL BOARD**: the order your sound goes through. It comes in at the top right and runs right to left, down, left to right, down... along the cable to the **speaker** at the end. The board fills the screen with squares: the more room, the more rows (up to 27 units).",
+              "The squares icon at the top opens the **PEDAL BOARD**: the order your sound goes through. It comes in at the top right and runs right to left, down, left to right, down... along the cable to the **speaker** at the end. The board fills the screen with squares: the more room, the more rows (up to 27 units).",
               "- Tap an **empty square** (+) to add a pedal, amp or cab there; it comes in switched on.",
               "- Each square has a small drawing of what it is: a stomp box for a pedal, an amp head, or a speaker cab. Tap a unit to turn it **on or off** (a dimmed unit is off). **Press and hold** it, or **double tap**, to open it full screen in LIVE PLAY.",
               "- **Drag** a unit onto another square to swap them, or onto an empty one to move it. A drive before the amp and the delay and reverb after the cab is the classic order, but try anything.",
@@ -4450,7 +4481,7 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
               "- The pedal icon opens **LIVE PLAY**: one unit full screen. Tap its **name** for the list of that kind, **◁ ▷** to step through, **CABS, AMPS, PEDALS** to change kind. The metal **TEST** button on the unit plays a looped test riff (a guitar straight into the interface, made by the app) through the rig, so you can try sounds without playing; **RECORD** (bottom left) starts listening to your instrument. On each side of the unit, words say where the sound comes from (the guitar or the unit before) and where it goes (the next unit or the speaker); **ADD TO BOARD** / **TAKE OFF BOARD** puts the unit in the sound or takes it out. It works with or without the mic. Under the name is a line about what the unit does, and the **waveform** at the bottom shows what goes into it (grey) and what comes out (coloured), with their levels, while you play.",
             ],
             es: [
-                            "El icono de cuadrados de arriba abre el **PEDAL BOARD**: el orden por el que pasa tu sonido. Entra arriba a la derecha y va de derecha a izquierda, baja, de izquierda a derecha, baja... siguiendo el cable hasta el **altavoz** al final. El board llena la pantalla de casillas: cuanto más espacio, más filas (hasta 27 unidades).",
+              "El icono de cuadrados de arriba abre el **PEDAL BOARD**: el orden por el que pasa tu sonido. Entra arriba a la derecha y va de derecha a izquierda, baja, de izquierda a derecha, baja... siguiendo el cable hasta el **altavoz** al final. El board llena la pantalla de casillas: cuanto más espacio, más filas (hasta 27 unidades).",
               "- Toca una **casilla vacía** (+) para poner ahí un pedal, amplificador o pantalla; entra encendido.",
               "- Cada casilla lleva un dibujo de lo que es: una caja de pedal, un cabezal de ampli o una pantalla. Toca una unidad para **encenderla o apagarla** (una atenuada está apagada). **Mantén pulsado** o **toca dos veces** para abrirla a pantalla completa en LIVE PLAY.",
               "- **Arrastra** una unidad a otra casilla para intercambiarlas, o a una vacía para moverla. Lo clásico es la saturación antes del amplificador y el delay y la reverb después de la pantalla, pero prueba lo que quieras.",
@@ -4497,14 +4528,14 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
               "- **ADD** picks audio files from this device (MP3, WAV, OGG, M4A and whatever else the browser can play, up to 80 MB each). They are kept on this device and never uploaded.",
               "- Tap a track to play it, again to stop it. **REPEAT** plays it again when it ends. **STOP** stops it.",
               "- **✕** deletes a track from this device: tap it, then **SURE?**.",
-              "- Tracks go to the **TRACKS** fader in the MIXER, not through the board, and are not recorded by the looper.",
+              "- Tracks go to the **TRACKS** knob in the MIXER, not through the board, and are not recorded by the looper.",
             ],
             es: [
               "El icono de nota de arriba abre **TRACKS**: tus propias pistas de acompañamiento o canciones para tocar encima.",
               "- **ADD** elige archivos de audio de este dispositivo (MP3, WAV, OGG, M4A y lo que el navegador pueda reproducir, hasta 80 MB cada uno). Se guardan en este dispositivo y nunca se suben.",
               "- Toca una pista para reproducirla, otra vez para pararla. **REPEAT** la repite al acabar. **STOP** la para.",
               "- **✕** borra una pista de este dispositivo: tócalo y después **SURE?**.",
-              "- Las pistas van al fader **TRACKS** del MIXER, no pasan por el board, y el looper no las graba.",
+              "- Las pistas van al potenciómetro **TRACKS** del MIXER, no pasan por el board, y el looper no las graba.",
             ],
           },
         },
@@ -4513,14 +4544,14 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
           t: { en: "MIXER", es: "MIXER" },
           b: {
             en: [
-              "The faders icon at the top (or the speaker on the board) opens the **MIXER**: a strip for the **GUITAR** (your input), the **TEST RIFF**, the **TRACKS**, the **LOOPS** and the **CLICK**, and the **MASTER**, which sets what reaches your headphones. Each one is a **knob** like TRACK.Pocket's mixer: drag it up or down, tap it twice to put it back, and **M** mutes it.",
-              "- Slide a fader to set its volume (0 dB is unchanged); **M** mutes it. The bar under each one shows its level while sound plays.",
+              "The faders icon at the top (or the speaker on the board) opens the **MIXER**: a strip for the **GUITAR** (your input), the **TEST RIFF**, the **SYNTH**, the **VOICE**, the **TRACKS**, the **LOOPS** and the **CLICK**, and the **MASTER**, which sets what reaches your headphones. Each one is a **knob** like TRACK.Pocket's mixer: drag it up or down, tap it twice to put it back, and **M** mutes it.",
+              "- 0 dB is unchanged. The bar under each one shows its level while sound plays.",
               "- A soft limiter after the master keeps a loud board from clipping harshly.",
               "- The lower button swaps the knobs for the **FX PADS**: effects on the whole mix (LO-FI, TAPE, RADIO, PHONE, UNDERWATER, STUTTER, LOW PASS, HIGH PASS, ECHO, REVERB, ROBOT, CRUNCH). With **LATCH** on, a tap turns an effect on or off, so you can leave LO-FI running; with it off, an effect plays while you hold it. **ALL OFF** turns them all off. **BACK TO MIXER** brings the knobs back.",
             ],
             es: [
-              "El icono de faders de arriba (o el altavoz del board) abre el **MIXER**: una tira para la **GUITAR** (tu entrada), el **TEST RIFF**, las **TRACKS**, los **LOOPS** y el **CLICK**, y el **MASTER**, que decide lo que llega a tus auriculares. Cada una es un **potenciómetro** como el mezclador de TRACK.Pocket: arrástralo arriba o abajo, tócalo dos veces para devolverlo a su sitio, y **M** lo silencia.",
-              "- Desliza un fader para su volumen (0 dB es sin cambio); **M** lo silencia. La barra de debajo muestra su nivel mientras suena.",
+              "El icono de faders de arriba (o el altavoz del board) abre el **MIXER**: una tira para la **GUITAR** (tu entrada), el **TEST RIFF**, el **SYNTH**, la **VOICE**, las **TRACKS**, los **LOOPS** y el **CLICK**, y el **MASTER**, que decide lo que llega a tus auriculares. Cada una es un **potenciómetro** como el mezclador de TRACK.Pocket: arrástralo arriba o abajo, tócalo dos veces para devolverlo a su sitio, y **M** lo silencia.",
+              "- 0 dB es sin cambio. La barra de debajo muestra su nivel mientras suena.",
               "- Un limitador suave después del master evita que un board muy fuerte sature de forma áspera.",
               "- El botón de abajo cambia los potenciómetros por los **FX PADS**: efectos sobre toda la mezcla (LO-FI, TAPE, RADIO, PHONE, UNDERWATER, STUTTER, LOW PASS, HIGH PASS, ECHO, REVERB, ROBOT, CRUNCH). Con **LATCH** activado, un toque enciende o apaga un efecto, así puedes dejar el LO-FI sonando; sin él, el efecto suena mientras lo mantienes pulsado. **ALL OFF** los apaga todos. **BACK TO MIXER** devuelve los potenciómetros.",
             ],
@@ -4596,6 +4627,7 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
               "- **LATENCY TEST**: a ball bounces from wall to wall; each time it crosses the middle a click sounds. Pick a string with each click (muted notes are easiest), following the sound, not the ball. Two clicks to get the feel, then ten are measured. Because you play along with what you hear, your pick reaches the app one whole trip late, so the result is the real delay of your setup: under 30 ms feels like an amp. The result is kept (the looper will use it).",
               "- **Audio input and output**: the input, its channel (on a two-input interface, input 1 is usually the instrument jack), **GAIN** (kept for each input) and the output. Chrome sends the sound straight to the chosen output; Firefox shows its own list (\"choose another…\") and plays through its media player, which adds delay, so in Firefox it is faster to pick the output in the system sound settings.",
               "- **Engine**: the sample rate (best: the same as the input), the buffer (interactive is the smallest; bigger ones help if the sound crackles), oversampling for the drive and the amp (smoother, a few ms later) and **RAW INPUT** (on: the browser does not touch your sound). Changing the rate, the buffer or the raw input restarts listening.",
+              "- **Install as an app**: adds PLAY.Pocket to your home screen or apps, with its own window and working offline. The **INSTALL** button says **INSTALLED** when you already run it as an app; on iPhone it shows the Safari ▸ Share ▸ Add to Home Screen steps.",
             ],
             es: [
               "**OPTIONS** (pestaña Archivos) tiene los datos y los ajustes:",
@@ -4603,6 +4635,7 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
               "- **LATENCY TEST**: una bola rebota de pared a pared; cada vez que cruza el centro suena un clic. Toca una cuerda con cada clic (las notas apagadas son lo más fácil), siguiendo el sonido, no la bola. Dos clics para coger el ritmo y luego se miden diez. Como tocas con lo que oyes, tu nota llega a la app con un viaje completo de retraso, así que el resultado es el retraso real de tu equipo: menos de 30 ms se siente como un amplificador. El resultado se guarda (lo usará el looper).",
               "- **Audio input and output**: la entrada, su canal (en una interfaz de dos entradas, la 1 suele ser la de instrumento), **GAIN** (guardada para cada entrada) y la salida. Chrome manda el sonido directo a la salida elegida; Firefox muestra su propia lista (\"choose another…\") y suena a través de su reproductor, lo que añade retraso, así que en Firefox es más rápido elegir la salida en los ajustes de sonido del sistema.",
               "- **Engine**: la frecuencia de muestreo (mejor: la misma que la entrada), el búfer (interactive es el más pequeño; uno mayor ayuda si el sonido chisporrotea), el sobremuestreo del drive y del amplificador (más suave, unos ms más tarde) y **RAW INPUT** (activado: el navegador no toca tu sonido). Cambiar la frecuencia, el búfer o la entrada en bruto reinicia la escucha.",
+              "- **Install as an app**: añade PLAY.Pocket a tu pantalla de inicio o a tus aplicaciones, con su propia ventana y funcionando sin conexión. El botón **INSTALL** dice **INSTALLED** si ya la usas como app; en iPhone muestra los pasos Safari ▸ Compartir ▸ Añadir a pantalla de inicio.",
             ],
           },
         },
@@ -4623,6 +4656,32 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
               "- **THEME**: el aspecto, compartido con TRACK, TUNE y SING.Pocket.",
               "- **OPTIONS**: mira Opciones, datos y prueba de retraso.",
               "- **HELP**: este manual. El logo **PLAY.** también lo abre.",
+            ],
+          },
+        },
+        {
+          id: "new",
+          t: { en: "What's new", es: "Novedades" },
+          b: {
+            en: [
+              "## Version 0.5.0",
+              "- **The first beta.** 16 pedals, 4 amps and 4 cabs on a board, with your instrument or the test riff.",
+              "- **PEDAL BOARD and LIVE PLAY** are two tabs: the board fills the screen with squares (tap a unit to turn it on or off, press and hold or double tap to open it, drag to move it), and LIVE PLAY shows one unit full screen with what it does, where the sound comes from and goes, and its waveform in and out.",
+              "- **LOOPER** as in TUNE.Pocket: 16 pads in time, EDIT tools (volume, overdub, reverse, normalize, nudge, quantize, crop), loop FX, UNDO, and the loops are kept on the device.",
+              "- **MIXER** with knobs like TRACK.Pocket's, a mute and a meter under each, and **FX PADS** on the whole mix (lo-fi, tape, radio, stutter, echo, reverb and more, to latch or hold).",
+              "- **SYNTH:** eight instruments made by the app, played from a MIDI keyboard or the keys on the screen, straight to the mixer or through the pedal board. **VOICE:** the microphone through a voice changer (pitch, robot, megaphone and more). Use headphones.",
+              "- **Install it:** the app is a web app (PWA). Add it to the Home Screen (iPhone: Safari ▸ Share; Android and desktop: Chrome ▸ Install app) and it opens like an app and works offline. **OPTIONS** has an **INSTALL** button.",
+              "- **Safer:** an imported board and the loops kept on the device are checked before they are used.",
+            ],
+            es: [
+              "## Versión 0.5.0",
+              "- **La primera beta.** 16 pedales, 4 amplificadores y 4 pantallas en un board, con tu instrumento o el riff de prueba.",
+              "- **PEDAL BOARD y LIVE PLAY** son dos pestañas: el board llena la pantalla de casillas (toca una unidad para encenderla o apagarla, mantén pulsado o toca dos veces para abrirla, arrastra para moverla), y LIVE PLAY muestra una unidad a pantalla completa con lo que hace, de dónde viene y a dónde va el sonido, y su onda de entrada y de salida.",
+              "- **LOOPER** como en TUNE.Pocket: 16 pads a tempo, herramientas EDIT (volumen, overdub, reverse, normalize, desplazar, cuantizar, recortar), efectos de loop, UNDO, y los loops se guardan en el dispositivo.",
+              "- **MIXER** con potenciómetros como los de TRACK.Pocket, un mute y un medidor bajo cada uno, y **FX PADS** sobre toda la mezcla (lo-fi, tape, radio, stutter, eco, reverb y más, fijos o mientras los mantienes).",
+              "- **SYNTH:** ocho instrumentos generados por la app, tocados desde un teclado MIDI o las teclas de la pantalla, directos al mezclador o a través del board. **VOICE:** el micrófono a través de un cambiador de voz (tono, robot, megáfono y más). Usa auriculares.",
+              "- **Instálala:** la app es una web app (PWA). Añádela a la pantalla de inicio (iPhone: Safari ▸ Compartir; Android y escritorio: Chrome ▸ Instalar app) y se abre como una app y funciona sin conexión. **OPTIONS** tiene un botón **INSTALL**.",
+              "- **Más segura:** un board importado y los loops guardados en el dispositivo se comprueban antes de usarse.",
             ],
           },
         },
@@ -4651,7 +4710,7 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
               return;
             }
             if (ul) ((h += "</ul>"), (ul = false));
-            h += `<p>${hfmt(l)}</p>`;
+            h += l.startsWith("## ") ? `<h4>${hfmt(l.slice(3))}</h4>` : `<p>${hfmt(l)}</p>`;
           });
           return h + (ul ? "</ul>" : "");
         }).join("");
@@ -4691,6 +4750,58 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
       });
 
       // ======================================================================
+      // INSTALL (OPTIONS): the browser's own install dialog where there is one (Chrome, Edge, Android), the Share-menu
+      // steps on iPhone, and "installed" when it already runs as an app. The sister apps' block without the first-visit
+      // note; the head script keeps the browser's install event (it can fire before this point).
+      // ======================================================================
+      const PWA = { ev: window.pocketInstall || null, done: false };
+      const pwaApp = () =>
+        matchMedia("(display-mode: standalone), (display-mode: minimal-ui), (display-mode: window-controls-overlay)").matches || navigator.standalone === true;
+      const pwaState = () => (PWA.done || pwaApp() ? "done" : PWA.ev ? "prompt" : isIOS ? "ios" : "menu");
+      const PWA_T = {
+        done: { b: "INSTALLED ✓", h: "Installed: it opens in its own window and works offline.", t: "Already installed: open it from your home screen or apps" },
+        prompt: { b: "INSTALL", h: "Adds it to your home screen or apps: its own window, no browser bars, and it works offline.", t: "Install cancelled" },
+        ios: { b: "HOW TO INSTALL", h: "iPhone and iPad: in Safari tap Share, then Add to Home Screen. An installed app also keeps its saved data longer.", t: "Safari ▸ Share ▸ Add to Home Screen" },
+        menu: {
+          b: "HOW TO INSTALL",
+          h: "Use your browser's menu: Install app (Chrome, Edge, Android) or Add to Home Screen. Firefox and Safari on a computer cannot install it. If you already installed it, open it from there.",
+          t: "Use your browser's menu: Install app / Add to Home Screen",
+        },
+      };
+      function pwaFace() {
+        const st = pwaState(),
+          t = PWA_T[st];
+        $("#instBtn").textContent = t.b;
+        $("#instBtn").disabled = st === "done";
+        $("#instBtn").classList.toggle("on", st === "prompt");
+        $("#instHint").textContent = t.h;
+      }
+      $("#instBtn").onclick = async () => {
+        const st = pwaState();
+        if (st !== "prompt") return toast(PWA_T[st].t);
+        const ev = PWA.ev;
+        PWA.ev = null; // the browser's event works once
+        try {
+          ev.prompt();
+          if ((await ev.userChoice).outcome === "accepted") PWA.done = true;
+          else toast(PWA_T.prompt.t);
+        } catch {}
+        pwaFace();
+      };
+      addEventListener("pocketinstall", () => {
+        PWA.ev = window.pocketInstall;
+        pwaFace();
+      });
+      addEventListener("appinstalled", () => {
+        PWA.done = true;
+        PWA.ev = null;
+        pwaFace();
+        toast("Installed: open it from your home screen or apps");
+      });
+      matchMedia("(display-mode: standalone)").addEventListener("change", pwaFace);
+      pwaFace();
+
+      // ======================================================================
       // boot
       // ======================================================================
       setTheme(document.documentElement.dataset.theme);
@@ -4705,5 +4816,5 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
       lpFace();
       trLoad();
     </script>
-  <div style="position:fixed;left:4px;bottom:2px;z-index:99;font:700 9px monospace;opacity:.7;pointer-events:none;color:#ff5e7a">TEST BUILD · beta · 2440fa6</div></body>
+  <div style="position:fixed;left:4px;bottom:2px;z-index:99;font:700 9px monospace;opacity:.7;pointer-events:none;color:#ff5e7a">TEST BUILD · beta · 141a997</div></body>
 </html>

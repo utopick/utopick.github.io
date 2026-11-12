@@ -5843,7 +5843,7 @@ registerProcessor("autotune", AutoTune);
       // help manual (EN / ES), same format as TRACK.Pocket: "## " heading, "- " list item, **bold**, *dim*
       // ======================================================================
       // The version of the app: change it here (and add its notes to the last help section, "What's new").
-      const APP_VERSION = "1.4.0";
+      const APP_VERSION = "1.4.0-beta";
       const HELP = [
         {
           id: "start",
@@ -6170,9 +6170,9 @@ registerProcessor("autotune", AutoTune);
               en: [
                 "## Version 1.4.0",
                 "- **Air:** a new view (the wind icon) that listens to your tone and says how much of it is clean, mixed or airy, live and as a result you can compare over time, with a side-view diagram of the tongue, soft palate and larynx for five mouth shapes (hum, nay, oo, ah, yawn).",
-                "## Version 1.3.0",
                 "- **Microphone setup (OPTIONS):** pick the input, its channel, the gain, a gate, a high-pass and your range, per input. **TESTS** measures noise, level, pops, range and the browser processing, and **AUTO SETUP** sets everything from them. The recording, autotune and the sampler use the same cleaned input.",
                 "- **Sampler:** the play and loop marks on the pads are big enough to see now. While the sampler effects are open, the MIDI pads and keys play them.",
+                "## Version 1.3.0",
                 "- **Install it:** the app is now a web app (PWA). Add it to the Home Screen (iPhone: Safari ▸ Share; Android and desktop: Chrome ▸ Install app) and it opens like an app and works offline. The welcome note and **OPTIONS** have an **INSTALL** button that knows when the app is already installed. The Android APK is retired.",
                 "- **Exercises:** an imported exercise file is limited to 400 notes per exercise and 100 exercises.",
                 "- **MIDI starting assignment:** known controllers (Akai MPK, Launchkey…) now start with a function on each knob and pad, shown as tags with a line on the DEVICE drawing: the pads play the sampler pads 1 to 16, and the keys play a reference note as always. ASSIGN, LEARN and the **DEFAULTS** switch in DEVICE change it, and CLEAR turns it off.",
@@ -6183,9 +6183,9 @@ registerProcessor("autotune", AutoTune);
               es: [
                 "## Versión 1.4.0",
                 "- **Aire:** una vista nueva (el icono del viento) que escucha tu tono y dice qué parte es limpia, mixta o con aire, en directo y como resultado que puedes comparar con el tiempo, con un diagrama lateral de la lengua, el paladar blando y la laringe para cinco formas de la boca (hum, nay, oo, ah, bostezo).",
-                "## Versión 1.3.0",
                 "- **Configurar el micrófono (OPCIONES):** elige la entrada, su canal, la ganancia, una puerta, un filtro de graves y tu rango, por entrada. **TESTS** mide ruido, nivel, golpes de aire, rango y el procesado del navegador, y **AUTO SETUP** lo configura todo. La grabación, el autotune y el sampler usan la misma entrada ya limpia.",
                 "- **Sampler:** las marcas de reproducción y de bucle en los pads ahora se ven bien. Con los efectos del sampler abiertos, los pads y teclas MIDI los tocan.",
+                "## Versión 1.3.0",
                 "- **Instálala:** la app ahora es una web app (PWA). Añádela a la pantalla de inicio (iPhone: Safari ▸ Compartir; Android y escritorio: Chrome ▸ Instalar app) y se abre como una app y funciona sin conexión. La nota de bienvenida y **OPTIONS** tienen un botón **INSTALL** que sabe si la app ya está instalada. El APK de Android se retira.",
                 "- **Ejercicios:** un archivo de ejercicios importado se limita a 400 notas por ejercicio y 100 ejercicios.",
                 "- **Asignación MIDI inicial:** los controladores conocidos (Akai MPK, Launchkey…) empiezan con una función en cada pote y pad, mostrada como etiquetas con una línea en el dibujo de DEVICE: los pads tocan los pads del sampler 1 a 16, y las teclas tocan una nota de referencia como siempre. ASSIGN, LEARN y el interruptor **DEFAULTS** de DEVICE la cambian, y CLEAR la desactiva.",
@@ -9287,5 +9287,5 @@ registerProcessor("autotune", AutoTune);
       } catch {}
       if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
     </script>
-  <div style="position:fixed;left:4px;bottom:2px;z-index:99;font:700 9px monospace;opacity:.7;pointer-events:none;color:#ff5e7a">TEST BUILD · beta · c824bc0</div></body>
+  <div style="position:fixed;left:4px;bottom:2px;z-index:99;font:700 9px monospace;opacity:.7;pointer-events:none;color:#ff5e7a">TEST BUILD · beta · d14c64b</div></body>
 </html>

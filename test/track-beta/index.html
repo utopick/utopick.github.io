@@ -24356,7 +24356,7 @@ ${syN() ? `<button data-ve="back">BACK TO OUR SONG<small>ends the Variator on al
       }
 
       // The version of the app: change it here (and add its notes to the last help section, "What's new").
-      const APP_VERSION = "1.3.0";
+      const APP_VERSION = "1.3.0-beta";
       const HELP = [
         {
           id: "start",
@@ -24736,9 +24736,9 @@ ${syN() ? `<button data-ve="back">BACK TO OUR SONG<small>ends the Variator on al
             b: {
               en: [
                 "## Version 1.3.0",
-                "- **Sync:** devices on the same Wi-Fi can share one session (Files ▸ **SYNC**, paired with QR codes, no server): the same song and samples, shared PLAY / STOP, edits on any device appear on the others, **SOUND HERE** to choose the device that makes the sound, and a MIDI knob on one moves the mixer of all.",
-                "## Version 1.2.0",
+                "- **Sync:** devices on the same Wi-Fi can share one session (Files ▸ **SYNC**, paired with two QR codes read by the camera, no server): the same song and samples, shared PLAY / STOP, edits on any device appear on the others, and the **Variator** is shared too. **SOUND HERE** chooses the device that makes the sound and **SOUND EVERYWHERE** lets all of them sound. A MIDI knob on one moves the mixer of all. **APP QR** shows a code that opens the app on another device.",
                 "- **MIDI:** the master volume knob now moves the mixer and Variator knobs as well (they follow every MIDI volume knob). When the Live FX pads are open, the MIDI pads and keys play the effects. In the Variator, with the piano open only the pads play effects and the keys play the piano, and with the drum pads open both play drums.",
+                "## Version 1.2.0",
                 "- **Install it:** the app is now a web app (PWA). Add it to the Home Screen (iPhone: Safari ▸ Share; Android and desktop: Chrome ▸ Install app) and it opens like an app and works offline. The welcome note and **OPTIONS** have an **INSTALL** button that knows when the app is already installed. The Android APK is retired.",
                 "- **Variator:** new styles **Lo-Fi**, **Synthwave** and **Dungeon Synth**; the dice also shuffles the VARS knobs; the **♫** button rotates the lower part between patterns, a piano and drum pads (what you play there is not written into the song); touch a channel anywhere to play it, and the dice and play icons are bare icons.",
                 "- **Autosave** no longer interrupts playback (it waits until you stop).",
@@ -24749,9 +24749,9 @@ ${syN() ? `<button data-ve="back">BACK TO OUR SONG<small>ends the Variator on al
               ],
               es: [
                 "## Versión 1.3.0",
-                "- **Sincronizar:** los dispositivos de la misma Wi-Fi pueden compartir una sesión (Files ▸ **SYNC**, emparejados con códigos QR, sin servidor): la misma canción y muestras, PLAY / STOP compartidos, las ediciones de uno aparecen en los demás, **SOUND HERE** para elegir el dispositivo que suena, y un potenciómetro MIDI en uno mueve el mezclador de todos.",
-                "## Versión 1.2.0",
+                "- **Sincronizar:** los dispositivos de la misma Wi-Fi pueden compartir una sesión (Files ▸ **SYNC**, emparejados con dos códigos QR leídos con la cámara, sin servidor): la misma canción y muestras, PLAY / STOP compartidos, las ediciones de uno aparecen en los demás, y el **Variator** también se comparte. **SOUND HERE** elige el dispositivo que suena y **SOUND EVERYWHERE** deja sonar a todos. Un potenciómetro MIDI en uno mueve el mezclador de todos. **APP QR** muestra un código que abre la app en otro dispositivo.",
                 "- **MIDI:** el pote de volumen general ahora mueve también los potes del mezclador y del Variator (siguen todos los potes MIDI de volumen). Con los pads de Live FX abiertos, los pads y teclas MIDI tocan los efectos. En el Variator, con el piano abierto solo los pads tocan efectos y las teclas el piano, y con los pads de batería abiertos ambos tocan la batería.",
+                "## Versión 1.2.0",
                 "- **Instálala:** la app ahora es una web app (PWA). Añádela a la pantalla de inicio (iPhone: Safari ▸ Compartir; Android y escritorio: Chrome ▸ Instalar app) y se abre como una app y funciona sin conexión. La nota de bienvenida y **OPTIONS** tienen un botón **INSTALL** que sabe si la app ya está instalada. El APK de Android se retira.",
                 "- **Variator:** estilos nuevos **Lo-Fi**, **Synthwave** y **Dungeon Synth**; el dado también mezcla los potes de VARS; el botón **♫** rota la parte de abajo entre patrones, un piano y pads de batería (lo que toques ahí no se escribe en la canción); toca un canal en cualquier parte para tocarlo, y el dado y el play son iconos sin botón.",
                 "- El **autoguardado** ya no interrumpe la reproducción (espera a que pares).",
@@ -25949,5 +25949,5 @@ ${syN() ? `<button data-ve="back">BACK TO OUR SONG<small>ends the Variator on al
         if (!localStorage.getItem("track-test.welcome")) welcomeShow();
       } catch {}
     </script>
-  <div style="position:fixed;left:4px;bottom:2px;z-index:99;font:700 9px monospace;opacity:.7;pointer-events:none;color:#ff5e7a">TEST BUILD · beta · 223afad</div></body>
+  <div style="position:fixed;left:4px;bottom:2px;z-index:99;font:700 9px monospace;opacity:.7;pointer-events:none;color:#ff5e7a">TEST BUILD · beta · c74349b</div></body>
 </html>
