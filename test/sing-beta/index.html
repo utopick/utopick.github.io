@@ -2753,8 +2753,8 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
         cueNext = (c) => CUES[(CUES.indexOf(c) + 1) % CUES.length];
       function saveState() {
         try {
-          const { view, voice, ex, bpm, updown, listen, key, tempo, octFree, backing, notes, wcue, cex, song, at, range, kar, ranges, airs, vx, game, gameBest } = S;
-          localStorage.setItem("sing-test.state", JSON.stringify({ view, voice, ex, bpm, updown, listen, key, tempo, octFree, backing, notes, wcue, cex, song, at, range, kar, ranges, airs, vx, game, gameBest }));
+          const { master, view, voice, ex, bpm, updown, listen, key, tempo, octFree, backing, notes, wcue, cex, song, at, range, kar, ranges, airs, vx, game, gameBest } = S;
+          localStorage.setItem("sing-test.state", JSON.stringify({ master, view, voice, ex, bpm, updown, listen, key, tempo, octFree, backing, notes, wcue, cex, song, at, range, kar, ranges, airs, vx, game, gameBest }));
         } catch {}
       }
       let dbP;
@@ -2792,7 +2792,15 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
       let ctx = null;
       async function getCtx() {
         // no forced sample rate: Android WebView refuses to connect a 48 kHz mic stream to a 44.1 kHz context
-        if (!ctx || ctx.state === "closed") ctx = new (window.AudioContext || window.webkitAudioContext)();
+        if (!ctx || ctx.state === "closed") {
+          ctx = new (window.AudioContext || window.webkitAudioContext)();
+          // the MASTER volume: everything that goes to ctx.destination goes through this gain first
+          const real = ctx.destination, master = ctx.createGain();
+          master.gain.value = S.master ?? 1;
+          master.connect(real);
+          Object.defineProperty(ctx, "destination", { get: () => master });
+          ctx.masterGain = master;
+        }
         if (ctx.state !== "running") await ctx.resume().catch(() => {});
         return ctx;
       }
@@ -6625,6 +6633,7 @@ registerProcessor("autotune", AutoTune);
             b: {
               en: [
                 "## Version 1.4.0",
+                "- **MIDI knobs:** knob 1 is the master volume (new, for everything the app plays) and knob 4 the tempo in the Warm-up or the speed in Song.",
                 "- **ASSIGN is a function mapper:** it learns your leftmost and rightmost key first (they never get a function), then asks for each function: turn a knob, or hold a key, pad or button for 3 seconds. Rightmost then leftmost skips a function, leftmost then rightmost ends the mapper. Hold the MOD pedal while you press or turn to map MOD + that control. A control is taken only once in a run.",
                 "- **MOD pedal:** on every keyboard the sustain pedal (or button) is now a shift: while it is held, the default pad and knob functions become a second set (knob 1 acts as knob 9, and so on). It keeps sustaining notes. The MOD button in the MIDI options turns this on or off; MAP can pick another key instead of the pedal.",
                 "- **MIDI DEVICE panel without scrolling:** it fits the screen. On an upright phone it turns sideways, and on a short window the controls go beside the diagram.",
@@ -6649,6 +6658,7 @@ registerProcessor("autotune", AutoTune);
               ],
               es: [
                 "## Versión 1.4.0",
+                "- **Potes MIDI:** el pote 1 es el volumen master (nuevo, para todo lo que suena) y el 4 el tempo en Calentamiento o la velocidad en Canción.",
                 "- **ASSIGN es un mapeador de funciones:** primero aprende tu tecla de más a la izquierda y la de más a la derecha (nunca reciben función), y luego pide cada función: gira un pote, o mantén una tecla, pad o botón 3 segundos. La de la derecha y luego la de la izquierda salta una función, la de la izquierda y luego la de la derecha termina. Mantén el pedal MOD mientras pulsas o giras para asignar MOD + ese control. Un control se usa solo una vez por sesión.",
                 "- **Pedal MOD:** en todos los teclados el pedal (o botón) de sustain es ahora una tecla de cambio: mientras se mantiene, las funciones por defecto de pads y potes pasan a ser un segundo juego (el pote 1 actúa como el 9, y así). Sigue sosteniendo notas. El botón MOD de las opciones MIDI lo activa o desactiva, y MAP puede elegir otra tecla en lugar del pedal.",
                 "- **Panel MIDI DEVICE sin desplazamiento:** cabe en la pantalla. En un móvil vertical se gira de lado, y en una ventana baja los controles van junto al dibujo.",
@@ -9220,9 +9230,18 @@ registerProcessor("autotune", AutoTune);
       // (the keys play a reference note as always). The user's own ASSIGN, LEARN and DEFAULTS off take precedence.
       MI.defaults = () => ({
         keys: "REFERENCE NOTE",
+        // knob 1: the master volume, knob 4: the tempo of the warm-up or the speed of the song (the screen that has one)
+        knobs: [["master", "MASTER"], null, null, ["tempo", S.view === "song" ? "SPEED" : "TEMPO"]],
         pads: Array.from({ length: 16 }, (_, i) => ["vx" + i, "SAMPLE " + (i + 1)]),
       });
       MI.actions = () => [
+        { id: "master", group: "Volume", name: "MASTER VOLUME", kind: "knob", run: (v) => ((S.master = v), ctx && ctx.masterGain && (ctx.masterGain.gain.value = v), saveState()) },
+        // the warm-up tempo (50 to 160), or the song's speed (50 to 120 %); both are on screen then, so no card
+        { id: "tempo", group: "Volume", name: "TEMPO / SPEED", kind: "knob", vis: () => S.view === "warm" || S.view === "song", fmt: (x) => (S.view === "song" ? Math.round(TEMPOS[Math.round(x * (TEMPOS.length - 1))] * 100) + "%" : Math.round(50 + x * 110) + " BPM"),
+          run: (v) => {
+            if (S.view === "song") { S.tempo = TEMPOS[Math.round(v * (TEMPOS.length - 1))]; stepApply(); }
+            else if (S.view === "warm") { S.bpm = Math.round(50 + v * 110); $("#wBpm").value = S.bpm; $("#bpmTxt").textContent = S.bpm; saveState(); }
+          } },
         { id: "warm", group: "Practice", name: "WARM-UP START / STOP", kind: "tap", run: () => $("#wPlay").click() },
         { id: "next", group: "Practice", name: "NEXT EXERCISE", kind: "tap", run: () => midiNextEx() },
         { id: "plane", group: "Practice", name: "PLANE START / STOP", kind: "tap", run: () => $("#gPlay").click() },
@@ -10187,5 +10206,5 @@ registerProcessor("autotune", AutoTune);
           }).catch(() => {});
       })();
     </script>
-  <div style="position:fixed;left:4px;bottom:2px;z-index:99;font:700 9px monospace;opacity:.7;pointer-events:none;color:#ff5e7a">TEST BUILD · beta · 50181cf</div></body>
+  <div style="position:fixed;left:4px;bottom:2px;z-index:99;font:700 9px monospace;opacity:.7;pointer-events:none;color:#ff5e7a">TEST BUILD · beta · 4478ad3</div></body>
 </html>
