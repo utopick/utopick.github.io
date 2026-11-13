@@ -17,7 +17,7 @@
     localStorage  play.state   { sel: { pedal, amp, cab: index shown }, fx: { <unit id>: { on, <knob id>: value } },
                                  slots: [27 unit ids in signal order, "" = empty square],
                                  mix: { gtr | riff | trk | loop | click | master: { v: 0..1.5, m: muted } },
-                                 loop: { bpm: 40..240, bars: 1 | 2 | 4 | 8, click: bool, trLoop: repeat tracks,
+                                 loop: { bpm: 40..240, bars: 1 | 2 | 4 | 8, click: bool, trMode: off | one | all (repeat), trShuf, trBoard (tracks through the pedal board), trFx (tracks hear the FX pads), trPitch -12..12, trSpeed 0.5..1.5, trQ: playlist (track ids),
                                          mon: hear the loops while layering, aq: auto quantize, grid: 0..3, sync: recording delay in ms (-1 = auto), latch: loop FX } }
     IndexedDB     "play-pocket" / tracks: { id, name, size, blob }: the backing tracks you add
                   "play-pocket" / loops: { id: pad 0..15, a: bar, o: beat offset, vol, bars, sr, data: Float32Array }: the looper's loops
@@ -578,7 +578,22 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
       #lRib > button, #tRib > button { flex: 1; font-size: 12px; }
       #loop, #tracks { padding-bottom: 6px; }
       /* TRACKS */
-      #trList { margin: 6px; flex: 1; min-height: 0; overflow: auto; display: flex; flex-direction: column; gap: 6px; }
+      #trList, #trQueue { margin: 6px; min-height: 0; overflow: auto; display: flex; flex-direction: column; gap: 6px; }
+      #trList { flex: 1 1 30%; }
+      #trQueue { flex: 1 1 18%; }
+      #trPlayer { margin: 0 6px; padding: 6px; flex: none; display: flex; flex-direction: column; gap: 4px; }
+      #trNow { display: flex; justify-content: space-between; gap: 8px; font: 800 12px var(--mono); }
+      #trName { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      #trTime { color: var(--dim); flex: none; }
+      #trWave { display: block; width: 100%; height: 64px; border: 1px solid var(--line); border-radius: 8px; background: var(--wave, var(--panel)); cursor: pointer; }
+      #trTrans, #trModes { height: 42px; margin: 0; }
+      #trTrans > button { flex: 1; font-size: 18px; }
+      #trModes > button { flex: 1; font-size: 11px; min-width: 0; padding: 0 2px; }
+      #trModes > button.dis { opacity: 0.4; pointer-events: none; }
+      #trPlayer .mkgrid { margin: 2px 0 0; }
+      #mixScope { display: block; flex: 1; min-height: 70px; width: calc(100% - 12px); margin: 6px; border: 1px solid var(--line); border-radius: 8px; background: var(--wave, var(--panel)); }
+      .trk .ta { width: 44px; flex: none; }
+      .trk .ta.on { background: var(--acc); border-color: var(--acc); color: var(--ink); }
       .trk { display: flex; gap: 6px; }
       .trk .tp { flex: 1; min-width: 0; justify-content: flex-start; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
       .trk .tp.on { background: var(--acc); border-color: var(--acc); color: var(--ink); }
@@ -793,11 +808,28 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
       <!-- TRACKS: your own backing tracks -->
       <section id="tracks">
         <div id="trList"></div>
-        <div class="hint">Add songs or backing tracks from this device (MP3, WAV, OGG, M4A...). They are kept here, never uploaded. Tap one to play it, again to stop. They go to the TRACKS knob in the MIXER, not through the board.</div>
+        <div class="card" id="trPlayer">
+          <div id="trNow"><b id="trName">No track</b><span id="trTime">0:00 / 0:00</span></div>
+          <canvas id="trWave" title="The track. Tap to jump there"></canvas>
+          <div class="prow" id="trTrans">
+            <button id="trPrev" title="Previous track" aria-label="Previous track">⏮</button>
+            <button id="trPP" title="Play or pause" aria-label="Play or pause">▶</button>
+            <button id="trStop" title="Stop the track" aria-label="Stop">⏹</button>
+            <button id="trNext" title="Next track" aria-label="Next track">⏭</button>
+          </div>
+          <div class="prow" id="trModes">
+            <button id="trLoop" title="What happens at the end: stop, repeat this track, or repeat the playlist"></button>
+            <button id="trShuf" title="Play the playlist in order or at random"></button>
+            <button id="trBoard" title="Send the track through your pedal board, as if it were played into the guitar input"></button>
+            <button id="trFx" title="Whether the FX pads of the MIXER act on the track (always on when it goes through the board)"></button>
+          </div>
+          <div class="mkgrid" id="trK"></div>
+        </div>
+        <div class="hint" id="trQHead"></div>
+        <div id="trQueue"></div>
         <div class="prow" id="tRib">
-          <button id="trAdd" title="Add audio files from this device"><i>FILES</i>ADD</button>
-          <button id="trLoop" title="Repeat the track when it ends"></button>
-          <button id="trStop" title="Stop the track"><i>TRACK</i>STOP</button>
+          <button id="trAdd" title="Add audio files from this device (MP3, WAV, OGG, M4A...)"><i>FILES</i>ADD</button>
+          <button id="trQClear" title="Empty the playlist (the songs stay on this device)"><i>PLAYLIST</i>CLEAR</button>
         </div>
         <input type="file" id="trFile" accept="audio/*,.mp3,.wav,.ogg,.m4a,.flac,.aac,.opus" multiple hidden />
       </section>
@@ -807,6 +839,7 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
         <div id="fxPads" hidden></div>
         <div class="prow" id="fxBar" hidden><button id="mLatch" title="Effects stay on when tapped (on) or only while held (off)"><i>TAP ON / OFF</i>LATCH</button><button id="mFxOff" title="Turn every effect off"><i>EFFECTS</i>ALL OFF</button></div>
         <div class="hint" id="mixHint">Each source has a volume knob (drag it up or down, tap it twice to put it back) and a mute (M); the master sets what reaches your headphones. The bars move while sound plays. The speaker at the end of the pedal board opens this tab.</div>
+        <canvas id="mixScope" title="The sound that reaches your headphones"></canvas>
         <div class="prow" id="mRib">
           <button class="riffBtn" title="Play a test riff through the board. Tap again to stop."><i>TEST</i>RIFF ▶</button>
           <button id="mFxB"></button>
@@ -1464,7 +1497,7 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
         mlatch: saved.mlatch !== false,
         syn: vetSyn(saved.syn),
         voice: vetVoice(saved.voice),
-        loop: { bpm: clamp(Math.round(+saved.loop?.bpm) || 100, 40, 240), bars: [1, 2, 4, 8].includes(+saved.loop?.bars) ? +saved.loop.bars : 2, click: saved.loop?.click !== false, trLoop: saved.loop?.trLoop === true, mon: saved.loop?.mon !== false, aq: saved.loop?.aq === true, grid: [0, 1, 2, 3].includes(+saved.loop?.grid) ? +saved.loop.grid : 1, sync: Number.isFinite(+saved.loop?.sync) ? clamp(Math.round(+saved.loop.sync), -1, 500) : -1, latch: saved.loop?.latch !== false },
+        loop: { bpm: clamp(Math.round(+saved.loop?.bpm) || 100, 40, 240), bars: [1, 2, 4, 8].includes(+saved.loop?.bars) ? +saved.loop.bars : 2, click: saved.loop?.click !== false, trMode: ["off", "one", "all"].includes(saved.loop?.trMode) ? saved.loop.trMode : saved.loop?.trLoop === true ? "one" : "off", trShuf: saved.loop?.trShuf === true, trBoard: saved.loop?.trBoard === true, trFx: saved.loop?.trFx !== false, trPitch: clamp(Math.round(+saved.loop?.trPitch) || 0, -12, 12), trSpeed: clamp(Number.isFinite(+saved.loop?.trSpeed) && +saved.loop.trSpeed ? +saved.loop.trSpeed : 1, 0.5, 1.5), trQ: Array.isArray(saved.loop?.trQ) ? saved.loop.trQ.filter((x) => typeof x === "string").slice(0, 200) : [], mon: saved.loop?.mon !== false, aq: saved.loop?.aq === true, grid: [0, 1, 2, 3].includes(+saved.loop?.grid) ? +saved.loop.grid : 1, sync: Number.isFinite(+saved.loop?.sync) ? clamp(Math.round(+saved.loop.sync), -1, 500) : -1, latch: saved.loop?.latch !== false },
         view: "pedal",
       };
       const save = () => store("play-test.state", { sel: S.sel, fx: S.fx, slots: S.slots, mix: S.mix, loop: S.loop, mlatch: S.mlatch, syn: { inst: S.syn.inst, oct: S.syn.oct, thru: S.syn.thru, k: S.syn.k }, voice: S.voice });
@@ -1776,6 +1809,11 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
         half.connect(safe);
         N.post = half; // the output stage's entry: the latency test's clicks go here too, so they reach the same output
         N.limit = safe;
+        N.mT = h.g(); // the tracks that do not go through the FX pads join here, after them, at the master's level
+        N.mT.connect(N.post);
+        N.scope = ctx.createAnalyser(); // the mixer's waveform: what reaches the output
+        N.scope.fftSize = 1024;
+        N.post.connect(N.scope);
         // a meter on each mixer strip
         N.meters = {};
         for (const [k, node] of [["gtr", N.chG], ["riff", N.chR], ["trk", N.chT], ["loop", N.chL], ["click", N.chC], ["syn", N.chS], ["voice", N.chV], ["master", N.master]]) {
@@ -1785,6 +1823,7 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
           N.meters[k] = m;
         }
         A.h = h;
+        trRoute(N);
         return N;
       }
       // a fader's gain, with its mute
@@ -1794,6 +1833,7 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
         ramp(A.nodes.chG.gain, A.voiceTab ? 0 : faderGain("gtr")); // the guitar is silent while the voice tab is open: only the voice
         ramp(A.nodes.chR.gain, faderGain("riff"));
         ramp(A.nodes.chT.gain, faderGain("trk"));
+        ramp(A.nodes.mT.gain, faderGain("master"));
         ramp(A.nodes.chL.gain, faderGain("loop"));
         ramp(A.nodes.chC.gain, faderGain("click"));
         ramp(A.nodes.chS.gain, faderGain("syn"));
@@ -1980,6 +2020,7 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
         $("#lvl i").style.width = Math.min(100, Math.sqrt(pk) * 100) + "%";
         $("#lvl").classList.toggle("clip", pk >= 0.98);
         if (S.view === "mix") mixMeters();
+        if (S.view === "tracks") trFrame();
         if (S.view === "loop") lpFrame();
         if (KINDS[S.view]) wavDraw();
         if (S.view === "voice") voiceWave();
@@ -2812,6 +2853,9 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
         det: '<path d="M21 29Q26 23 31 29T41 29M21 36Q26 30 31 36T41 36"/>',
         bri: '<circle cx="32" cy="32" r="3.2"/><path d="M32 23V26M32 38V41M23 32H26M38 32H41M25.6 25.6L27.8 27.8M36.2 36.2L38.4 38.4M25.6 38.4L27.8 36.2M36.2 27.8L38.4 25.6"/>',
         pitch: '<path d="M27 39V25M23 29L27 25L31 29M37 25V39M33 35L37 39L41 35"/>',
+        trk: '<path d="M24 29H28L34 24V40L28 35H24Z"/><path d="M38 28Q41 32 38 36"/>',
+        mst: '<path d="M22 38V26M28 38V30M34 38V24M40 38V28"/>',
+        tsp: '<path d="M22 38A10 10 0 0 1 42 38M32 38L38 30"/>',
         mix: '<circle cx="28" cy="32" r="6.5"/><circle cx="36" cy="32" r="6.5"/>',
         depth: '<path d="M22 38Q32 20 42 38M26.5 38Q32 28 37.5 38M30.5 38Q32 34 33.5 38"/>',
       };
@@ -3628,7 +3672,45 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
         ).join("");
         $$("#mixer .strip").forEach(mixKnobFace);
       }
+      // the waveform of the output, in the empty part of the mixer tab
+      function mixScope() {
+        const cv = $("#mixScope"),
+          w = cv.clientWidth,
+          h = cv.clientHeight,
+          dpr = devicePixelRatio || 1;
+        if (!w) return;
+        if (cv.width !== Math.round(w * dpr) || cv.height !== Math.round(h * dpr)) ((cv.width = Math.round(w * dpr)), (cv.height = Math.round(h * dpr)));
+        const g = cv.getContext("2d"),
+          cs = getComputedStyle(document.documentElement),
+          an = A.nodes && A.nodes.scope;
+        g.setTransform(dpr, 0, 0, dpr, 0, 0);
+        g.clearRect(0, 0, w, h);
+        g.fillStyle = cs.getPropertyValue("--line");
+        g.fillRect(0, h / 2, w, 1);
+        g.font = "700 10px " + (cs.getPropertyValue("--mono") || "monospace");
+        g.fillStyle = cs.getPropertyValue("--dim");
+        g.fillText("OUTPUT", 8, 14);
+        if (!an) return;
+        const d = new Float32Array(an.fftSize);
+        an.getFloatTimeDomainData(d);
+        let i0 = 1;
+        while (i0 < d.length / 2 && !(d[i0 - 1] < 0 && d[i0] >= 0)) i0++; // start on a rising zero crossing: a steady picture
+        if (i0 >= d.length / 2) i0 = 0;
+        const n = d.length - i0 - 1;
+        let pk = 0.05;
+        for (let i = i0; i < d.length; i++) pk = Math.max(pk, Math.abs(d[i]));
+        g.beginPath();
+        for (let i = 0; i < n; i++) {
+          const x = (i / (n - 1)) * w,
+            y = h / 2 - (d[i0 + i] / pk) * (h / 2 - 8);
+          i ? g.lineTo(x, y) : g.moveTo(x, y);
+        }
+        g.strokeStyle = cs.getPropertyValue("--acc");
+        g.lineWidth = 2;
+        g.stroke();
+      }
       function mixMeters() {
+        mixScope();
         $$("#mixer .strip").forEach((st) => {
           const m = A.nodes?.meters[st.dataset.ch];
           st.querySelector(".mt i").style.width = m ? Math.min(100, Math.sqrt(peakOf(m)) * 100) + "%" : "0";
@@ -4515,7 +4597,7 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
       // ======================================================================
       // TRACKS: your own backing tracks, kept on this device in IndexedDB (never uploaded), played into the TRACKS fader
       // ======================================================================
-      const TR = { list: [], cur: -1, src: null, bufs: {}, sure: -1 };
+      const TR = { list: [], cur: -1, sel: -1, src: null, pn: null, bufs: {}, peaks: {}, sure: -1, paused: false, base: 0, tS: 0, dur: 0, neutral: true };
       const MAX_TRACK = 80 * 1024 * 1024;
       function idbDo(mode, fn, store = "tracks") {
         return new Promise((ok, no) => {
@@ -4539,56 +4621,326 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
         } catch {
           TR.list = [];
         }
+        S.loop.trQ = S.loop.trQ.filter((id) => TR.list.some((t) => t.id === id));
         trFace();
       }
+      // ---- what plays after what: the playlist, or all the songs when it is empty
+      const trIdx = (id) => TR.list.findIndex((t) => t.id === id);
+      const trOrder = () => {
+        const q = S.loop.trQ.map(trIdx).filter((i) => i >= 0);
+        return q.length ? q : TR.list.map((_, i) => i);
+      };
+      function trNextIndex(dir) {
+        const o = trOrder(),
+          me = TR.cur >= 0 ? TR.cur : TR.sel;
+        if (!o.length) return -1;
+        if (S.loop.trShuf && dir > 0 && o.length > 1) {
+          let n;
+          do n = o[Math.floor(Math.random() * o.length)];
+          while (n === me);
+          return n;
+        }
+        const at = o.indexOf(me),
+          n = at < 0 ? (dir > 0 ? 0 : o.length - 1) : at + dir;
+        if (n >= o.length) return S.loop.trMode === "all" ? o[0] : -1;
+        if (n < 0) return S.loop.trMode === "all" ? o[o.length - 1] : o[0];
+        return o[n];
+      }
+      const trRate = () => S.loop.trSpeed;
+      const trSemis = () => S.loop.trPitch;
+      // where the track is now (seconds): what was played when it paused, plus what has run since at the speed it runs at
+      function trPos() {
+        if (TR.cur < 0 || TR.paused || !TR.src || !A.ctx) return TR.base;
+        return Math.min(TR.dur, TR.base + (A.ctx.currentTime - TR.tS) * trRate());
+      }
+      // the track goes to the TRACKS fader: straight, or through the pitch worklet when pitch and speed are off their neutral values
+      // (the speed changes the pitch with it, so the worklet puts it back, and adds the pitch you asked for)
+      function trWire(src) {
+        if (TR.pn) {
+          try {
+            TR.pn.disconnect();
+          } catch {}
+          TR.pn = null;
+        }
+        try {
+          src.disconnect();
+        } catch {}
+        const neutral = trSemis() === 0 && trRate() === 1;
+        TR.neutral = neutral;
+        if (neutral || !A.wl) {
+          src.connect(A.nodes.chT);
+          if (!neutral) src.detune.value = trSemis() * 100; // no worklet: the pitch moves the speed too
+          return;
+        }
+        TR.pn = new AudioWorkletNode(A.ctx, "pp-pitch", { numberOfInputs: 1, numberOfOutputs: 1, outputChannelCount: [1], channelCount: 1, channelCountMode: "explicit" });
+        TR.pn.parameters.get("ratio").value = Math.pow(2, trSemis() / 12) / trRate();
+        src.connect(TR.pn);
+        TR.pn.connect(A.nodes.chT);
+      }
+      // a change of speed or pitch while playing: carry on from the same place
+      function trApply() {
+        if (!TR.src || !A.ctx) return;
+        TR.base = trPos();
+        TR.tS = A.ctx.currentTime;
+        TR.src.playbackRate.value = trRate();
+        const neutral = trSemis() === 0 && trRate() === 1;
+        if (neutral !== TR.neutral || (!TR.neutral && !A.wl)) trWire(TR.src);
+        else if (TR.pn) TR.pn.parameters.get("ratio").value = Math.pow(2, trSemis() / 12) / trRate();
+        else if (!A.wl) TR.src.detune.value = trSemis() * 100;
+      }
+      // where the TRACKS fader goes: the master (the FX pads act on it), the master after the FX pads, or the pedal board
+      function trRoute(N = A.nodes) {
+        if (!N || !N.chT) return;
+        try {
+          N.chT.disconnect();
+        } catch {}
+        N.chT.connect(S.loop.trBoard ? N.rig : S.loop.trFx === false ? N.mT : N.master);
+      }
+      async function trBuf(t) {
+        if (TR.bufs[t.id]) return TR.bufs[t.id];
+        toast("Loading " + t.name + "…");
+        try {
+          const buf = (TR.bufs[t.id] = await A.ctx.decodeAudioData(await t.blob.arrayBuffer())),
+            d = buf.getChannelData(0),
+            n = 400,
+            pk = new Float32Array(n),
+            step = Math.max(1, Math.floor(d.length / n));
+          for (let i = 0; i < n; i++) {
+            let m = 0;
+            for (let k = i * step; k < Math.min(d.length, (i + 1) * step); k += 8) m = Math.max(m, Math.abs(d[k]));
+            pk[i] = m;
+          }
+          TR.peaks[t.id] = pk;
+          return buf;
+        } catch {
+          toast("This browser cannot play that file", 2600);
+          return null;
+        }
+      }
+      function trKill() {
+        if (TR.src) {
+          TR.src.onended = null;
+          try {
+            TR.src.stop();
+          } catch {}
+        }
+        if (TR.pn) {
+          try {
+            TR.pn.disconnect();
+          } catch {}
+          TR.pn = null;
+        }
+        TR.src = null;
+      }
+      async function trStart(i, off = 0) {
+        trKill();
+        await engineEnsure();
+        const t = TR.list[i];
+        if (!t || !A.ctx) return;
+        const buf = await trBuf(t);
+        if (!buf || !A.ctx) return;
+        const src = A.ctx.createBufferSource();
+        src.buffer = buf;
+        src.loop = S.loop.trMode === "one";
+        src.playbackRate.value = trRate();
+        trWire(src);
+        trRoute();
+        src.onended = () => TR.src === src && trEnded();
+        src.start(0, clamp(off, 0, Math.max(0, buf.duration - 0.05)));
+        Object.assign(TR, { src, cur: i, sel: i, paused: false, base: off, tS: A.ctx.currentTime, dur: buf.duration });
+        trFace();
+      }
+      // the track ended by itself: the next one, the same again, or the end of the playlist
+      function trEnded() {
+        const n = trNextIndex(1);
+        TR.src = null;
+        if (n < 0) return trStop();
+        trStart(n);
+      }
+      function trStop() {
+        trKill();
+        TR.cur = -1;
+        TR.paused = false;
+        TR.base = 0;
+        trFace();
+      }
+      function trPause() {
+        if (!TR.src) return;
+        TR.base = trPos();
+        trKill();
+        TR.paused = true;
+        trFace();
+      }
+      async function trToggle() {
+        if (TR.src) return trPause();
+        if (TR.paused && TR.sel >= 0) return trStart(TR.sel, TR.base);
+        const o = trOrder();
+        if (!o.length) return toast("Add a song first");
+        trStart(TR.sel >= 0 && TR.sel < TR.list.length ? TR.sel : o[0]);
+      }
+      async function trStep(dir) {
+        const n = trNextIndex(dir);
+        if (n >= 0) trStart(n);
+      }
+      // ---- the screen
+      const trTxt = (sec) => `${Math.floor(sec / 60)}:${String(Math.floor(sec % 60)).padStart(2, "0")}`;
       function trFace() {
+        const inQ = (t) => S.loop.trQ.includes(t.id);
         $("#trList").innerHTML = TR.list.length
           ? TR.list
               .map(
                 (t, i) =>
-                  `<div class="trk"><button class="tp${TR.cur === i ? " on" : ""}" data-i="${i}" title="${TR.cur === i ? "Stop" : "Play"} ${esc(t.name)}">${TR.cur === i ? "■" : "▶"} ${esc(t.name)}</button><button class="td${TR.sure === i ? " sure" : ""}" data-del="${i}" title="Delete ${esc(t.name)} from this device" aria-label="Delete ${esc(t.name)}">${TR.sure === i ? "SURE?" : "✕"}</button></div>`,
+                  `<div class="trk"><button class="tp${TR.cur === i ? " on" : ""}" data-i="${i}" title="${TR.cur === i ? "Stop" : "Play"} ${esc(t.name)}">${TR.cur === i ? "■" : "▶"} ${esc(t.name)}</button><button class="ta${inQ(t) ? " on" : ""}" data-q="${i}" title="${inQ(t) ? "Take it off the playlist" : "Add it to the playlist"}" aria-label="${inQ(t) ? "Take off the playlist" : "Add to the playlist"}">${inQ(t) ? "✓" : "＋"}</button><button class="td${TR.sure === i ? " sure" : ""}" data-del="${i}" title="Delete ${esc(t.name)} from this device" aria-label="Delete ${esc(t.name)}">${TR.sure === i ? "SURE?" : "✕"}</button></div>`,
               )
               .join("")
           : `<div class="card hint">No tracks yet: ADD one from this device.</div>`;
-        $("#trLoop").innerHTML = `<i>AT THE END</i>${S.loop.trLoop ? "REPEAT ON" : "REPEAT OFF"}`;
-        $("#trLoop").classList.toggle("on", S.loop.trLoop);
+        const q = S.loop.trQ.map(trIdx).filter((i) => i >= 0);
+        $("#trQHead").textContent = q.length ? "PLAYLIST · " + q.length + (q.length > 1 ? " songs" : " song") : "PLAYLIST · empty: all the songs play in order. Tap ＋ on a song to make your own.";
+        $("#trQueue").innerHTML = q
+          .map((i) => `<div class="trk"><button class="tp${TR.cur === i ? " on" : ""}" data-i="${i}" title="Play ${esc(TR.list[i].name)}">${TR.cur === i ? "■" : "▶"} ${esc(TR.list[i].name)}</button><button class="td" data-uq="${i}" title="Take it off the playlist" aria-label="Take off the playlist">✕</button></div>`)
+          .join("");
+        const cur = TR.list[TR.cur >= 0 ? TR.cur : TR.sel];
+        $("#trName").textContent = cur ? cur.name : "No track";
+        $("#trPP").textContent = TR.src ? "⏸" : "▶";
+        $("#trPP").classList.toggle("on", !!TR.src);
+        const M = { off: "OFF", one: "THIS SONG", all: "PLAYLIST" };
+        $("#trLoop").innerHTML = `<i>REPEAT</i>${M[S.loop.trMode]}`;
+        $("#trLoop").classList.toggle("on", S.loop.trMode !== "off");
+        $("#trShuf").innerHTML = `<i>ORDER</i>${S.loop.trShuf ? "SHUFFLE" : "IN ORDER"}`;
+        $("#trShuf").classList.toggle("on", S.loop.trShuf);
+        $("#trBoard").innerHTML = `<i>PEDAL BOARD</i>${S.loop.trBoard ? "ON" : "OFF"}`;
+        $("#trBoard").classList.toggle("on", S.loop.trBoard);
+        $("#trFx").innerHTML = `<i>FX PADS</i>${S.loop.trFx || S.loop.trBoard ? "ON" : "OFF"}`;
+        $("#trFx").classList.toggle("on", S.loop.trFx || S.loop.trBoard);
+        $("#trFx").classList.toggle("dis", S.loop.trBoard);
+        trKnobs && trKnobs();
+        trFrame();
       }
-      function trStop() {
-        try {
-          TR.src?.stop();
-        } catch {}
-        TR.src = null;
-        TR.cur = -1;
-        trFace();
-      }
-      async function trPlay(i) {
-        if (TR.cur === i) return trStop(), toast("Track stopped");
-        trStop();
-        await engineEnsure();
-        const t = TR.list[i];
-        let buf = TR.bufs[t.id];
-        if (!buf)
-          try {
-            toast("Loading " + t.name + "…");
-            buf = TR.bufs[t.id] = await A.ctx.decodeAudioData(await t.blob.arrayBuffer());
-          } catch {
-            return toast("This browser cannot play that file", 2600);
+      // the clock and the wave with its play head (every frame while the tab is open and the engine runs)
+      function trFrame() {
+        if (S.view !== "tracks") return;
+        const pos = trPos();
+        $("#trTime").textContent = `${trTxt(pos)} / ${trTxt(TR.dur || 0)}`;
+        const cv = $("#trWave"),
+          w = cv.clientWidth,
+          h = cv.clientHeight,
+          dpr = devicePixelRatio || 1;
+        if (!w) return;
+        if (cv.width !== Math.round(w * dpr)) ((cv.width = Math.round(w * dpr)), (cv.height = Math.round(h * dpr)));
+        const g = cv.getContext("2d"),
+          cs = getComputedStyle(document.documentElement),
+          t = TR.list[TR.cur >= 0 ? TR.cur : TR.sel],
+          pk = t && TR.peaks[t.id];
+        g.setTransform(dpr, 0, 0, dpr, 0, 0);
+        g.clearRect(0, 0, w, h);
+        g.fillStyle = cs.getPropertyValue("--line");
+        g.fillRect(0, h / 2, w, 1);
+        if (pk) {
+          const f = TR.dur ? pos / TR.dur : 0;
+          for (let x = 0; x < w; x++) {
+            const a = pk[Math.min(pk.length - 1, Math.floor((x / w) * pk.length))] * (h / 2 - 3);
+            g.fillStyle = cs.getPropertyValue(x / w <= f ? "--acc" : "--dim");
+            g.fillRect(x, h / 2 - a, 1, Math.max(1, a * 2));
           }
-        if (!A.ctx) return;
-        const src = A.ctx.createBufferSource();
-        src.buffer = buf;
-        src.loop = S.loop.trLoop;
-        src.connect(A.nodes.chT);
-        src.onended = () => TR.src === src && trStop();
-        src.start();
-        Object.assign(TR, { src, cur: i });
-        trFace();
-        toast("Playing " + t.name);
+          g.fillStyle = cs.getPropertyValue("--text");
+          g.fillRect(Math.round(f * w), 0, 2, h);
+        } else {
+          g.font = "700 10px " + (cs.getPropertyValue("--mono") || "monospace");
+          g.fillStyle = cs.getPropertyValue("--dim");
+          g.fillText("PLAY A SONG TO SEE ITS WAVE", 8, 14);
+        }
       }
-      $("#trList").addEventListener("click", async (e) => {
+      // the knobs: the TRACKS and the MASTER volume, the pitch (semitones, the speed untouched) and the speed (the pitch untouched)
+      const TRK = [
+        ["trk", "TRACK", (v) => dbTxt(v * 1.5)],
+        ["mst", "MASTER", (v) => dbTxt(v * 1.5)],
+        ["tpi", "PITCH", (v) => (trSemis() > 0 ? "+" : "") + trSemis() + " st"],
+        ["tsp", "SPEED", (v) => Math.round(trRate() * 100) + "%"],
+      ];
+      KICO.tpi = KICO.pitch;
+      const trKnobs = mkPanel(
+        $("#trK"),
+        TRK,
+        (k) => (k === "trk" ? S.mix.trk.v / 1.5 : k === "mst" ? S.mix.master.v / 1.5 : k === "tpi" ? (trSemis() + 12) / 24 : trRate() - 0.5),
+        (k, v) => {
+          if (k === "trk" || k === "mst") {
+            S.mix[k === "trk" ? "trk" : "master"].v = Math.round(v * 1.5 * 100) / 100;
+            applyMix();
+          } else if (k === "tpi") {
+            S.loop.trPitch = Math.round(v * 24) - 12;
+            trApply();
+          } else {
+            S.loop.trSpeed = Math.round((0.5 + v) * 20) / 20;
+            trApply();
+          }
+          save();
+          if (S.view === "mix") mixFace();
+        },
+        (k) => (k === "trk" ? MIX0.trk.v / 1.5 : k === "mst" ? MIX0.master.v / 1.5 : k === "tpi" ? 0.5 : 0.5),
+      );
+      $("#trWave").addEventListener("pointerdown", (e) => {
+        if (!TR.dur || TR.sel < 0) return;
+        const r = e.currentTarget.getBoundingClientRect(),
+          off = clamp((e.clientX - r.left) / r.width, 0, 1) * TR.dur;
+        if (TR.src) trStart(TR.sel, off);
+        else Object.assign(TR, { base: off, paused: true });
+        trFace();
+      });
+      $("#trPP").onclick = trToggle;
+      $("#trPrev").onclick = () => trStep(-1);
+      $("#trNext").onclick = () => trStep(1);
+      $("#trStop").onclick = () => (TR.cur >= 0 || TR.paused ? (trStop(), toast("Track stopped")) : toast("No track playing"));
+      $("#trLoop").onclick = () => {
+        S.loop.trMode = { off: "one", one: "all", all: "off" }[S.loop.trMode];
+        save();
+        if (TR.src) TR.src.loop = S.loop.trMode === "one";
+        trFace();
+        toast({ off: "The tracks play once", one: "This song repeats", all: "The playlist repeats" }[S.loop.trMode]);
+      };
+      $("#trShuf").onclick = () => {
+        S.loop.trShuf = !S.loop.trShuf;
+        save();
+        trFace();
+        toast(S.loop.trShuf ? "The playlist plays at random" : "The playlist plays in order");
+      };
+      $("#trBoard").onclick = () => {
+        S.loop.trBoard = !S.loop.trBoard;
+        save();
+        trRoute();
+        trFace();
+        toast(S.loop.trBoard ? "The track goes through your pedal board" : "The track goes straight to the mix");
+      };
+      $("#trFx").onclick = () => {
+        if (S.loop.trBoard) return toast("Through the board, the FX pads always act on it");
+        S.loop.trFx = !S.loop.trFx;
+        save();
+        trRoute();
+        trFace();
+        toast(S.loop.trFx ? "The FX pads act on the track" : "The FX pads leave the track alone");
+      };
+      $("#trQClear").onclick = () => {
+        S.loop.trQ = [];
+        save();
+        trFace();
+        toast("Playlist empty");
+      };
+      const trRows = async (e) => {
         const p = e.target.closest("[data-i]"),
+          q = e.target.closest("[data-q]"),
+          uq = e.target.closest("[data-uq]"),
           d = e.target.closest("[data-del]");
-        if (p) return trPlay(+p.dataset.i);
+        if (p) {
+          const i = +p.dataset.i;
+          return TR.cur === i ? (trStop(), toast("Track stopped")) : trStart(i);
+        }
+        if (q || uq) {
+          const id = TR.list[+(q || uq).dataset[q ? "q" : "uq"]].id,
+            at = S.loop.trQ.indexOf(id);
+          if (at >= 0) S.loop.trQ.splice(at, 1);
+          else S.loop.trQ.push(id);
+          save();
+          return trFace();
+        }
         if (!d) return;
         const i = +d.dataset.del;
         // delete asks twice: the button turns into SURE? for 3 s
@@ -4601,9 +4953,14 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
         const t = TR.list[i];
         if (TR.cur === i) trStop();
         else if (TR.cur > i) TR.cur--;
+        if (TR.sel === i) TR.sel = -1;
+        else if (TR.sel > i) TR.sel--;
         TR.sure = -1;
         TR.list.splice(i, 1);
+        S.loop.trQ = S.loop.trQ.filter((x) => x !== t.id);
         delete TR.bufs[t.id];
+        delete TR.peaks[t.id];
+        save();
         trFace();
         try {
           await idbDo("readwrite", (st) => st.delete(t.id));
@@ -4611,7 +4968,9 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
         } catch {
           toast("Could not delete it from this device", 2600);
         }
-      });
+      };
+      $("#trList").addEventListener("click", trRows);
+      $("#trQueue").addEventListener("click", trRows);
       $("#trAdd").onclick = () => $("#trFile").click();
       $("#trFile").onchange = async (e) => {
         const files = [...e.target.files];
@@ -4635,14 +4994,6 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
         trFace();
         if (n) toast(n + (n > 1 ? " tracks added" : " track added"));
       };
-      $("#trLoop").onclick = () => {
-        S.loop.trLoop = !S.loop.trLoop;
-        save();
-        if (TR.src) TR.src.loop = S.loop.trLoop;
-        trFace();
-        toast(S.loop.trLoop ? "Tracks repeat" : "Tracks play once");
-      };
-      $("#trStop").onclick = () => (TR.src ? (trStop(), toast("Track stopped")) : toast("No track playing"));
 
       // ======================================================================
       // LATENCY TEST: a ball bounces wall to wall; each time it crosses the middle a click sounds and you pick a string.
@@ -4875,16 +5226,22 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
             en: [
               "The note icon at the top opens **TRACKS**: your own backing tracks or songs to play along with.",
               "- **ADD** picks audio files from this device (MP3, WAV, OGG, M4A and whatever else the browser can play, up to 80 MB each). They are kept on this device and never uploaded.",
-              "- Tap a track to play it, again to stop it. **REPEAT** plays it again when it ends. **STOP** stops it.",
-              "- **✕** deletes a track from this device: tap it, then **SURE?**.",
-              "- Tracks go to the **TRACKS** knob in the MIXER, not through the board, and are not recorded by the looper.",
+              "- The list at the top has your songs: tap one to play it, **＋** adds it to the **PLAYLIST** below (**✓** takes it off), **✕** deletes it from this device (tap it, then **SURE?**). With an empty playlist all the songs play in order.",
+              "- The player shows the **wave** of the song (tap it to jump there) and its time. **⏮ ⏸/▶ ⏹ ⏭** go to the previous song, play or pause, stop, and go to the next one.",
+              "- **REPEAT**: OFF (stop at the end), THIS SONG, or the whole PLAYLIST. **ORDER**: in order or at **SHUFFLE**.",
+              "- **PEDAL BOARD** sends the song through your pedals, as if it came in with the guitar. **FX PADS** says whether the FX pads of the MIXER act on it (always when it goes through the board).",
+              "- **TRACK** and **MASTER** are the volume of the song and of everything. **PITCH** moves the song up or down (12 semitones each way) without changing its speed, and **SPEED** (50 to 150%) without changing its pitch.",
+              "- Tracks go to the **TRACKS** knob in the MIXER and are not recorded by the looper.",
             ],
             es: [
               "El icono de nota de arriba abre **TRACKS**: tus propias pistas de acompañamiento o canciones para tocar encima.",
               "- **ADD** elige archivos de audio de este dispositivo (MP3, WAV, OGG, M4A y lo que el navegador pueda reproducir, hasta 80 MB cada uno). Se guardan en este dispositivo y nunca se suben.",
-              "- Toca una pista para reproducirla, otra vez para pararla. **REPEAT** la repite al acabar. **STOP** la para.",
-              "- **✕** borra una pista de este dispositivo: tócalo y después **SURE?**.",
-              "- Las pistas van al potenciómetro **TRACKS** del MIXER, no pasan por el board, y el looper no las graba.",
+              "- La lista de arriba tiene tus canciones: toca una para reproducirla, **＋** la añade a la **PLAYLIST** de abajo (**✓** la quita), **✕** la borra de este dispositivo (tócalo y después **SURE?**). Con la lista vacía suenan todas en orden.",
+              "- El reproductor muestra la **onda** de la canción (tócala para saltar ahí) y su tiempo. **⏮ ⏸/▶ ⏹ ⏭** van a la canción anterior, reproducen o pausan, paran y van a la siguiente.",
+              "- **REPEAT**: OFF (para al final), THIS SONG o toda la PLAYLIST. **ORDER**: en orden o al azar (**SHUFFLE**).",
+              "- **PEDAL BOARD** manda la canción por tus pedales, como si entrara con la guitarra. **FX PADS** dice si los FX pads del MIXER actúan sobre ella (siempre cuando pasa por el board).",
+              "- **TRACK** y **MASTER** son el volumen de la canción y de todo. **PITCH** sube o baja la canción (12 semitonos a cada lado) sin cambiar su velocidad, y **SPEED** (50 a 150 %) sin cambiar su tono.",
+              "- Las pistas van al potenciómetro **TRACKS** del MIXER y el looper no las graba.",
             ],
           },
         },
@@ -4896,12 +5253,14 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
               "The faders icon at the top (or the speaker on the board) opens the **MIXER**: a strip for the **GUITAR** (your input), the **TEST RIFF**, the **SYNTH**, the **VOICE**, the **TRACKS**, the **LOOPS** and the **CLICK**, and the **MASTER**, which sets what reaches your headphones. Each one is a **knob** like TRACK.Pocket's mixer: drag it up or down, tap it twice to put it back, and **M** mutes it.",
               "- 0 dB is unchanged. The bar under each one shows its level while sound plays.",
               "- A soft limiter after the master keeps a loud board from clipping harshly.",
+              "- The **wave** at the bottom is what reaches the output (after the effects).",
               "- The lower button swaps the knobs for the **FX PADS**: effects on the whole mix (LO-FI, TAPE, RADIO, PHONE, UNDERWATER, STUTTER, LOW PASS, HIGH PASS, ECHO, REVERB, ROBOT, CRUNCH). With **LATCH** on, a tap turns an effect on or off, so you can leave LO-FI running; with it off, an effect plays while you hold it. **ALL OFF** turns them all off. **BACK TO MIXER** brings the knobs back.",
             ],
             es: [
               "El icono de faders de arriba (o el altavoz del board) abre el **MIXER**: una tira para la **GUITAR** (tu entrada), el **TEST RIFF**, el **SYNTH**, la **VOICE**, las **TRACKS**, los **LOOPS** y el **CLICK**, y el **MASTER**, que decide lo que llega a tus auriculares. Cada una es un **potenciómetro** como el mezclador de TRACK.Pocket: arrástralo arriba o abajo, tócalo dos veces para devolverlo a su sitio, y **M** lo silencia.",
               "- 0 dB es sin cambio. La barra de debajo muestra su nivel mientras suena.",
               "- Un limitador suave después del master evita que un board muy fuerte sature de forma áspera.",
+              "- La **onda** de abajo es lo que llega a la salida (después de los efectos).",
               "- El botón de abajo cambia los potenciómetros por los **FX PADS**: efectos sobre toda la mezcla (LO-FI, TAPE, RADIO, PHONE, UNDERWATER, STUTTER, LOW PASS, HIGH PASS, ECHO, REVERB, ROBOT, CRUNCH). Con **LATCH** activado, un toque enciende o apaga un efecto, así puedes dejar el LO-FI sonando; sin él, el efecto suena mientras lo mantienes pulsado. **ALL OFF** los apaga todos. **BACK TO MIXER** devuelve los potenciómetros.",
             ],
           },
@@ -5018,6 +5377,7 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
           b: {
             en: [
               "## Version 0.5.0",
+                "- **TRACKS is a player:** a wave with a play head (tap to jump), play, pause, stop, previous and next, a PLAYLIST (＋ on a song), repeat (off, this song, playlist), shuffle, TRACK and MASTER volume, PITCH and SPEED knobs that do not change each other, and two switches: through the pedal board, and whether the FX pads act on the song. The MIXER shows the wave of the output.",
                 "- **Microphone blocked:** if the browser or the phone has the microphone switched off, a message now says so and shows the steps to turn it on for iPhone, Android or a computer (before, only a short note flashed by). TUNE, SING and PLAY check when they open.",
                 "- **Lists:** every dropdown now opens as a list of big buttons, grouped like the dropdown was, instead of the browser's own list. Tap one to choose, tap outside or CLOSE to leave.",
               "- **The first beta.** 16 pedals, 4 amps and 4 cabs on a board, with your instrument or the test riff.",
@@ -5030,6 +5390,7 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
             ],
             es: [
               "## Versión 0.5.0",
+                "- **TRACKS es un reproductor:** una onda con cabezal (toca para saltar), play, pausa, stop, anterior y siguiente, una PLAYLIST (＋ en una canción), repetir (no, esta canción, la lista), aleatorio, volumen TRACK y MASTER, potes PITCH y SPEED que no se afectan entre sí, y dos interruptores: por el pedal board, y si los FX pads actúan sobre la canción. El MIXER muestra la onda de la salida.",
                 "- **Micrófono bloqueado:** si el navegador o el teléfono tiene el micrófono desactivado, ahora un mensaje lo dice y muestra los pasos para activarlo en iPhone, Android u ordenador (antes solo pasaba un aviso breve). TUNE, SING y PLAY lo comprueban al abrir.",
                 "- **Listas:** cada desplegable ahora se abre como una lista de botones grandes, agrupada como estaba el desplegable, en vez de la lista del navegador. Toca uno para elegir, toca fuera o CLOSE para salir.",
               "- **La primera beta.** 16 pedales, 4 amplificadores y 4 pantallas en un board, con tu instrumento o el riff de prueba.",
@@ -5320,5 +5681,5 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
           }).catch(() => {});
       })();
     </script>
-  <div style="position:fixed;left:4px;bottom:2px;z-index:99;font:700 9px monospace;opacity:.7;pointer-events:none;color:#ff5e7a">TEST BUILD · beta · 9d7aef7</div></body>
+  <div style="position:fixed;left:4px;bottom:2px;z-index:99;font:700 9px monospace;opacity:.7;pointer-events:none;color:#ff5e7a">TEST BUILD · beta · c34c9ee</div></body>
 </html>
