@@ -597,6 +597,31 @@ const RealFM1 = (() => {
     return { identity: id, image, files };
   }
 
+  // ---- a raw flash (a backup) wrapped as a one-file package, the form the emulator and the firmware list take. flash.bin is the
+  // raw flash from address 0 as stored, so the backup goes in unchanged; the identity is woven in as in M-VAVE's packages.
+  function wrap(flash, identity = "FM-1_000") {
+    const B = 48, K = 47, PREFIX = 20, S = 0x7d, HEAD = 64, ENTRY = 80, FIRST = 0x400;
+    if (flash.length % 4096 || flash.length > 0x100000) throw new Error("A flash copy is whole 4 KiB sectors");
+    const total = FIRST + flash.length, image = new Uint8Array(total).fill(0);
+    const w16 = (b, i, v) => { b[i] = v & 255; b[i + 1] = v >> 8; }, w32 = (b, i, v) => { w16(b, i, v & 0xffff); w16(b, i + 2, v >>> 16); };
+    const entry = new Uint8Array(ENTRY);
+    w16(entry, 4, crc16(flash)); w32(entry, 8, FIRST); w32(entry, 12, flash.length);
+    entry.set(new TextEncoder().encode("flash.bin"), 64);
+    image.set(enc(0xffff, entry), HEAD);
+    const head = new Uint8Array(HEAD);
+    w16(head, 2, crc16(image.subarray(HEAD, HEAD + ENTRY))); w32(head, 4, total); w16(head, 8, 1); w16(head, 10, 4); w16(head, 12, 0x200);
+    head.set(new TextEncoder().encode("AC791N"), 16);
+    w16(head, 0, crc16(head.subarray(2)));
+    image.set(enc(0xffff, head), 0);
+    image.set(flash, FIRST);
+    const markers = Array.from({ length: PREFIX }, (_, i) => (i < identity.length ? (identity.charCodeAt(i) + i + 1) & 255 : S));
+    const out = new Uint8Array(total + PREFIX);
+    for (let i = 0; i < PREFIX; i++) { out.set(image.subarray(i * K, (i + 1) * K), i * B); out[i * B + K] = markers[i]; }
+    out.set(image.subarray(PREFIX * K), PREFIX * B);
+    if (out[PREFIX * B + K] === S) throw new Error("The copy cannot be wrapped (a byte after the prefix reads as a sentinel)");
+    return out;
+  }
+
   // ---- install: the unit asks for the package a piece at a time (0x30, "flag, address, length") and we answer from the image.
   // The unit checks everything (header, chip key, CRCs, each sector) before it erases, so a wrong package is refused there.
   // `start` sends the message that begins it (F0 22 24 35 7F F7 to a running firmware; nothing to a unit already in MIDI mode).
@@ -625,7 +650,7 @@ const RealFM1 = (() => {
     }
   }
 
-  return { CMD, SOFT, frame, parse, soft, Link, probe, backup, unweave, servePackage, crc16, crc32, enc };
+  return { CMD, SOFT, frame, parse, soft, Link, probe, backup, unweave, wrap, servePackage, crc16, crc32, enc };
 })();
 if (typeof module !== "undefined") module.exports = RealFM1;
 
@@ -1693,7 +1718,7 @@ registerProcessor("fm1", Fm1);
           seen = new Set(),
           out = [];
         for (const f of list.slice(0, 2000)) {
-          if (!f || typeof f !== "object" || !/^[\w.-]{1,40}$/.test(f.id) || f.id === "local" || seen.has(f.id) || f.embedded) continue;
+          if (!f || typeof f !== "object" || !/^[\w.-]{1,40}$/.test(f.id) || f.id === "local" || f.id === "backup" || seen.has(f.id) || f.embedded) continue;
           if (typeof f.package !== "string" || !/^https:\/\/[^\s]{1,300}$/.test(f.package) || !str(f.name, 80)) continue;
           seen.add(f.id);
           out.push({ id: f.id, name: str(f.name, 80), version: str(f.version, 40), author: str(f.author, 80), license: str(f.license, 40), about: str(f.about, 600), package: f.package });
@@ -1896,8 +1921,9 @@ registerProcessor("fm1", Fm1);
         seq = 0,
         run = null, // what is running: { f, hash, base, saved: Map(offset -> sector) }
         peak = 0; // the loudest sample lately (for the tests)
-      const current = () => FIRMWARES.find((f) => f.id === $("#fw").value) || (local && $("#fw").value === "local" ? local : null);
+      const current = () => FIRMWARES.find((f) => f.id === $("#fw").value) || (local && $("#fw").value === "local" ? local : null) || (backup && $("#fw").value === "backup" ? backup : null);
       let local = null; // a package opened from a file: { id: "local", name, bytes }
+      let backup = null; // the flash of the user's own FM-1, saved by REAL FM-1 and wrapped as a package: { id: "backup", name, bytes }, kept under "bak:fm1" (the DELETE of downloads leaves it)
       async function packageOf(f) {
         if (f.bytes) return f.bytes;
         const got = vetPkg(await kvGet("pkg:" + f.id));
@@ -2068,6 +2094,7 @@ registerProcessor("fm1", Fm1);
         const sel = $("#fw"),
           was = want;
         sel.textContent = "";
+        if (backup) sel.add(new Option("● " + backup.name, "backup"));
         if (local) sel.add(new Option("● " + local.name + " (your file)", "local"));
         for (const f of FIRMWARES) sel.add(new Option((kept.has(f.id) ? "● " : "") + f.name + (f.version ? " " + f.version : ""), f.id));
         sel.value = [...sel.options].some((o) => o.value === was) ? was : FIRMWARES.some((f) => f.id === "grimm") ? "grimm" : sel.options[0]?.value;
@@ -2078,7 +2105,7 @@ registerProcessor("fm1", Fm1);
             img = el("img"),
             t = el("div", "t"),
             act = el("div", "act"),
-            have = f === local || kept.has(f.id),
+            have = f === local || f === backup || kept.has(f.id),
             dl = el("button", "", have ? "KEPT ●" : "DOWNLOAD"),
             go = el("button", f.id === sel.value ? "on" : "", f.id === sel.value && node ? "IN USE" : "USE");
           const own = () => ((img.onerror = null), kvGet("shot:" + f.id).then((d) => (img.src = typeof d === "string" && d.startsWith("data:image/png;base64,") && d.length < 300000 ? d : NO_IMG)));
@@ -2086,9 +2113,9 @@ registerProcessor("fm1", Fm1);
           img.loading = "lazy";
           img.referrerPolicy = "no-referrer";
           img.onerror = own;
-          if (f === local || !navigator.onLine) own();
+          if (f === local || f === backup || !navigator.onLine) own();
           else img.src = HUB_IMG + f.id + ".webp";
-          t.append(el("b", "", f.name + (f.version ? " " + f.version : "")), el("span", "", f === local ? "your file" : (f.author || "?") + (f.license ? " · " + f.license : "")), el("small", "", f === local ? "Kept on this device. Nothing is uploaded." : f.about));
+          t.append(el("b", "", f.name + (f.version ? " " + f.version : "")), el("span", "", f === backup ? "your FM-1" : f === local ? "your file" : (f.author || "?") + (f.license ? " · " + f.license : "")), el("small", "", f === backup ? "The flash of your real FM-1, saved by REAL FM-1. Kept on this device. Nothing is uploaded." : f === local ? "Kept on this device. Nothing is uploaded." : f.about));
           t.title = f.about || f.name;
           dl.disabled = have;
           dl.title = have ? "Kept on this device: it runs offline" : "Download " + f.name + " and keep it on this device, to run it offline later";
@@ -2099,8 +2126,8 @@ registerProcessor("fm1", Fm1);
           c.append(img, t, act);
           return c;
         };
-        $("#fwList").replaceChildren(...(local ? [local] : []).concat(FIRMWARES).map(card));
-        const n = kept.size + (local ? 1 : 0);
+        $("#fwList").replaceChildren(...[backup, local].filter(Boolean).concat(FIRMWARES).map(card));
+        const n = kept.size + (local ? 1 : 0) + (backup ? 1 : 0);
         $("#stor span").textContent = n + " KEPT";
         navigator.storage?.estimate?.().then((s) => {
           const used = s.usage || 0,
@@ -2162,7 +2189,7 @@ registerProcessor("fm1", Fm1);
       $("#sureNo").onclick = () => (sureClose(), toast("Cancelled"));
       $("#wipe").onclick = () => (node && run ? sure("Erase everything " + run.f.name + " has saved (patches, settings, songs) and start it fresh? This cannot be undone.", () => (boot(true), toast("Saves erased: starting fresh"))) : toast("Turn the FM-1 on first: the saves belong to the firmware that runs"));
       $("#forget").onclick = () =>
-        sure("Delete every downloaded firmware and your opened file from this device? Their saves stay. They can be downloaded again when online.", async () => {
+        sure("Delete every downloaded firmware and your opened file from this device? Their saves stay, and so does the backup of your FM-1. They can be downloaded again when online.", async () => {
           for (const k of await kvKeys()) if (String(k).startsWith("pkg:")) await kvDel(k);
           kept.clear();
           local = null;
@@ -2178,6 +2205,8 @@ registerProcessor("fm1", Fm1);
         const mine = vetPkg(await kvGet("pkg:local"));
         if (mine) local = { id: "local", name: mine.name, version: "", bytes: mine.bytes };
         kept.delete("local");
+        const bak = vetPkg(await kvGet("bak:fm1"));
+        if (bak) backup = { id: "backup", name: bak.name, version: "", bytes: bak.bytes };
         listFace();
         if (!navigator.onLine) return;
         try {
@@ -2511,7 +2540,25 @@ registerProcessor("fm1", Fm1);
         REAL.saved = { uid: info.uid, jedec: info.jedec };
         realSay("Backup saved as " + name + " (" + (bytes.length >> 10) + " KiB, checked against the chip's own checksum). Keep it somewhere safe.");
         toast("Backup saved: " + name, 5000);
+        // kept as the first firmware of the list, and run here: if it draws its screen, the copy is a good one
+        const pkg = RealFM1.wrap(bytes, (/FM-1_\d+/.exec(REAL.ident) || ["FM-1_000"])[0]);
+        const mine = { name: "MY FM-1 · " + new Date().toISOString().slice(0, 10), version: "", bytes: pkg };
+        backup = { id: "backup", ...mine };
+        await kvPut("bak:fm1", mine).catch(() => toast("No room to keep the backup in the list: use the file just saved", 4000));
+        use("backup");
+        realCheck();
       }
+      // does the backup run? its screen must draw something within 25 s (as the firmware smoke test does)
+      async function realCheck() {
+        const colours = () => new Set(new Uint32Array($("#lcd").getContext("2d").getImageData(0, 0, 240, 240).data.buffer)).size;
+        for (let i = 0; i < 50; i++) {
+          await new Promise((r) => setTimeout(r, 500));
+          if (node && colours() > 2) return realSay(realMsgNow() + " It runs here: its screen drew. Open OPTIONS, REAL FM-1 for the next step."), toast("Your backup runs in the emulator ✓", 5000);
+        }
+        realSay(realMsgNow() + " It did not draw a screen here in 25 s. The file is saved, but check it before trusting it.");
+        toast("The backup did not start in the emulator: " + $("#status").textContent, 6000);
+      }
+      const realMsgNow = () => $("#realMsg").textContent.replace(/ It (runs here|did not draw).*$/, "");
       $("#realBackup").onclick = () => {
         if (REAL.up && REAL.info?.mboot) return realRun("Backup", backupNow);
         if (REAL.up) return toast("This unit answers, but it is not m-bootloader or its helper: nothing was sent");
@@ -2778,5 +2825,5 @@ registerProcessor("fm1", Fm1);
       refreshCatalog();
       navigator.storage?.persist?.(); // ask the browser not to clear the kept firmwares and saves
     </script>
-  <div style="position:fixed;left:4px;bottom:2px;z-index:99;font:700 9px monospace;opacity:.7;pointer-events:none;color:#ff5e7a">TEST BUILD · pocket · a2f4018</div></body>
+  <div style="position:fixed;left:4px;bottom:2px;z-index:99;font:700 9px monospace;opacity:.7;pointer-events:none;color:#ff5e7a">TEST BUILD · pocket · 8351d36</div></body>
 </html>
