@@ -2035,7 +2035,7 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
   };
   // Knobs are matched in the order of their CC numbers (mod wheel, sustain and the like are not knobs).
   const NOT_KNOB = new Set([0, 1, 32, 64, 98, 99, 100, 101]);
-  const knobRank = (seen, cc, cc0, ccs) => (ccs ? ccs.indexOf(cc) : cc0 != null ? (cc >= cc0 ? cc - cc0 : -1) : NOT_KNOB.has(cc) || cc >= 120 ? -1 : [...seen].filter((x) => !NOT_KNOB.has(x) && x < 120).sort((a, b) => a - b).indexOf(cc));
+  const knobRank = (seen, cc, cc0, ccs) => (ccs ? ccs.indexOf(cc) : cc0 != null ? (cc >= cc0 ? cc - cc0 : -1) : NOT_KNOB.has(cc) || cc >= 120 ? -1 : [...(seen || [])].filter((x) => !NOT_KNOB.has(x) && x < 120).sort((a, b) => a - b).indexOf(cc));
 
   // ---------- the wireframes (SVG, 840 wide)
   const W = 840;
@@ -2116,10 +2116,11 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
     const layer = {}; // device -> is its mod key held
     const MODP = "pocket.midi.modpedal"; // "0": the mod key (the sustain pedal, or the one MAP found) is off
     const modPedalOn = () => { try { return localStorage.getItem(MODP) !== "0"; } catch { return true; } };
-    const prof = () => withMap(PROFILES[profile] || PROFILES.generic, device);
+    const profById = (id) => (typeof id === "string" && Object.prototype.hasOwnProperty.call(PROFILES, id) ? PROFILES[id] : PROFILES.generic);
+    const prof = () => withMap(profById(profile), device);
     // ---- the starting assignment: what a control does before anyone assigns it (the app lists it in MI.defaults)
     const defs = () => (typeof MI.defaults === "function" ? MI.defaults() : MI.defaults) || {};
-    const profOf = (from) => withMap(PROFILES[saved[from]?.profile || guess(from)] || PROFILES.generic, from);
+    const profOf = (from) => withMap(profById(saved[from]?.profile || guess(from)), from);
     const shortName = (id) => String((MI.actions().find((x) => x.id === id) || { name: id }).name).replace("VOLUME ", "VOL ").slice(0, 12);
     // [action id, label] a model gives control id (a pad "p3", a knob "c1"), or null. Knobs need a known first CC.
     function factory(p, id) {
@@ -2145,10 +2146,13 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
       const r = t === "c" ? knobRank(seenCC[from], +n, p.cc0, p.ccs) : -1;
       return p.cc0 != null && r >= 0 && r < p.knobs ? "c" + (r + (layer[from] ? p.knobs : 0)) : "";
     }
+    const downAs = {};
     // a control nobody assigned, doing what its model's starting assignment says
     function fallback(from, key, cc, on, value) {
       if (!cc && MI.holdDefaults && MI.holdDefaults()) return false; // the app is using the pads and keys for something on screen (a knob keeps its starting function)
-      const e = effective(from, profOf(from), controlOf(from, key)), action = e && e[0] && MI.actions().find((a) => a.id === e[0]);
+      const dk = from + "|" + key, id = !cc && !on && downAs[dk] != null ? downAs[dk] : controlOf(from, key);
+      if (!cc) { if (on) downAs[dk] = id; else delete downAs[dk]; } // a note let go after the MOD key still ends the function it started
+      const e = effective(from, profOf(from), id), action = e && e[0] && MI.actions().find((a) => a.id === e[0]);
       if (!action) return false;
       run(action, from + "/" + key, cc, on, value);
       return true;
@@ -2257,7 +2261,7 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
       if (!c && o.map) return hint("Nothing usable in that map.");
       if (c) hw[device] = c; else delete hw[device];
       persistHw();
-      if (typeof o.model === "string" && PROFILES[o.model]) { record().profile = o.model; persist(); }
+      if (typeof o.model === "string" && Object.prototype.hasOwnProperty.call(PROFILES, o.model)) { record().profile = o.model; persist(); }
       draw();
       hint("Map imported for " + device + (c ? "" : " (model only)") + ".");
     }
@@ -2587,7 +2591,7 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
     }
     function observe(data, from) {
       const [st, a, b] = data, cmd = st & 0xf0;
-      if (from) { tally(data, from); if (!(wiz && el && from === device)) { sniffLayout(from, data); modTrack(from, data); } }
+      if (from) { tally(data, from); modTrack(from, data); if (!(wiz && el && from === device)) sniffLayout(from, data); }
       if (wiz && el && from === device) { wizMsg(data); return true; } // MAP is listening: the app must not react
       if (st >= 0xf0 || !from) return;
       const noteOn = cmd === 0x90 && b > 0, noteOff = cmd === 0x80 || (cmd === 0x90 && b === 0), cc = cmd === 0xb0;
@@ -2796,7 +2800,7 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
           ctx = new (window.AudioContext || window.webkitAudioContext)();
           // the MASTER volume: everything that goes to ctx.destination goes through this gain first
           const real = ctx.destination, master = ctx.createGain();
-          master.gain.value = S.master ?? 1;
+          master.gain.value = Number.isFinite(+S.master) ? Math.max(0, Math.min(1, +S.master)) : 1; // a damaged saved value is not used
           master.connect(real);
           Object.defineProperty(ctx, "destination", { get: () => master });
           ctx.masterGain = master;
@@ -9046,7 +9050,7 @@ registerProcessor("autotune", AutoTune);
           if (L.done === key) L.done = null;
           if (!cc) return;
         }
-        if (cc && midiPanel.isMod(from, key)) return; // the MOD key itself only shifts
+        if (midiPanel.isMod(from, key)) return; // the MOD key itself only shifts
         // the first step: the leftmost key, then the rightmost
         if (L.pre) {
           if (!on) return;
@@ -10206,5 +10210,5 @@ registerProcessor("autotune", AutoTune);
           }).catch(() => {});
       })();
     </script>
-  <div style="position:fixed;left:4px;bottom:2px;z-index:99;font:700 9px monospace;opacity:.7;pointer-events:none;color:#ff5e7a">TEST BUILD · beta · 4478ad3</div></body>
+  <div style="position:fixed;left:4px;bottom:2px;z-index:99;font:700 9px monospace;opacity:.7;pointer-events:none;color:#ff5e7a">TEST BUILD · beta · 40f9e40</div></body>
 </html>
