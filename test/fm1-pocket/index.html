@@ -205,7 +205,7 @@
          the same screen under each filter. Tap one to use it */
       #menu section.row { flex-direction: row; }
       #menu .pane { flex: 1; min-height: 0; display: none; gap: 8px; }
-      #menu [data-sub="keys"] #pvKeys, #menu [data-sub="fx"] #pvFx, #menu [data-sub="midi"] #pvMidi, #menu [data-sub="inst"] #pvInst { display: flex; }
+      #menu [data-sub="keys"] #pvKeys, #menu [data-sub="fx"] #pvFx, #menu [data-sub="midi"] #pvMidi, #menu [data-sub="inst"] #pvInst, #menu [data-sub="real"] #pvReal { display: flex; }
       #menu [data-sub="skin"] #pvSkin { display: grid; grid-template-columns: repeat(auto-fill, minmax(max(130px, 16% - 8px), 1fr)); grid-auto-rows: max-content; align-content: start; overflow: auto; padding-right: 4px; }
       /* a skin card keeps its shape whatever the window: its little FM-1 is drawn to a fixed ratio */
       #menu #pvSkin .pick { height: auto; }
@@ -364,8 +364,22 @@
             <p id="instHint"></p>
             <button id="inst" class="big" title="Install the app: its own window on your home screen or computer, and it works offline"></button>
           </div>
+          <div class="box pane" id="pvReal">
+            <h3>REAL FM-1</h3>
+            <p>Connect a real FM-1 with a USB cable (Chrome or Edge, a computer or an Android phone; not iPhone). It can play along with this one, and this page can back up its flash and install firmwares on it. Do the steps in order and read what each one says.</p>
+            <p id="realNames">Not connected yet.</p>
+            <p id="realMsg"></p>
+            <div class="grid">
+              <button id="realConn" title="Connect a real FM-1 over USB MIDI (asks to use SysEx)"><i>USB MIDI</i>CONNECT</button>
+              <button id="realSync" title="Sync: what you play here goes to the real FM-1 too, and what the real FM-1 plays (notes and clock) comes here"><i>PLAY TOGETHER</i>SYNC OFF</button>
+              <button id="realBackup" title="Step 1: save a copy of the whole flash of the real FM-1 to a file. Nothing is written to the unit except a small helper in RAM"><i>STEP 1 · SAFE</i>BACKUP</button>
+              <button id="realProt" title="Step 2: install the protected bootloader (m-bootloader), so a bad firmware can always be replaced over USB"><i>STEP 2 · WRITES</i>PROTECTOR</button>
+              <button id="realFw" title="Step 3: install the firmware chosen in FIRMWARE on the real FM-1, through the protector's MIDI mode"><i>STEP 3 · WRITES</i>INSTALL FIRMWARE</button>
+            </div>
+          </div>
           <div class="grid">
             <button data-sub="midi" title="MIDI: connect a controller and map its knobs, pads and keys"><i>OPTIONS</i>MIDI CONTROLLER</button>
+            <button data-sub="real" title="A real FM-1 on USB: play together, back up, install firmwares"><i>OPTIONS</i>REAL FM-1</button>
             <button data-sub="inst" title="Install the app on this device"><i>OPTIONS</i>INSTALL THE APP</button>
           </div>
         </section>
@@ -431,6 +445,191 @@ SOFTWARE.
     </div>
     <div id="toast"></div>
 
+    <script id="real-fm1">
+// REAL FM-1: talking to a real M-VAVE FM-1 over USB MIDI (SysEx). Pure protocol, no page code, so Node can test it
+// (tests/real-fm1.test.js). Written from docs/SPEC.md of jvitkauskas/m-bootloader (MIT) sections 4.2, 5.1, 5.6, 11.6, 11.7.
+// What it can do: frame and read messages, ask what is answering (0x12), back up the whole flash (0x23, checked with 0x24),
+// and serve a firmware package to the unit, which reads it by itself (0x30). It never builds a command from data: every
+// command byte below is a constant. 0x21 (erase on stock firmware) differs from 0x23 (read) by one bit and is never sent.
+const RealFM1 = (() => {
+  const CMD = { IDENT: 0x11, INFO: 0x12, READ: 0x23, CRC: 0x24, PKG: 0x30 };
+  const SOFT = { UPGRADE: 0x7f, DOWNLOAD: 0x7d, RESTART: 0x7e }; // F0 22 24 35 <n> F7
+  const PACKET = 512, FINISH = 0xf0000000;
+
+  const crc16 = (b, c = 0) => { // CRC16/XMODEM
+    for (const x of b) { c ^= x << 8; for (let i = 0; i < 8; i++) c = c & 0x8000 ? ((c << 1) ^ 0x1021) & 0xffff : (c << 1) & 0xffff; }
+    return c;
+  };
+  let T32;
+  const crc32 = (b, c = 0xffffffff) => {
+    if (!T32) { T32 = new Uint32Array(256); for (let n = 0; n < 256; n++) { let v = n; for (let k = 0; k < 8; k++) v = v & 1 ? 0xedb88320 ^ (v >>> 1) : v >>> 1; T32[n] = v >>> 0; } }
+    for (const x of b) c = T32[(c ^ x) & 255] ^ (c >>> 8);
+    return (c ^ 0xffffffff) >>> 0;
+  };
+  // the ENC transform (its own inverse): one state step per byte
+  const enc = (key, b) => {
+    const o = new Uint8Array(b.length);
+    let s = key;
+    for (let i = 0; i < b.length; i++) { o[i] = b[i] ^ (s & 255); s = ((s << 1) & 0xffff) ^ (s & 0x8000 ? 0x1021 : 0); }
+    return o;
+  };
+  const le32 = (b, i) => (b[i] | (b[i + 1] << 8) | (b[i + 2] << 16) | (b[i + 3] << 24)) >>> 0;
+
+  // ---- frames: F0, the bytes 8-to-7 packed, F7. Unpacked: 00 59 cmd len16 00 body checksum (complement of the body's sum)
+  function frame(cmd, body = []) {
+    const raw = [0, 0x59, cmd, body.length & 255, (body.length >> 8) & 255, 0, ...body];
+    let sum = 0;
+    for (const x of body) sum += x;
+    raw.push(~sum & 255);
+    const out = [0xf0];
+    let acc = 0, bits = 0;
+    for (const x of raw) {
+      acc |= x << bits; bits += 8;
+      while (bits >= 7) { out.push(acc & 127); acc >>= 7; bits -= 7; }
+    }
+    if (bits) out.push(acc & 127);
+    out.push(0xf7);
+    return Uint8Array.from(out);
+  }
+  // a whole SysEx message (F0 ... F7) -> {cmd, body}, {soft: 0x7d...}, or null when it is not one of ours or fails its checks
+  function parse(msg) {
+    if (msg[0] !== 0xf0 || msg[msg.length - 1] !== 0xf7) return null;
+    const m = msg.slice(1, -1);
+    if (m.length === 4 && m[0] === 0x22 && m[1] === 0x24 && m[2] === 0x35) return { soft: m[3] };
+    const d = [];
+    let acc = 0, bits = 0;
+    for (const x of m) { acc |= (x & 127) << bits; bits += 7; if (bits >= 8) { d.push(acc & 255); acc >>= 8; bits -= 8; } }
+    if (d.length < 7 || d[0] || d[1] !== 0x59 || d[5] || (d[3] | (d[4] << 8)) !== d.length - 7) return null;
+    let sum = 0;
+    for (let i = 6; i < d.length; i++) sum += d[i];
+    if ((sum & 255) !== 255) return null;
+    return { cmd: d[2], body: Uint8Array.from(d.slice(6, d.length - 1)) };
+  }
+  const soft = (n) => Uint8Array.of(0xf0, 0x22, 0x24, 0x35, n, 0xf7);
+  const readBody = (addr, n) => [0, addr & 255, (addr >> 8) & 255, (addr >> 16) & 255, (addr >>> 24) & 255, n & 255, (n >> 8) & 255, (n >> 16) & 255];
+
+  // ---- a link: one MIDI input and one output (or anything with onmessage / send), answers matched by command
+  class Link {
+    constructor(input, output) {
+      this.out = output; this.ms = 1500; this.q = []; this.wait = null; this.buf = [];
+      input.onmidimessage = (e) => this.feed(e.data);
+    }
+    feed(data) { // Web MIDI hands whole SysEx messages; collect anyway if one comes in pieces
+      for (const x of data) {
+        if (x === 0xf0) this.buf = [x];
+        else if (this.buf.length) { this.buf.push(x); if (x === 0xf7) { const p = parse(this.buf); this.buf = []; if (p) this.got(p); } }
+      }
+    }
+    got(p) { if (this.wait && this.wait.test(p)) { const w = this.wait; this.wait = null; clearTimeout(w.t); w.ok(p); } else this.q.push(p); }
+    send(bytes) { this.out.send(bytes); }
+    // wait for a message that passes test(), up to ms; resolves null on timeout. Messages that arrived early are used first.
+    next(test, ms) {
+      const i = this.q.findIndex(test);
+      if (i >= 0) return Promise.resolve(this.q.splice(i, 1)[0]);
+      return new Promise((ok) => { this.wait = { test, ok, t: setTimeout(() => { this.wait = null; ok(null); }, ms) }; });
+    }
+    async ask(cmd, body, test, ms = this.ms, tries = 3) {
+      for (let t = 0; t < tries; t++) {
+        this.q.length = 0;
+        this.send(frame(cmd, body));
+        const r = await this.next(test, ms);
+        if (r) return r;
+      }
+      return null;
+    }
+  }
+
+  // ---- what is answering: m-bootloader's MIDI mode or its RAM stage, and nothing else. Sent only to a port called "... Update".
+  async function probe(link) {
+    const r = await link.ask(CMD.INFO, [], (p) => p.cmd === CMD.INFO || p.cmd === 0, undefined, 2);
+    if (!r) return null;
+    const b = r.body, text = String.fromCharCode(...b.slice(0, 5));
+    if (r.cmd !== CMD.INFO || text !== "MBOOT" || b.length < 28) return { mboot: false };
+    let v = "";
+    for (let i = 28; i < b.length && b[i]; i++) v += String.fromCharCode(b[i]);
+    return {
+      mboot: true, protocol: b[5], kind: b[6] === 1 ? "bootloader" : b[6] === 2 ? "RAM stage" : "unknown", reads: !!(b[7] & 1),
+      key: b[8] | (b[9] << 8), capacity: le32(b, 10), jedec: le32(b, 14), uid: Array.from(b.slice(18, 26), (x) => x.toString(16).padStart(2, "0")).join(""), version: v,
+    };
+  }
+
+  // ---- backup: the whole flash in 512-byte reads, each checked against the address it came back for, then the whole checked
+  // against the chip's own CRC-32 (0x24). Resolves the bytes; throws on a failure.
+  async function backup(link, info, onProgress = () => {}, stop = () => false) {
+    if (!info || !info.mboot || !info.capacity || info.capacity > 0x1000000) throw new Error("This unit did not say what its flash is");
+    const out = new Uint8Array(info.capacity);
+    for (let at = 0; at < out.length; at += PACKET) {
+      if (stop()) throw new Error("Stopped");
+      const n = Math.min(PACKET, out.length - at);
+      const r = await link.ask(CMD.READ, readBody(at, n), (p) => p.cmd === CMD.READ || p.cmd === 0, undefined, 4);
+      if (!r || r.cmd !== CMD.READ || r.body.length !== 8 + n || le32(r.body, 1) !== at) throw new Error("The unit stopped answering at " + at.toString(16));
+      out.set(r.body.subarray(8), at);
+      if (!((at / PACKET) & 31)) onProgress(at / out.length);
+    }
+    const r = await link.ask(CMD.CRC, readBody(0, out.length), (p) => p.cmd === CMD.CRC || p.cmd === 0, 8000, 2);
+    if (!r || r.cmd !== CMD.CRC || r.body.length !== 12) throw new Error("The unit did not give its checksum");
+    if (le32(r.body, 8) !== crc32(out)) throw new Error("The copy does not match the chip's checksum. Try again.");
+    onProgress(1);
+    return out;
+  }
+
+  // ---- a package (.fwsc): identity bytes sit in the 48th byte of the first blocks; the unit reads the image without them
+  function unweave(raw) {
+    const B = 48, K = 47, MIN = 20, S = 0x7d;
+    if (raw.length < 0x1000) throw new Error("This is not a firmware package");
+    let prefix = 0;
+    while (prefix < MIN || raw[prefix * B + K] === S) { prefix++; if ((prefix + 1) * B > raw.length) throw new Error("This is not a firmware package"); }
+    let id = "";
+    for (let i = 0; i < prefix && raw[i * B + K] !== S; i++) id += String.fromCharCode((raw[i * B + K] - i - 1) & 255);
+    const image = new Uint8Array(raw.length - prefix);
+    for (let i = 0; i < prefix; i++) image.set(raw.subarray(i * B, i * B + K), i * K);
+    image.set(raw.subarray(prefix * B), prefix * K);
+    // the header must check out before anything is offered to a unit
+    const head = enc(0xffff, image.subarray(0, 64));
+    const total = le32(head, 4), count = head[8] | (head[9] << 8);
+    if (crc16(head.subarray(2)) !== (head[0] | (head[1] << 8)) || total !== image.length || !count || count > 16) throw new Error("This package's header is damaged");
+    if (crc16(image.subarray(64, 64 + 80 * count)) !== (head[2] | (head[3] << 8))) throw new Error("This package's file list is damaged");
+    const files = [];
+    for (let i = 0; i < count; i++) {
+      const e = enc(0xffff, image.subarray(64 + 80 * i, 64 + 80 * (i + 1)));
+      files.push({ type: e[0] | (e[1] << 8), crc: e[4] | (e[5] << 8), offset: le32(e, 8), size: le32(e, 12) });
+    }
+    return { identity: id, image, files };
+  }
+
+  // ---- install: the unit asks for the package a piece at a time (0x30, "flag, address, length") and we answer from the image.
+  // The unit checks everything (header, chip key, CRCs, each sector) before it erases, so a wrong package is refused there.
+  // `start` sends the message that begins it (F0 22 24 35 7F F7 to a running firmware; nothing to a unit already in MIDI mode).
+  async function servePackage(link, image, { start = true, onProgress = () => {}, stop = () => false, idleMs = 20000, doneMs = 5000 } = {}) {
+    if (start) link.send(soft(SOFT.UPGRADE));
+    let served = 0, last = Date.now();
+    for (;;) {
+      if (stop()) throw new Error("Stopped");
+      const p = await link.next((m) => m.cmd === CMD.PKG, 500);
+      if (!p) {
+        const idle = Date.now() - last;
+        // through a running firmware's update route the unit takes the package, restarts and installs on its own: it just stops asking
+        if (start && served && idle > doneMs) return served;
+        if (idle > idleMs) throw new Error("The unit stopped asking for the package");
+        continue;
+      }
+      last = Date.now();
+      if (p.body.length !== 8) continue;
+      const addr = le32(p.body, 1), n = p.body[5] | (p.body[6] << 8) | (p.body[7] << 16);
+      if (n > PACKET) continue;
+      if (addr === FINISH) { link.send(frame(CMD.PKG, [...p.body, ...new Array(n).fill(0)])); return served; } // the unit has written everything
+      if (addr + n > image.length) continue; // outside the package: say nothing, the unit asks again then gives up
+      link.send(frame(CMD.PKG, [...p.body, ...image.subarray(addr, addr + n)]));
+      served += n;
+      onProgress(Math.min(1, (addr + n) / image.length));
+    }
+  }
+
+  return { CMD, SOFT, frame, parse, soft, Link, probe, backup, unweave, servePackage, crc16, crc32, enc };
+})();
+if (typeof module !== "undefined") module.exports = RealFM1;
+
+    </script>
     <script id="midi-device">
 // Shared, offline MIDI device wireframes and per-device assignments. Kept identical in all Pocket apps.
 // The drawings are original line sketches of each controller's layout (not manufacturer images), made in code.
@@ -2156,12 +2355,14 @@ registerProcessor("fm1", Fm1);
           if (midiPanel.route(from, key, cc, on, b) || midiPanel.fallback(from, key, cc, on, b)) return;
         }
         midiIn(Array.from(data));
+        realThru(data);
       }
       const midiPanel = createMidiPanel(MI, miRun, midiMsg);
       function midiFace() {
         MI.names = [];
         if (MI.acc)
           for (const i of MI.acc.inputs.values()) {
+            if (isRealFM1(i.name)) continue; // the real FM-1 is handled by REAL FM-1 below
             i.onmidimessage = (e) => midiMsg(e.data, i.name || "MIDI input");
             if (i.state !== "disconnected") MI.names.push(i.name || "MIDI input");
           }
@@ -2185,6 +2386,170 @@ registerProcessor("fm1", Fm1);
       $("#midiMod").onclick = () => (midiPanel.modPedal(!midiPanel.modPedal()), modFace(), toast(midiPanel.modPedal() ? "MOD on: hold the sustain pedal and the pads and knobs become a second set" : "MOD off: the pads and knobs stay the first set"));
       modFace();
       $("#midiDev").onclick = () => (MI.names.length ? (midiPanel.open(), toast("Press a key, a pad or turn a knob: it lights up on the drawing")) : toast("Connect a MIDI device first"));
+
+
+      // ======================================================================
+      // REAL FM-1: a real unit on USB MIDI (vendor/real-fm1.js has the protocol and its tests). Sync, backup, install.
+      // The writes are only ever m-bootloader's own packages (checked by SHA-256 here) or a firmware package you chose; the unit
+      // itself checks the package (header, chip key, every CRC) before it erases anything.
+      // ======================================================================
+      const MBOOT = { stage: "SgpzXd8dfPjxwadnzr9bl05dC0HgzSdOnBkTJkyYMGDAoUKECDFDhgwYMGDhwoRHCBAgQIAAIWPnzr1blw8/X5+b358ff4F8+PDFo2dgoluXzwE8eNGDJ06cGRMmTJhPMGDAoUKECDFDhgwYMGDhwoQIECBAgAAhY+fOvVuXDz9fn1EImf/hb2I5cuTIkAEwI0aM//////////////////////////////////////////////////////////81//////////////////////////////////////////////////////////////9k//////////////////////////////////////////////////////////////82//////////////////////////////////////////////////////////////9A//////////////////////////////////////////////////////////////9B//////////////////////////////////////////////////////////////99//////////////////////////////////////////////////////////////99//////////////////////////////////////////////////////////////99//////////////////////////////////////////////////////////////99//////////////////////////////////////////////////////////////99//////////////////////////////////////////////////////////////99//////////////////////////////////////////////////////////////99//////////////////////////////////////////////////////////////99//////////////////////////////////////////////////////////////99//////////////////////////////////////////////////////////////99//////////////////////////////////////////////////////////////99//////////////////////////////////////////////////////////////99////////////////////////////////////////////////////////////////////////////////////////////////////////////////sMbOgSAAAACOHwAAQQAAAHVzYl9oaWRfb3RhLmJpbgDQ1Gog9CAAAACowAEAAAAAdXNiX2hpZF9vdGEuYmluAAYPAAAAEAAA4cL/COnAAWTggC3C/wj5CgDyMi7A6vYKRkVMVUNDQS1MT0FERVItMWUEAlBD4CEQHEBEqEgZRCiNF9WvtRkAoVgZBOr5/xmBAury/4AXRQSAAGQEKADwTwwZlAeMF8SvtBkAoUgZAur2/0QEgAB1BARhgekIQEweBOwFMARgBWJAFsUAVQRAIFUEZQTD/0A50v8EYJQZRSCEQUUhkOEhRVToBwI7gfNVQCHB/zzkwAGYRGDhAUBqAPAJQyHI4TARAKZA4aAKAkNk6AABgABk6AMBZgDxGBQWBRZxj1CmYOCgGhAZZugLBFUEQODY/wAACIHwXYAAegRg4IJLxlIA8CvB/6CCAABPHEUhYOAAjAkWAFdA6oBMQeoAQGhIQTgAQUk8NeSQp6EbwWLFYEAWgRZCIVGKARa04JIKKADzIvFHQCA56AAAQCFaBHYEJBYFFsb/CD4BAADvAWAQFgGHUBYBhUAWAYPA7wFgVgR0BMQeAPBJDEDAYQDvEEAgAEAWQSJCIEGAeT8AQUFhEBdUBBIWQSDnmXYERCDA/wACBACEYGDgmAuEYMD/HBAFAMHvAgDA7yAARSFAI0EgQiFBiEAjQSRCIEGEQCNBJUoA8BnA/8gABQAF7xAAAO8CAAHvAgDC7wIAw+8CAEAjQSJCIb/qbv9AI0EjCgDwAWn/YOCOC0DqKACFYUHgAUBIAfIDQCEBmHg/AZ94P0EgEYZAIQGRKgHwBexMIYAAF8jhUBD4MDDpCQBBFuFkCACA7URWBBAEAhaQAPEUv+oz/9HoAACniHQEBBaA6uwAQCBxkUAWQSA0BASAdAR6P8N2AfATO0SDWEIgAUJC4AAQYOCOS0FguSwhGcFgwGIgAGDgABxAFp4A8Sz1/hE/QmKAQRIWAO+ATCAXVAR1BGA/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4QDgiunW4QAggBdGI1gB4IDoQ4BAIFkkv+qS+0AhuASwjvtAIVLuSAHe6WRYAfAOQL/qVvtGJhBQQOABUIDpFaBI4ABQYOD6yeqEACE4AWFF94D4agJqALAhv+pv+3wYGOEAgJgCACIAQEHgAECMClCA+FgCRk4KoSS/6l37YOBwBMLIAKBBKL/qmvYkiEYlSgPwDwomoEuG+AcK3OlkcIdKv+r5+gBHFJ5gJ+AaUOhiAhYA8S5IQjDqAQBHIc9Cv+p7+zDh/W+w7AJQwf/Ax8AB2OwaIML/1MjAAWDgeGxAI2EWv+p5+0hCASMg6gEAFhbB1Adgwv/Mx8ABEgBAEhZAJSQA8ANn+0hCYf8BAE39v+oM/KaKRiUaAeTXlwYW95zBFASCSeAHACwD8QCI8b/qkvq/6gbzQCBg4I7YCvAhmBuQYMH/AANB/gIlKRyQYIn4CgTA/4D9xwHB/7fIwAFCML/ql/UgAL/qz/PA/+zICA3yBACW55YQBBAWIRYyFr/qS/IABAABABAIAQDwTABgYAAAYBAIBAMANjYAAAAIFCJBQSIUCAAICD4ICAIBUQkGPlFJRT4AQn9AAEJhUUlGIUFFSzEYFBJ/ECdFRUU5PEpJSTABcQkFAzZJSUk2BklJKR5+CQkJfn8PAKA+QUFBIn9BQUE+DwDwDEF/CQkJAT5BSUl6fwgICH8AQX9BACBAQT8Bf3gA8AB/QEBAQH8CDAJ/fwQIEH88ABA+MgDyMAY+QVEhXn8JGSlGRklJSTEBAX8BAT9AQEA/HyBAIB8/QDhAP2MUCBRjAwR4BANhUUlFQ290YS1GTS0xXzkwMO4ABQYA8BQBAAMEAgAAEgEQAQAAAEAJEgIAAAIAAQABCQJlAAIBAIAyCSIBYAEBAAAJJBcA0AABAQkEAQACAQMAAAcSAHBBAAYkAgEBBgCwAgIACSQDAQMBAgEJALACBAEBAQAJBQECQHAAhgUlAQEBCQWBDgDwNgMEAwkEgMjAAUbIwAEnyMABSU5TVEFMTCBBR0FJTgAgLS4vOjw+Kz8wMTIzNDU2Nzg5QUJDREVGR0hJSktMTU5PUFFSU+gAAAD0AAAA9ixUVVZXWFlaAABTV0lUQ0ggT0ZGOiBCQUNLIFRPAE1CT09UADIuNABIT1NUIFNUT1BQRUQARE8gTk9UIDIA8D0AV1JPTkcgQ0hJUCBLRVkAQ09OTkVDVCBVU0IgQU5EAFdSSVRJTkcATk9USElORyBFUkFTRUQgWUVUAEJBRCBQQUNLQUdFAENIRUNLKADwI09QRU4gVEhFIFdFQiBQQUdFLgBGTS0xIE0tRkxBU0hFUgB1c2JfdXBkYXRlX21vZGUALQCRRklSTVdBUkUAJQBiIEVSUk9SOAARVSoAkAAAAQIAAAAAB////////////////////////w==", uboot: "0STq4f92fPjxwadnzr9bl05dC0HgzSdOnBkTJkyYMGDAoUKECDFDhgwYMGDhwoRHCBAgQIAAIWPnzr1blw8/X5+b358fVHt8+PDFo2cb+VuX71o8eNGDJ06cGRMmTJhPMGDAoUKECDFDhgwYMGDhwoQIECBAgAAhY+fOvVuXDz9fn1EImf/hb2I5cuTIkAEwI0aM//////////////////////////////////////////////////////////81//////////////////////////////////////////////////////////////9k//////////////////////////////////////////////////////////////82//////////////////////////////////////////////////////////////9A//////////////////////////////////////////////////////////////9B//////////////////////////////////////////////////////////////99//////////////////////////////////////////////////////////////99//////////////////////////////////////////////////////////////99//////////////////////////////////////////////////////////////99//////////////////////////////////////////////////////////////99//////////////////////////////////////////////////////////////99//////////////////////////////////////////////////////////////99//////////////////////////////////////////////////////////////99//////////////////////////////////////////////////////////////99//////////////////////////////////////////////////////////////99//////////////////////////////////////////////////////////////99//////////////////////////////////////////////////////////////99////////////////////////////////////////////////////////////////////////////////////////////////////////////////A86MnyAAAAC1RAAAQQAAAHVzYl9oaWRfb3RhLmJpbgAQScI1xE0AAACowAEAAAAAdXNiX2hpZF9vdGEuYmluAFoGAAAAEAAAX8DqwCYAAQD///////////+x8P///////zeYQXRKilYAAANchoguHfUD/qP0wbYeMJQA3l+3guL54eMZ2fai5tjQ0f734moLhRn9WR15eHF+rryuEJGy3qtv64COisjxhYJiPPwxiFmLZU+LO7Tx7Sc6aHPPpGqJAipkjXPwEb9GPBIekg/QODH3kqfe5fSbgAHp16eFRflL8dYA90XZj8fd8dyive1wXK6F6Now4+Q3jvLb9fjFVbqWPvo90e7Zu5Af7EK/GKT+kUC2n2Ta3qFRbHETAn0xV0TucQpkPSXkf73hqgeoNjZ6gyd77CvdIg0kimqv6kOC4O3WuxCR8QnTK1zY+YB+dbTMUKFHE39dT4bggfqVdQoxdq8OsUL1AlzFzCCV0AjVW2zRcmwQPINbF+LwXXSvYW7coQ252sbyAUO4iYlvkWdrvbojWYz8TWchCAOjarmF0fPeGn+hgmp42krfqrDmRAnP7cymUA8QWRcKQOoW7nc5dR7hImk3przFZ/URD2gspdx1pjUNL/BGv/En/a+ymAGvBRrNiNf/+sdWk/ko825IAa/E1aeabFk54eRetUDuI/AWztRR9X+M2/kJLe0WszB4IbZURdHDO/aV3JtHQ1AGVbog/qkUqEmlbbpkD6t5uYEXzT1dlShrFAStPWPuZt3apXN49Z1xE3R8og+fnWedrX3TSpqxnQ/0SrDhPbuH5ZAzJm3QigqtDkqacaYq2zDDZcNzjH75oA0LwTIn79nOfBX3WQqIYrgFEnReXjjCLWBFsKYuvz4C7OIbB6HbIQhdgmGX3l0TKSsD7NjLQl3plpAf4xeidJ0c5HrCuHop3xGVgPH1CR41jR81Nbn5BII+CXTIUJHaOtylv/yoc1iX7AA64UPO1s5ePk3dUfd/2CPn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", sha: { stage: "e861ad2ec1a7fe0088e8281d566442acb93a8b7e2dba41437e4edaa16ff25a6c", uboot: "28fb1336dbff22882f545169d57afbb5a732eeb6268331aaa444f1c657b286d3" } };
+      const isRealFM1 = (name) => /\bFM-1\b/i.test(name || "");
+      const isUpdatePort = (name) => /update/i.test(name || "");
+      const REAL = { acc: null, fw: null, up: null, fwLink: null, upLink: null, info: null, sync: false, busy: false, saved: null, ident: "" };
+      const realSay = (t) => ($("#realMsg").textContent = t);
+      const unb64 = (t) => Uint8Array.from(atob(t), (c) => c.charCodeAt(0));
+      const sha256 = async (bytes) => hex(await crypto.subtle.digest("SHA-256", bytes));
+      // the real unit's notes, bend, clock and start/stop arrive in the emulator when SYNC is on; what you play goes the other way
+      const realThru = (data) => REAL.sync && REAL.fw && data[0] < 0xf0 && REAL.fw.out.send(Uint8Array.from(data));
+      function realFace() {
+        const names = [REAL.fw && "firmware port: " + REAL.fw.name, REAL.up && "update port: " + REAL.up.name].filter(Boolean);
+        $("#realNames").textContent = !REAL.acc ? "Not connected yet." : names.length ? names.join(" · ") + (REAL.info ? " · " + (REAL.info.mboot ? REAL.info.kind + " " + REAL.info.version + ", flash " + (REAL.info.capacity >> 10) + " KiB, chip " + REAL.info.jedec.toString(16).toUpperCase() : "answers, but is not m-bootloader") : "") : "No FM-1 found on USB MIDI. Plug it in, switched on.";
+        $("#realConn").classList.toggle("on", !!REAL.acc && names.length > 0);
+        const s = $("#realSync");
+        s.classList.toggle("on", REAL.sync);
+        label(s, "PLAY TOGETHER", REAL.sync ? "SYNC ON" : "SYNC OFF");
+      }
+      async function realScan() {
+        const pick = (map, up) => [...map.values()].find((p) => p.state !== "disconnected" && isRealFM1(p.name) && isUpdatePort(p.name) === up);
+        const find = (up) => {
+          const i = pick(REAL.acc.inputs, up), o = pick(REAL.acc.outputs, up);
+          return i && o ? { in: i, out: o, name: i.name } : null;
+        };
+        const fw = find(false), up = find(true);
+        if (fw?.in !== REAL.fw?.in) {
+          if (REAL.fw) REAL.fw.in.onmidimessage = null;
+          REAL.fw = fw;
+          REAL.fwLink = null;
+          if (fw) {
+            REAL.fwLink = new RealFM1.Link(fw.in, fw.out);
+            fw.in.onmidimessage = (e) => (e.data[0] === 0xf0 ? REAL.busy && REAL.fwLink.feed(e.data) : REAL.sync && midiIn(Array.from(e.data)));
+          }
+        }
+        if (up?.in !== REAL.up?.in) {
+          REAL.up = up;
+          REAL.upLink = up ? new RealFM1.Link(up.in, up.out) : null;
+          REAL.info = null;
+        }
+        if (REAL.up && !REAL.info && !REAL.probing) {
+          REAL.probing = true; // it may still be starting: asked again at the next scan until it answers
+          const up = REAL.up;
+          await new Promise((r) => setTimeout(r, 800));
+          if (REAL.up === up) REAL.info = await RealFM1.probe(REAL.upLink); // the update port is only ever asked what it is
+          REAL.probing = false;
+        }
+        realFace();
+      }
+      $("#realConn").onclick = async () => {
+        if (!navigator.requestMIDIAccess) return toast("This browser has no MIDI (use Chrome or Edge)", 3000);
+        try {
+          REAL.acc = REAL.acc || (await navigator.requestMIDIAccess({ sysex: true }));
+          REAL.acc.onstatechange = realScan;
+          await realScan();
+          toast(REAL.fw || REAL.up ? "Real FM-1 found" : "No FM-1 on USB MIDI", 3000);
+        } catch {
+          toast("MIDI with SysEx was not allowed", 3000);
+        }
+      };
+      $("#realSync").onclick = () => {
+        if (!REAL.fw) return toast("Connect a real FM-1 first (it must be running its firmware)");
+        REAL.sync = !REAL.sync;
+        realFace();
+        toast(REAL.sync ? "Sync on: what you play goes to both, and the real FM-1's notes and clock come here" : "Sync off");
+      };
+      // wait for a port to come back (the unit restarts into another mode after a write)
+      const realWait = async (test, ms) => {
+        for (let t = 0; t < ms / 250; t++) {
+          await new Promise((r) => setTimeout(r, 250));
+          await realScan();
+          if (test()) return true;
+        }
+        return false;
+      };
+      async function realRun(what, job) {
+        if (REAL.busy) return toast("Wait for the unit: it is busy");
+        REAL.busy = true;
+        try {
+          await job();
+        } catch (e) {
+          realSay(what + ": " + e.message);
+          toast(what + " failed: " + e.message, 5000);
+        } finally {
+          REAL.busy = false;
+          realFace();
+        }
+      }
+      // the model the firmware says it is (answer to 0x11): only a firmware that says FM-1 gets a package
+      async function realIdent() {
+        const r = await REAL.fwLink.ask(RealFM1.CMD.IDENT, [], (p) => p.cmd === RealFM1.CMD.IDENT, undefined, 2);
+        if (!r) throw Error("the firmware does not answer (is it running, with its USB cable in?)");
+        REAL.ident = String.fromCharCode(...r.body).replace(/[^\x20-\x7e]+/g, " ").trim();
+        if (!/FM-1/i.test(REAL.ident)) throw Error("this does not say it is an FM-1 (it says: " + REAL.ident + ")");
+        return REAL.ident;
+      }
+      async function realServe(link, image, start, what) {
+        realSay(what + "…");
+        await RealFM1.servePackage(link, image, { start, onProgress: (f) => realSay(what + ": " + Math.round(f * 100) + "%") });
+      }
+      async function mbootImage(which) {
+        const raw = unb64(MBOOT[which]);
+        if ((await sha256(raw)) !== MBOOT.sha[which]) throw Error("the bundled package is damaged");
+        return RealFM1.unweave(raw).image;
+      }
+      const saveFile = (bytes, name) => {
+        const a = el("a");
+        a.href = URL.createObjectURL(new Blob([bytes], { type: "application/octet-stream" }));
+        a.download = name;
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(a.href), 60000);
+      };
+      async function backupNow() {
+        const info = REAL.info;
+        const bytes = await RealFM1.backup(REAL.upLink, info, (f) => realSay("Backup: " + Math.round(f * 100) + "%"));
+        const name = "fm1-backup-" + info.uid + "-" + new Date().toISOString().slice(0, 10) + ".bin";
+        saveFile(bytes, name);
+        REAL.saved = { uid: info.uid, jedec: info.jedec };
+        realSay("Backup saved as " + name + " (" + (bytes.length >> 10) + " KiB, checked against the chip's own checksum). Keep it somewhere safe.");
+        toast("Backup saved: " + name, 5000);
+      }
+      $("#realBackup").onclick = () => {
+        if (REAL.up && REAL.info?.mboot) return realRun("Backup", backupNow);
+        if (REAL.up) return toast("This unit answers, but it is not m-bootloader or its helper: nothing was sent");
+        if (!REAL.fw) return toast("Connect a real FM-1 first");
+        sure("To read the whole flash, a small helper is sent to the unit and runs from RAM. It restarts the unit into the helper (no keys needed) and writes only the firmware's updater storage area, never the boot area or keys. When the backup is done, switch the unit off and on.", () =>
+          realRun("Backup", async () => {
+            await realIdent();
+            await realServe(REAL.fwLink, await mbootImage("stage"), true, "Sending the helper");
+            realSay("Waiting for the unit to restart into the helper…");
+            if (!(await realWait(() => REAL.info?.mboot, 30000))) throw Error("the helper did not appear. Switch the unit off and on, and try again");
+            await backupNow();
+          }));
+      };
+      $("#realProt").onclick = () => {
+        if (!REAL.fw) return toast("Switch the unit on with its firmware running (not the helper) and connect it");
+        if (!REAL.saved) return toast("Step 1 first: save a backup of this unit");
+        const risky = REAL.saved.jedec === 0xb36014 ? " WARNING: this unit has the newer flash chip (UC25HQ80). It has had little testing with the protector and one unit did not start after it. Only go on if you accept that." : "";
+        sure("Install the protected bootloader (m-bootloader v2.4, MIT) on this FM-1? It replaces the boot area. It restarts the unit when done. A power cut during this can leave the unit dead (a USB_KEY dongle is then the way back)." + risky, () =>
+          realRun("Protector", async () => {
+            await realIdent();
+            await realServe(REAL.fwLink, await mbootImage("uboot"), true, "Installing the protector");
+            realSay("Done. The unit restarts. To check it, switch it off, hold PLAY, switch it on: the recovery menu of m-bootloader opens.");
+            toast("Protector installed", 5000);
+          }));
+      };
+      $("#realFw").onclick = () => {
+        const f = current();
+        if (!f) return toast("Choose a firmware in FIRMWARE first");
+        if (!REAL.info?.mboot || REAL.info.kind !== "bootloader") return toast("Put the unit in MIDI mode: with the protector installed, hold PLAY while switching on and choose MIDI mode, then CONNECT");
+        sure("Install " + f.name + " on the real FM-1? Its present firmware is replaced (and its saved patches with it, unless you restore your backup). The unit checks the package before it erases anything and only writes the firmware area, never the boot area.", () =>
+          realRun("Install", async () => {
+            const { identity, image } = RealFM1.unweave(await packageOf(f));
+            if (!/FM-1/i.test(identity)) throw Error("this package says it is for " + identity);
+            await realServe(REAL.upLink, image, false, "Installing " + f.name);
+            realSay("Done: the unit restarts into " + f.name + ". If its screen stays dark, switch it off and on; hold PLAY at power-on for the recovery menu.");
+            toast(f.name + " installed", 5000);
+          }));
+      };
 
       // ======================================================================
       // INSTALL: the browser's own install dialog where there is one, the steps elsewhere (as in the Pocket apps)
@@ -2304,7 +2669,13 @@ registerProcessor("fm1", Fm1);
           "- **RESTART** starts the firmware again. **ERASE** forgets what the running firmware saved. **CLEAR** deletes the downloaded firmwares. The last two ask you to slide to confirm.",
           "- What a firmware saves (patches, songs, settings) is kept on this device, for each exact version of it.",
           "- **LOOK**: the keys (the FM-1's own or a piano), the skin (the colours the FM-1 is sold in, then ours) and the screen filter (LCD, CRT or clean).",
-          "- **OPTIONS**: MIDI and installing the app.",
+          "- **OPTIONS**: MIDI, a real FM-1 on USB, and installing the app.",
+          "## Real FM-1 on USB",
+          "- **CONNECT** (OPTIONS, REAL FM-1) finds an FM-1 on USB MIDI. Chrome or Edge on a computer or an Android phone; not iPhone. The browser asks to use SysEx: allow it.",
+          "- **SYNC** plays together: what you play on your controller goes to the real FM-1 too, and its notes, pitch bend, clock and start/stop come to this one. This one cannot send its own notes out.",
+          "- **BACKUP** (step 1) saves the whole flash of the real FM-1 to a file, checked against the chip's own checksum. It sends a small helper that runs from RAM and writes only the firmware's updater storage. Always do this first.",
+          "- **PROTECTOR** (step 2) installs m-bootloader (MIT, by jvitkauskas) in the boot area: a checked start, a recovery menu (hold PLAY at power-on) and a MIDI mode that reinstalls firmware over USB. It writes the boot area: do it with the unit on a charger or a steady USB port.",
+          "- **INSTALL FIRMWARE** (step 3) writes the firmware chosen in FIRMWARE to the real FM-1, from the protector's MIDI mode. The unit checks the package before it erases anything. To go back, use M-Flasher with your backup.",
           "## MIDI",
           "- **CONNECT MIDI** finds your keyboards and controllers. Their keys play the FM-1 through its MIDI IN.",
           "- On known controllers (Akai MPK mini, Launchkey) the knobs and pads start on the FM-1's controls: knobs 1 to 4 are KNOB1 to 4, knobs 5 to 8 are MASTER, SELECT, PRESETS and ALGORITHM. Pads 1 to 4 are HOME, SAVE, PLAY and REC, pads 5 to 8 are FX, SEL, ENV and LFO.",
@@ -2330,7 +2701,13 @@ registerProcessor("fm1", Fm1);
           "- **RESTART** reinicia el firmware. **ERASE** borra lo que ha guardado el firmware en uso. **CLEAR** borra los firmwares descargados. Los dos últimos piden deslizar para confirmar.",
           "- Lo que guarda un firmware (sonidos, canciones, ajustes) se queda en este dispositivo, para cada versión exacta.",
           "- **LOOK**: las teclas (las del FM-1 o un piano), el aspecto (los colores en que se vende el FM-1 y luego los nuestros) y el filtro de pantalla (LCD, CRT o limpio).",
-          "- **OPTIONS**: MIDI e instalar la app.",
+          "- **OPTIONS**: MIDI, un FM-1 real por USB e instalar la app.",
+          "## FM-1 real por USB",
+          "- **CONNECT** (OPTIONS, REAL FM-1) busca un FM-1 por USB MIDI. Chrome o Edge en ordenador o en un móvil Android; no en iPhone. El navegador pide usar SysEx: permítelo.",
+          "- **SYNC** toca juntos: lo que tocas en tu controlador va también al FM-1 real, y sus notas, pitch bend, reloj y start/stop llegan a este. Este no puede enviar sus propias notas.",
+          "- **BACKUP** (paso 1) guarda toda la flash del FM-1 real en un archivo, comprobada con el checksum del propio chip. Envía un pequeño ayudante que corre desde la RAM y solo escribe en el almacén de actualizaciones del firmware. Hazlo siempre primero.",
+          "- **PROTECTOR** (paso 2) instala m-bootloader (MIT, de jvitkauskas) en el área de arranque: un arranque comprobado, un menú de recuperación (mantén PLAY al encender) y un modo MIDI que reinstala firmware por USB. Escribe el área de arranque: hazlo con el aparato en un cargador o un USB estable.",
+          "- **INSTALL FIRMWARE** (paso 3) escribe en el FM-1 real el firmware elegido en FIRMWARE, desde el modo MIDI del protector. El aparato comprueba el paquete antes de borrar nada. Para volver atrás, usa M-Flasher con tu copia.",
           "## MIDI",
           "- **CONNECT MIDI** busca tus teclados y controladores. Sus teclas tocan el FM-1 por su MIDI IN.",
           "- En los controladores conocidos (Akai MPK mini, Launchkey) los potes y los pads empiezan en los controles del FM-1: los potes 1 a 4 son KNOB1 a 4, los potes 5 a 8 son MASTER, SELECT, PRESETS y ALGORITHM. Los pads 1 a 4 son HOME, SAVE, PLAY y REC, los pads 5 a 8 son FX, SEL, ENV y LFO.",
@@ -2401,5 +2778,5 @@ registerProcessor("fm1", Fm1);
       refreshCatalog();
       navigator.storage?.persist?.(); // ask the browser not to clear the kept firmwares and saves
     </script>
-  <div style="position:fixed;left:4px;bottom:2px;z-index:99;font:700 9px monospace;opacity:.7;pointer-events:none;color:#ff5e7a">TEST BUILD · pocket · 31d53c0</div></body>
+  <div style="position:fixed;left:4px;bottom:2px;z-index:99;font:700 9px monospace;opacity:.7;pointer-events:none;color:#ff5e7a">TEST BUILD · pocket · a2f4018</div></body>
 </html>
