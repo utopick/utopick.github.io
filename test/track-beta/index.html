@@ -3796,7 +3796,7 @@
               ><span id="pkChordTxt"></span
               ><select id="pkChord" title="Chord mode"></select
             ></label>
-            <button id="pkLive" title="While the pattern plays: PLAY (the keys only sound) or WRITE (the keys write into the selected square, as when stopped)"></button>
+            <button id="pkLive" title="KEYS: PLAY (they only sound: try the piano and the instruments) or WRITE (they write into the selected square). Tapping a square while stopped turns WRITE on"></button>
             <button id="pkPedal" title="Pedal: volume, piano layout and what HOLD / REPEAT / VOL change">
               <i>MORE</i>PEDAL
             </button>
@@ -17547,7 +17547,8 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
         liveVoice(id, m, ch, v, ex, dr ? 0 : S.arp, quiet);
         if (write && !varAway) {
           if (S.playing && S.rec) recNote(id, m, ch, vol, dr, tapT);
-          else if (!S.playing || S.liveWrite) {
+          else if (S.liveWrite) {
+            // WRITE mode (S.liveWrite): off by default, so the keys and pads only play and the piano and the instruments can be tried
             writeNote(m, S.row, ch, dr, vol);
             if (!dr) press.set(id, { live: false, row: S.row, col: ch, t: ctx.currentTime });
           }
@@ -22402,7 +22403,7 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
         $("#pkChord").value = S.chord;
         $("#pkChordDd").classList.toggle("on", S.chord > 0);
         face($("#pkArp"), "ARP", S.arp ? ["", "↑", "↓", "↕"][S.arp] : "Off");
-        face($("#pkLive"), "PLAYING", S.liveWrite ? "WRITE" : "PLAY");
+        face($("#pkLive"), "KEYS", S.liveWrite ? "WRITE" : "PLAY");
         $("#pkLive").classList.toggle("on", !!S.liveWrite);
         $("#pkArp").classList.toggle("on", S.arp > 0);
         face($("#pkScale"), "SCALE", S.scaleT ? KEYN[S.root] + " " + SCALES[S.scaleT].s : "All");
@@ -22521,6 +22522,11 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
         if (d.r >= 0) {
           select(d.r, S.col);
           audition(d.r, S.col);
+          if (!S.playing && !S.liveWrite) {
+            S.liveWrite = true; // a square tapped while stopped: the person is about to write
+            pkLabels();
+            toast("WRITE: the keys write into the selected square. KEYS goes back to PLAY");
+          }
         }
       });
       addEventListener("pointercancel", (e) => sqDown.delete(e.pointerId));
@@ -22871,12 +22877,13 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
         if (!$("#sheet").hidden && S.sheet === "Scale") closeSheet();
         else sheetScale();
       };
-      // WHILE PLAYING: off (default), the keys only sound while the song plays; on, they write into the selected
-      // square as they do when stopped (REC, when on, still records on the step you hear instead)
+      // KEYS: PLAY (the default) the keys and pads only sound, so the piano and the instruments can be tried; WRITE they write into the
+      // selected square, stopped or playing. WRITE turns on by tapping a square while stopped, or with this button (REC, when on,
+      // still records on the step you hear instead)
       $("#pkLive").onclick = () => {
         S.liveWrite = !S.liveWrite;
         pkLabels();
-        toast(S.liveWrite ? "While playing, the keys write into the selected square" : "While playing, the keys only play");
+        toast(S.liveWrite ? "WRITE: the keys write into the selected square" : "PLAY: the keys only play");
       };
       $("#pkArp").onclick = () => {
         if (!$("#sheet").hidden && S.sheet === "Arpeggiator") closeSheet();
@@ -23893,9 +23900,10 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
         lofi: [[10, "..x...x...x...x."], [7, "....x.......x..."]],
         synthwave: [[10, "x.x.x.x.x.x.x.x."], [9, "....x.......x..."]],
         dungeon: [[5, "x.......x......."], [8, "x..............."]],
+        techno: [[10, "x.xxx.xxx.xxx.xx"], [9, "....x.......x..."]],
       };
       // COUNTER: a slower second melody, its instrument per style
-      const V_COUNTER = { rock: "Clean guitar", blues: "Trumpet", funk: "Sax", reggae: "Jazz organ", metal: "Slow strings", jazz: "Trumpet", bossa: "Vibraphone", hiphop: "Voice ooh", lofi: "Voice ooh", synthwave: "Soft lead", dungeon: "Oboe" };
+      const V_COUNTER = { rock: "Clean guitar", blues: "Trumpet", funk: "Sax", reggae: "Jazz organ", metal: "Slow strings", jazz: "Trumpet", bossa: "Vibraphone", hiphop: "Voice ooh", lofi: "Voice ooh", synthwave: "Soft lead", dungeon: "Oboe", techno: "Soft lead" };
       // drums: 16 steps per bar for kick (k), snare (s), hats (h), open hat (o), extra (x, drum xd). sn / hd: drums used.
       const V_STY = {
         rock: {
@@ -23957,6 +23965,12 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
           ins: ["Synth bass 2", "Polysynth", "Saw lead 2", "Pluck lead", "Warm pad"],
           dr: { k: ["x...x...x...x..."], s: "....x.......x...", h: "..x...x...x...x.", sn: 2, hd: 3 },
           prog: { maj: ["I V vi IV", "vi IV I V", "I iii IV V"], min: ["i VI III VII", "i VII VI VII", "i iv VI V"] },
+        },
+        techno: {
+          n: "Techno", bpm: [124, 138], kit: 1, sw: 0, minor: 0.92, lead: "pent", bass: "8th", comp: "stab",
+          ins: ["Acid bass", "Polysynth", "Pluck lead", "Saw lead 2", "Sweep pad"],
+          dr: { k: ["x...x...x...x..."], s: "....x.......x...", h: "x...x...x...x...", o: "..x...x...x...x.", sn: 2, hd: 3 },
+          prog: { maj: ["I I IV I", "I V I IV"], min: ["i i VI i", "i VII i VII", "i i iv i"] },
         },
         dungeon: {
           n: "Dungeon Synth", bpm: [56, 76], kit: 7, sw: 0, minor: 0.95, lead: "scale", bass: "dub", comp: "stab",
@@ -24976,7 +24990,7 @@ ${syN() ? `<button data-ve="back">BACK TO OUR SONG<small>ends the Variator on al
               "- **−1 OCT / +1 OCT**: move the keyboard an octave.",
               "- **Scale**: choose a key and a scale; keys outside the scale are locked so you cannot hit a wrong note.",
               "- **Chords**: play a whole chord with one key.",
-              "- **PLAYING · PLAY / WRITE**: while the pattern plays, the keys only sound (PLAY, the default), or they write into the selected square as they do when stopped (WRITE): pick a square and play the note, and hear it come round. **●** REC, when on, records on the step you hear instead.",
+              "- **KEYS · PLAY / WRITE**: the keys and pads only sound (PLAY, the default), so you can try the piano and the instruments. In WRITE they write into the selected square, stopped or playing: pick a square and play the note, and hear it come round. Tapping a square while stopped turns WRITE on, and this button turns it on or off. **●** REC, when on, records on the step you hear instead.",
               "- **PEDAL**: shows or hides one more row just above the piano (the app remembers it):",
               "- PEDAL · **VOL**: the volume of the notes you write, from 1 (quiet) to 15 (full).",
               "- PEDAL · **ARP**: arpeggiator (up, down, up-down) at the Amiga 50 Hz speed or a number of notes per step.",
@@ -25004,7 +25018,7 @@ ${syN() ? `<button data-ve="back">BACK TO OUR SONG<small>ends the Variator on al
               "- **−1 OCT / +1 OCT**: mueven el teclado una octava.",
               "- **Scale**: elige tonalidad y escala; las teclas fuera de la escala se bloquean para que no puedas fallar.",
               "- **Chords**: toca un acorde entero con una tecla.",
-              "- **PLAYING · PLAY / WRITE**: mientras suena el patrón, las teclas solo suenan (PLAY, por defecto), o escriben en el cuadrado elegido como cuando está parado (WRITE): elige un cuadrado, toca la nota y óyela cuando vuelva. **●** REC, si está activo, graba en el paso que oyes.",
+              "- **KEYS · PLAY / WRITE**: las teclas y los pads solo suenan (PLAY, por defecto), para probar el piano y los instrumentos. En WRITE escriben en el cuadrado elegido, parado o sonando: elige un cuadrado, toca la nota y óyela cuando vuelva. Tocar un cuadrado estando parado activa WRITE, y este botón lo activa o desactiva. **●** REC, si está activo, graba en el paso que oyes.",
               "- **PEDAL**: muestra u oculta una fila más justo encima del piano (la app lo recuerda):",
               "- PEDAL · **VOL**: el volumen de las notas que escribes, de 1 (suave) a 15 (máximo).",
               "- PEDAL · **ARP**: arpegiador (arriba, abajo, arriba-abajo) a la velocidad Amiga de 50 Hz o con un número de notas por paso.",
@@ -25283,6 +25297,8 @@ ${syN() ? `<button data-ve="back">BACK TO OUR SONG<small>ends the Variator on al
             b: {
               en: [
                 "## Version 1.3.0",
+                "- **Techno** joins the Variator styles (124 to 138 BPM, four on the floor, off-beat open hats, acid bass and stabs).",
+                "- **Keys only play by default:** the piano and the pads no longer write into the squares unless WRITE is on. Tapping a square while stopped turns WRITE on, or use the KEYS button (PLAY / WRITE), so you can try the instruments freely.",
                 "- **ASSIGN is a function mapper:** it learns your leftmost and rightmost key first (they never get a function), then asks for each function: turn a knob, or hold a key, pad or button for 3 seconds. Rightmost then leftmost skips a function, leftmost then rightmost ends the mapper. Hold the MOD pedal while you press or turn to map MOD + that control. A control is taken only once in a run.",
                 "- **Variator and MIDI:** on the VARS screen the knobs are the ones on screen (1 to 4 the upper row, 5 to 8 the lower one). With the patterns shown below, the pads are the patterns: a short press continues the song from that pattern, a held press loops it.",
                 "- **MOD pedal:** on every keyboard the sustain pedal (or button) is now a shift: while it is held, the default pad and knob functions become a second set (knob 1 acts as knob 9, and so on). It keeps sustaining notes. The MOD button in the MIDI options turns this on or off; MAP can pick another key instead of the pedal.",
@@ -25307,6 +25323,8 @@ ${syN() ? `<button data-ve="back">BACK TO OUR SONG<small>ends the Variator on al
               ],
               es: [
                 "## Versión 1.3.0",
+                "- **Techno** se une a los estilos del Variator (124 a 138 BPM, bombo a negras, hats abiertos a contratiempo, bajo ácido y stabs).",
+                "- **Las teclas solo suenan por defecto:** el piano y los pads ya no escriben en los cuadrados salvo que WRITE esté activo. Tocar un cuadrado estando parado activa WRITE, o usa el botón KEYS (PLAY / WRITE), para probar los instrumentos con libertad.",
                 "- **ASSIGN es un mapeador de funciones:** primero aprende tu tecla de más a la izquierda y la de más a la derecha (nunca reciben función), y luego pide cada función: gira un pote, o mantén una tecla, pad o botón 3 segundos. La de la derecha y luego la de la izquierda salta una función, la de la izquierda y luego la de la derecha termina. Mantén el pedal MOD mientras pulsas o giras para asignar MOD + ese control. Un control se usa solo una vez por sesión.",
                 "- **Variator y MIDI:** en la pantalla VARS los potes son los de la pantalla (1 a 4 la fila de arriba, 5 a 8 la de abajo). Con los patrones abajo, los pads son los patrones: una pulsación corta continúa la canción desde ese patrón, una larga lo repite en bucle.",
                 "- **Pedal MOD:** en todos los teclados el pedal (o botón) de sustain es ahora una tecla de cambio: mientras se mantiene, las funciones por defecto de pads y potes pasan a ser un segundo juego (el pote 1 actúa como el 9, y así). Sigue sosteniendo notas. El botón MOD de las opciones MIDI lo activa o desactiva, y MAP puede elegir otra tecla en lugar del pedal.",
@@ -26663,5 +26681,5 @@ ${syN() ? `<button data-ve="back">BACK TO OUR SONG<small>ends the Variator on al
           }).catch(() => {});
       })();
     </script>
-  <div style="position:fixed;left:4px;bottom:2px;z-index:99;font:700 9px monospace;opacity:.7;pointer-events:none;color:#ff5e7a">TEST BUILD · beta · 6b63158</div></body>
+  <div style="position:fixed;left:4px;bottom:2px;z-index:99;font:700 9px monospace;opacity:.7;pointer-events:none;color:#ff5e7a">TEST BUILD · beta · 3305c3b</div></body>
 </html>
