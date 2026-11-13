@@ -120,6 +120,11 @@ body.pocket .bpm input { width: 52px; min-height: 32px; padding: 1px; font-size:
 #hViews { flex: 1; min-width: 0; gap: 2px; justify-content: center; }
 #hViews button { flex: 1 1 0; min-width: 0; max-width: 38px; height: 44px; min-height: 0; padding: 0; border-radius: 6px; display: flex; align-items: center; justify-content: center; }
 #hViews button.on { background: var(--acc); border-color: var(--acc); color: var(--ink); }
+#wTap { position: absolute; inset: 0; z-index: 3; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; background: rgba(0, 0, 0, 0.28); color: var(--text); cursor: pointer; text-align: center; }
+#wTap[hidden] { display: none; }
+#wTap .ic { width: 52px; height: 52px; stroke: var(--acc); stroke-width: 1.8; }
+#wTap b { font: 900 16px var(--mono, monospace); letter-spacing: 0.12em; }
+#wTap i { font: 600 11px var(--mono, monospace); font-style: normal; color: var(--dim); }
 body.pocket #play { height: 44px; min-height: 0; min-width: 0; padding: 0; border-radius: 6px; align-items: center; justify-content: center; flex: none; }
 body.pocket #play { width: 34px; font-size: 17px; }
 #play.dis { opacity: 0.35; pointer-events: none; }
@@ -1583,6 +1588,7 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
         <div class="lane" id="wLane">
           <canvas id="wCv"></canvas>
           <div class="hud"><div class="n" id="wNote">—</div><div class="c" id="wCents"></div><div class="t" id="wHint"></div></div>
+          <div id="wTap" hidden><svg class="ic" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3" /><path d="M5 11a7 7 0 0 0 14 0M12 18v3" /></svg><b>TAP TO LISTEN</b><i>and sing a note: it shows which one</i></div>
         </div>
         <div class="chips" id="wChips"></div>
         <div class="pads" id="exPads"></div>
@@ -3958,6 +3964,7 @@ html[data-theme="demo"] .card { border: 2px solid var(--line); background: var(-
           }
           if (REC.on) REC.pitch.push(+tv.toFixed(3), v.m === v.m ? +v.m.toFixed(2) : null);
         }
+        $("#wTap").hidden = W.on || MIC.on || !S.listen; // the detector waits for a tap (the browser has not allowed the microphone yet)
         const det = !W.on && MIC.on; // the tone detector
         if (det) {
           if (!DET.live) Object.assign(DET, { live: true, t0: ctx.currentTime, voice: [], center: {} });
@@ -10180,5 +10187,5 @@ registerProcessor("autotune", AutoTune);
           }).catch(() => {});
       })();
     </script>
-  <div style="position:fixed;left:4px;bottom:2px;z-index:99;font:700 9px monospace;opacity:.7;pointer-events:none;color:#ff5e7a">TEST BUILD · beta · bd2c4d1</div></body>
+  <div style="position:fixed;left:4px;bottom:2px;z-index:99;font:700 9px monospace;opacity:.7;pointer-events:none;color:#ff5e7a">TEST BUILD · beta · 50181cf</div></body>
 </html>
