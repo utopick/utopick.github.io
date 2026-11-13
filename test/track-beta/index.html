@@ -14963,7 +14963,7 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
       lo: ["LEFTMOST KEY", "Press the leftmost key of the keyboard, whatever octave is selected (and do not change the octave until MAP ends). No keys? NEXT."],
       hi: ["RIGHTMOST KEY", "Press the rightmost key of the keyboard."],
       modkey: ["MOD KEY (optional)", "Want a MOD key? While it is held, the pads and knobs become a second set (knob 1 acts as knob 9, and so on), so a few controls can do double duty. The sustain pedal is a good choice: it keeps its own job too. Press the pedal or a key (not the leftmost or the rightmost one), or NEXT for none."],
-      pads: ["PADS", "Press every pad in order (all the banks, if there are some). To finish: the rightmost key, then the leftmost key, or NEXT."],
+      pads: ["PADS", "Press every pad one by one, from the TOP LEFT pad to the BOTTOM RIGHT pad: left to right, then top to bottom (all the banks, if there are some). That order is the pad numbering the apps use. To finish: the rightmost key, then the leftmost key, or NEXT."],
       knobs: ["KNOBS", "Turn every knob a little, in order. To finish: the rightmost key, then the leftmost key, or NEXT."],
       sus: ["SUSTAIN", "Press the sustain pedal or button. To skip: the rightmost key, then the leftmost key, or NEXT."],
       stick: ["STICK AND WHEELS", "Move the stick or the wheels through their full range: left, right, up and down (and an expression pedal, if any), then let go. Everything that moves is listed. NEXT when done (or skip: the rightmost key, then the leftmost key)."],
@@ -18247,6 +18247,26 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
       // what pads, buttons and knobs can be assigned to
       // What the controls do before anyone assigns anything: [action id, label on the diagram]. An empty id is a label only
       // (the pads and keys play notes as always). The user's own ASSIGN, LEARN and DEFAULTS off take precedence.
+      // PADS ON A SCREEN OF SQUARES: numbered as drawn, left to right and then down. ptr: the square wants pointerdown / pointerup (a held effect), otherwise a tap
+      const miPads = () => miGrid().els.slice(0, 16).map((el, i) => ["pad" + i, (((el.querySelector(".nt") || el).textContent || "").trim().slice(0, 12).toUpperCase()) || "PAD " + (i + 1)]);
+      const miPadDown = new Map();
+      function miPadPress(i, on) {
+        const g = miGrid(), el = on ? g.els[i] : miPadDown.get(i);
+        if (!el) return;
+        if (!g.ptr) return on && el.click();
+        el.dispatchEvent(new PointerEvent(on ? "pointerdown" : "pointerup", { bubbles: true, cancelable: true, pointerId: 100 + i }));
+        on ? miPadDown.set(i, el) : miPadDown.delete(i);
+      }
+      const miPadActions = () => Array.from({ length: 16 }, (_, i) => ({ id: "pad" + i, group: "Pads", name: "PAD " + (i + 1) + " OF THE SCREEN", kind: "hold", run: (on) => miPadPress(i, on) }));
+      // the screens of squares in TRACK: the live patterns and the song squares of the tracker, and the sampler. The drum pads, the live FX pads
+      // (played by their notes, see miFxFor) and the Variator keep their own.
+      const miGrid = () => {
+        const none = { els: [], ptr: false };
+        if ($("#var").classList.contains("show")) return none;
+        if ($("#smp").classList.contains("show")) return { els: $$(!$("#smpFxBar").hidden ? "#smpFxGrid .fxp" : "#smpSq [data-s]"), ptr: false };
+        if (!$("#trk").classList.contains("show") || S.fxPanel) return none;
+        return S.pk === "pats" ? { els: $$("#sp .sq"), ptr: true } : S.pk === "song" ? { els: $$("#sg .sq"), ptr: false } : none;
+      };
       MI.defaults = () => {
         const vOn = $("#var").classList.contains("show"),
           vars = vOn && VAR.view === "vars", // the VARS screen: the knobs are the ones on screen (1 to 4 the upper row, 5 to 8 the lower one)
@@ -18258,13 +18278,14 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
             ? [...V_KNOBS.map(([k, n]) => ["vk:" + k, n]), ["master", "MASTER"], ...Array.from({ length: 8 }, (_, c) => ["vol" + c, "VOL CH" + (c + 1)])]
             : [["master", "MASTER"], ["swing", "SWING"], ["echofb", "ECHO FB"], ["bpm", "BPM"], ...Array.from({ length: 12 }, (_, c) => ["vol" + c, "VOL CH" + (c + 1)])],
           padText: "DRUM",
-          ...(pats ? { pads: Array.from({ length: 16 }, (_, i) => ["vpat" + i, "PATTERN " + (i + 1)]) } : {}),
+          ...(pats ? { pads: Array.from({ length: 16 }, (_, i) => ["vpat" + i, "PATTERN " + (i + 1)]) } : miGrid().els.length ? { pads: miPads() } : {}),
         };
       };
       // where the screen already shows a knob: the mixer, and the Variator's own views
       const miMixShown = () => $("#mix").classList.contains("show"),
         miVarShown = (view) => $("#var").classList.contains("show") && VAR.view === view;
       MI.actions = () => [
+        ...miPadActions(),
         { id: "play", group: "Transport", name: "PLAY / STOP", kind: "tap", run: () => togglePlay() },
         { id: "rec", group: "Transport", name: "LIVE RECORD", kind: "tap", run: () => $("#rec").click() },
         { id: "pat-", group: "Transport", name: "PATTERN ◀", kind: "tap", run: () => midiPat(-1) },
@@ -25308,6 +25329,7 @@ ${syN() ? `<button data-ve="back">BACK TO OUR SONG<small>ends the Variator on al
                 "- **MOD pedal:** on every keyboard the sustain pedal (or button) is now a shift: while it is held, the default pad and knob functions become a second set (knob 1 acts as knob 9, and so on). It keeps sustaining notes. The MOD button in the MIDI options turns this on or off; MAP can pick another key instead of the pedal.",
                 "- **MIDI DEVICE panel without scrolling:** it fits the screen. On an upright phone it turns sideways, and on a short window the controls go beside the diagram.",
                 "- **Knob card:** turning a MIDI knob shows a small card in the middle of the screen with its name, a little knob and its value, so you see what you are changing. It does not appear where the screen already shows that knob (the mixer, the Variator's own views, the metronome).",
+                "- **Pads follow the screen:** on a screen made of squares (the effects, the loop pads, the samples, the exercises...) the pads of a MIDI controller are those squares, numbered from the top left, left to right and then down. MAP now asks for the pads from the top left pad to the bottom right one. The drum pads keep playing drums.",
                 "- **MOD key:** MAP asks if you want a MOD key (the sustain pedal is a good one, and keeps its own job). While it is held, the pads and knobs become a second set: knob 1 acts as knob 9, and so on, so a few controls do double duty. The leftmost and rightmost keys cannot be the MOD key.",
                 "- **MIDI knobs in TRACK:** knobs 1 to 4 start as master volume, swing, echo feedback and BPM, then one knob per channel volume (more channels than knobs: hold the MOD key).",
                 "- **MAP:** the old MIDI TEST is now a step-by-step mapper, like an emulator's. Press any key, then the leftmost and the rightmost key (it counts the physical keys, whatever octave is selected), every pad and every knob in order, the sustain pedal, the bend, the mod, play, stop, record and any other function button (a list ends with the rightmost key and then the leftmost key). The map is saved for the controller (shared by the apps), and can be exported and imported as a file. It also shows the MIDI clock (BPM), start and stop, COPY REPORT, and a LIGHT TEST that sends notes to the device.",
@@ -25334,6 +25356,7 @@ ${syN() ? `<button data-ve="back">BACK TO OUR SONG<small>ends the Variator on al
                 "- **Pedal MOD:** en todos los teclados el pedal (o botón) de sustain es ahora una tecla de cambio: mientras se mantiene, las funciones por defecto de pads y potes pasan a ser un segundo juego (el pote 1 actúa como el 9, y así). Sigue sosteniendo notas. El botón MOD de las opciones MIDI lo activa o desactiva, y MAP puede elegir otra tecla en lugar del pedal.",
                 "- **Panel MIDI DEVICE sin desplazamiento:** cabe en la pantalla. En un móvil vertical se gira de lado, y en una ventana baja los controles van junto al dibujo.",
                 "- **Tarjeta del pote:** al girar un pote MIDI aparece una tarjeta pequeña en el centro con su nombre, un potenciómetro y su valor, para ver qué estás cambiando. No aparece donde la pantalla ya muestra ese pote (el mezclador, las vistas del Variator, el metrónomo).",
+                "- **Los pads siguen la pantalla:** en una pantalla hecha de cuadrados (los efectos, los pads de loops, los samples, los ejercicios...) los pads de un controlador MIDI son esos cuadrados, numerados desde arriba a la izquierda, de izquierda a derecha y luego hacia abajo. MAP ahora pide los pads del pad de arriba a la izquierda al de abajo a la derecha. Los pads de bateria siguen tocando bateria.",
                 "- **Tecla MOD:** MAP pregunta si quieres una tecla MOD (el pedal de sustain es buena opción y sigue haciendo su trabajo). Mientras se mantiene pulsada, los pads y potes pasan a ser un segundo juego: el pote 1 actúa como el 9, y así, para que pocos controles hagan doble trabajo. La tecla de más a la izquierda y la de más a la derecha no pueden ser la tecla MOD.",
                 "- **Potes MIDI en TRACK:** los potes 1 a 4 empiezan como volumen master, swing, feedback del eco y BPM, y luego un pote por volumen de canal (más canales que potes: mantén la tecla MOD).",
                 "- **MAP:** el antiguo MIDI TEST ahora es un mapeador paso a paso, como el de los emuladores. Pulsa una tecla, luego la tecla de más a la izquierda y la de más a la derecha (cuenta las teclas físicas, sea cual sea la octava), cada pad y cada pote en orden, el pedal de sustain, el bend, el mod, play, stop, record y cualquier otro botón de función (una lista termina con la tecla de la derecha y luego la de la izquierda). El mapa se guarda para el controlador (compartido por las apps) y se puede exportar e importar como archivo. También muestra el reloj MIDI (BPM), start y stop, COPY REPORT y un LIGHT TEST que envía notas al dispositivo.",
@@ -26685,5 +26708,5 @@ ${syN() ? `<button data-ve="back">BACK TO OUR SONG<small>ends the Variator on al
           }).catch(() => {});
       })();
     </script>
-  <div style="position:fixed;left:4px;bottom:2px;z-index:99;font:700 9px monospace;opacity:.7;pointer-events:none;color:#ff5e7a">TEST BUILD · beta · cab44d1</div></body>
+  <div style="position:fixed;left:4px;bottom:2px;z-index:99;font:700 9px monospace;opacity:.7;pointer-events:none;color:#ff5e7a">TEST BUILD · beta · c548f0a</div></body>
 </html>
