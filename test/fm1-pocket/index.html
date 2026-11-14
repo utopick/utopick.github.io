@@ -378,6 +378,7 @@
               <button id="realSync" title="Sync: what you play here goes to the real FM-1 too, and what the real FM-1 plays (notes and clock) comes here"><i>PLAY TOGETHER</i>SYNC OFF</button>
               <button id="realBackup" title="Step 1: save a copy of the whole flash of the real FM-1 to a file. Nothing is written to the unit except a small helper in RAM"><i>STEP 1 · SAFE</i>BACKUP</button>
               <button id="realProt" title="Step 2: install the protected bootloader (m-bootloader), so a bad firmware can always be replaced over USB"><i>STEP 2 · WRITES</i>PROTECTOR</button>
+              <button id="realInfo" title="Read what the unit says about itself (nothing is written) and copy a text report: ports, identity, chip, flash, backup, and what happened. Paste it in a message."><i>NO WRITES</i>INSPECT · COPY</button>
               <button id="realFw" title="Step 3: install the firmware chosen in FIRMWARE on the real FM-1, through the protector's MIDI mode"><i>STEP 3 · WRITES</i>INSTALL FIRMWARE</button>
             </div>
           </div>
@@ -2430,7 +2431,11 @@ registerProcessor("fm1", Fm1);
       const isRealFM1 = (name) => /\bFM-1\b/i.test(name || "");
       const isUpdatePort = (name) => /update/i.test(name || "");
       const REAL = { acc: null, fw: null, up: null, fwLink: null, upLink: null, info: null, sync: false, busy: false, saved: null, ident: "" };
-      const realSay = (t) => ($("#realMsg").textContent = t);
+      const REAL_LOG = [];
+      const realSay = (t) => {
+        $("#realMsg").textContent = t;
+        if (REAL_LOG[REAL_LOG.length - 1]?.[1] !== t && !/\d+%$/.test(t)) REAL_LOG.push([new Date().toISOString().slice(11, 19), t]); // progress lines are not kept
+      };
       const unb64 = (t) => Uint8Array.from(atob(t), (c) => c.charCodeAt(0));
       const sha256 = async (bytes) => hex(await crypto.subtle.digest("SHA-256", bytes));
       // the real unit's notes, bend, clock and start/stop arrive in the emulator when SYNC is on; what you play goes the other way
@@ -2541,7 +2546,7 @@ registerProcessor("fm1", Fm1);
         const bytes = await RealFM1.backup(REAL.upLink, info, (f) => realSay("Backup: " + Math.round(f * 100) + "%"));
         const name = "fm1-backup-" + info.uid + "-" + new Date().toISOString().slice(0, 10) + ".bin";
         saveFile(bytes, name);
-        REAL.saved = { uid: info.uid, jedec: info.jedec };
+        REAL.saved = { uid: info.uid, jedec: info.jedec, size: bytes.length, crc32: RealFM1.crc32(bytes) };
         realSay("Backup saved as " + name + " (" + (bytes.length >> 10) + " KiB, checked against the chip's own checksum). Keep it somewhere safe.");
         toast("Backup saved: " + name, 5000);
         // kept as the first firmware of the list, and run here: if it draws its screen, the copy is a good one
@@ -2576,6 +2581,44 @@ registerProcessor("fm1", Fm1);
             await backupNow();
           }));
       };
+      // INSPECT: asks the firmware port who it is (0x11) and the update port what it is (0x12), both read-only, then copies a text report
+      const realReport = () => {
+        const h = (n) => (n == null ? "?" : "0x" + (n >>> 0).toString(16).toUpperCase());
+        const ports = (m) => (m ? [...m.values()].map((p) => "  " + p.name + " [" + (p.manufacturer || "?") + ", " + p.state + "/" + p.connection + "]").join("\n") || "  (none)" : "  (not connected)");
+        const i = REAL.info, v = REAL.saved, f = current();
+        return [
+          "FM1.Pocket · real FM-1 report · " + new Date().toISOString(),
+          "page: " + location.href.replace(/[?#].*/, ""),
+          "browser: " + navigator.userAgent,
+          "sysex: " + (REAL.acc ? (REAL.acc.sysexEnabled ? "allowed" : "NOT allowed") : "not asked yet") + " · sync: " + (REAL.sync ? "on" : "off") + " · busy: " + REAL.busy,
+          "MIDI inputs:\n" + ports(REAL.acc?.inputs),
+          "MIDI outputs:\n" + ports(REAL.acc?.outputs),
+          "firmware port: " + (REAL.fw?.name || "none") + " · identity: " + (REAL.ident || "not read"),
+          "update port: " + (REAL.up?.name || "none"),
+          i ? "update port says: " + (i.mboot ? i.kind + " v" + i.version + " · protocol " + i.protocol + " · reads " + i.reads + " · key " + i.key + " · flash " + i.capacity + " bytes (" + (i.capacity >> 10) + " KiB) · chip JEDEC " + h(i.jedec) + " · uid " + i.uid : "answers, but is not m-bootloader's helper") : "update port says: nothing yet",
+          "chip risk: " + ((i?.jedec ?? v?.jedec) === 0xb36014 ? "UC25HQ80 (newer chip: little tested with the protector)" : "none known"),
+          "backup this session: " + (v ? "uid " + v.uid + " · " + (v.size >> 10) + " KiB · crc32 " + h(v.crc32) + " · chip jedec " + h(v.jedec) : "none"),
+          "stored copy in the list: " + (backup ? backup.name + " (" + backup.bytes.length + " bytes)" : "none"),
+          "running here: " + (f ? f.name : "nothing") + " · screen: " + ($("#realMsg").textContent || ""),
+          "what happened:",
+          ...REAL_LOG.slice(-25).map(([t, m]) => "  " + t + " " + m),
+        ].join("\n");
+      };
+      $("#realInfo").onclick = () =>
+        realRun("Inspect", async () => {
+          realSay("Reading what the unit says…");
+          if (REAL.acc) await realScan();
+          if (REAL.fwLink) await realIdent().catch((e) => realSay("firmware port: " + e.message));
+          const text = realReport();
+          try {
+            await navigator.clipboard.writeText(text);
+            realSay("Report copied: paste it in a message.");
+            toast("Report copied", 3000);
+          } catch {
+            saveFile(new TextEncoder().encode(text), "fm1-report-" + new Date().toISOString().slice(0, 10) + ".txt");
+            realSay("The browser would not copy: the report was saved as a .txt file instead.");
+          }
+        });
       $("#realProt").onclick = () => {
         if (!REAL.fw) return toast("Switch the unit on with its firmware running (not the helper) and connect it");
         if (!REAL.saved) return toast("Step 1 first: save a backup of this unit");
@@ -2829,5 +2872,5 @@ registerProcessor("fm1", Fm1);
       refreshCatalog();
       navigator.storage?.persist?.(); // ask the browser not to clear the kept firmwares and saves
     </script>
-  <div style="position:fixed;left:4px;bottom:2px;z-index:99;font:700 9px monospace;opacity:.7;pointer-events:none;color:#ff5e7a">TEST BUILD · pocket · 62a519d</div></body>
+  <div style="position:fixed;left:4px;bottom:2px;z-index:99;font:700 9px monospace;opacity:.7;pointer-events:none;color:#ff5e7a">TEST BUILD · pocket · c22d741</div></body>
 </html>
