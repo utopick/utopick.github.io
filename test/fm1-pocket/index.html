@@ -2750,7 +2750,11 @@ registerProcessor("fm1", Fm1);
       $("#realFw").onclick = () => {
         const f = current();
         if (!f) return toast("Choose a firmware in FIRMWARE first");
-        if (!REAL.saved?.protector?.installed) {
+        if (!REAL.saved) {
+          realSay("Back this unit up first (BACKUP): custom firmware is only offered when a backup shows the protector in it. It reads straight from the unit when it is in the protector's MIDI mode.");
+          return toast("Back the unit up first: the backup has to show the protector", 5000);
+        }
+        if (!REAL.saved.protector?.installed) {
           realSay("No protector, no custom firmware. Back this unit up (BACKUP) and the backup has to show the protector. Without it, install the protector first (PROTECTOR, or M-Flasher on the newer flash chip).");
           return toast("No protector in a backup of this unit: custom firmware is locked", 5000);
         }
@@ -2994,5 +2998,5 @@ registerProcessor("fm1", Fm1);
       refreshCatalog();
       navigator.storage?.persist?.(); // ask the browser not to clear the kept firmwares and saves
     </script>
-  <div style="position:fixed;left:4px;bottom:2px;z-index:99;font:700 9px monospace;opacity:.7;pointer-events:none;color:#ff5e7a">TEST BUILD · pocket · 761c523</div></body>
+  <div style="position:fixed;left:4px;bottom:2px;z-index:99;font:700 9px monospace;opacity:.7;pointer-events:none;color:#ff5e7a">TEST BUILD · pocket · 3abd3da</div></body>
 </html>
