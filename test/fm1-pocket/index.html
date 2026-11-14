@@ -2645,6 +2645,9 @@ registerProcessor("fm1", Fm1);
         if (REAL.busy) return realNotice(what, "The unit is busy with another job. Wait for it to finish.");
         REAL.busy = true;
         if (modal) jobOpen(what.toUpperCase() + "…");
+        // a phone that dims or locks its screen throttles this page, and the unit would wait for answers: keep it awake while a job runs (where the browser can)
+        const lock = modal ? await navigator.wakeLock?.request("screen").catch(() => null) : null;
+        if (modal) $("#jobText").textContent = lock ? "Keep this page open until it says DONE." : "Keep this page open and the screen on until it says DONE.";
         try {
           await job();
           if (modal) { $("#jobTitle").textContent = what.toUpperCase() + " · DONE"; jobEnd(true); }
@@ -2653,6 +2656,7 @@ registerProcessor("fm1", Fm1);
           if (modal) { $("#jobTitle").textContent = what.toUpperCase() + " · FAILED"; $("#jobText").textContent = e.message + "\n\nNothing else was sent. If the unit looks stuck, switch it off, unplug its cable for a few seconds and CONNECT again. Holding PLAY at power-on opens the recovery menu if the protector is installed."; jobEnd(false); }
           else toast(what + " failed: " + e.message, 5000);
         } finally {
+          lock?.release().catch(() => {});
           REAL.busy = false;
           realFace();
         }
@@ -3109,5 +3113,5 @@ registerProcessor("fm1", Fm1);
       refreshCatalog();
       navigator.storage?.persist?.(); // ask the browser not to clear the kept firmwares and saves
     </script>
-  <div style="position:fixed;left:4px;bottom:2px;z-index:99;font:700 9px monospace;opacity:.7;pointer-events:none;color:#ff5e7a">TEST BUILD · pocket · e3461e5</div></body>
+  <div style="position:fixed;left:4px;bottom:2px;z-index:99;font:700 9px monospace;opacity:.7;pointer-events:none;color:#ff5e7a">TEST BUILD · pocket · e4b5330</div></body>
 </html>
