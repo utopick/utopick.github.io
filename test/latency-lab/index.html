@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0d0f12">
-<title>LAB.Pocket · audio latency</title>
+<title>LAB.Pocket · audio lab</title>
 <style>
 :root{color-scheme:dark;--bg:#0d0f12;--panel:#161a20;--panel2:#1d222a;--line:#2a313b;--text:#e8ecf1;--dim:#8a94a3;--acc:#7cf29a;--acc2:#ffb347;--hot:#ff5e7a;--blue:#6ab7ff;--ink:#0d0f12;--r:10px;--mono:ui-monospace,Menlo,Consolas,monospace}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -54,7 +54,7 @@ ol{margin:6px 0;padding-left:20px;color:var(--dim)}li{margin:4px 0}
 </style>
 </head>
 <body><main>
-<header><a class="mark" href="../../" title="Pocket apps"><span class="t">LAB<b>.</b>Pocket</span><span class="sub">audio latency</span></a><span class="grow"></span><span class="pill">TEST TOOL</span></header>
+<header><a class="mark" href="../../" title="Pocket apps"><span class="t">LAB<b>.</b>Pocket</span><span class="sub">audio lab</span></a><span class="grow"></span><span class="pill">TEST TOOL</span></header>
 <div id="environment" class="status"><span id="statusDot" class="dot"></span><span id="status">Idle · plug in headphones before you turn monitoring up</span></div>
 
 <section class="panel"><h2>1 · Input and output</h2>
@@ -128,8 +128,203 @@ ol{margin:6px 0;padding-left:20px;color:var(--dim)}li{margin:4px 0}
 
 <section class="panel"><h2>6 · Diagnostics</h2><div class="buttons"><button id="refresh">REFRESH</button><button id="copy">COPY</button></div><pre id="diagnostics">No audio session yet.</pre><p id="notes" class="hint">Everything runs in this page: browser audio and a small embedded WebAssembly module, no network. Choosing the output isn't possible in every browser (Safari, Chrome on Android); the system default always works.</p><div id="logs" class="tiny" aria-live="polite">Ready.</div></section>
 
+<section class="panel" id="mouthPanel"><h2>7 · Mouth to MIDI</h2>
+<p>Hum a melody or beatbox a groove. The lab turns it into notes and drum pads (not audio slices) that you can play back and save as a MIDI file. Use headphones: a count-in click plays, then you go. It uses the microphone chosen in section 1, with echo cancellation, noise suppression and automatic gain forced off.</p>
+<div class="two"><label class="field"><span>Tempo (BPM)</span><input type="number" id="mBpm" value="100" min="50" max="200" title="Tempo of the count-in click and of the grid your notes snap to"></label>
+<label class="field"><span>Bars to record</span><select id="mBars" title="How many bars after the 1-bar count-in"><option>2</option><option selected>4</option><option>8</option></select></label></div>
+<div class="checks"><label><input type="checkbox" id="mSnap" checked title="Move notes that are out of tune to the nearest note of the key it finds">Snap melody to the key it hears</label><label><input type="checkbox" id="mClick" title="Keep the click going while you record (more bleed into the mic)">Keep the click while recording</label></div>
+<label class="field"><span>Timing nudge, ms (raise it if everything lands late)</span><input type="number" id="mNudge" value="0" min="-200" max="200" title="Shifts everything you recorded earlier or later before it snaps to the grid"></label>
+<div class="buttons"><button id="mHum" class="primary" title="Count in, then hum or whistle a melody">HUM</button><button id="mDrums" class="primary" title="Count in, then beatbox: kick, snare, hats">BEATBOX</button><button id="mCal" title="Teach the lab your sounds: 4 kicks, 4 snares and 4 hats on the click">CALIBRATE</button></div>
+<div class="buttons"><button id="mPlay" title="Play what was heard, looping">PLAY</button><button id="mMidi" title="Save the melody and drums as a .mid file">MIDI FILE</button><button id="mClear" title="Forget the melody and drums">CLEAR</button></div>
+<div class="chartbox"><canvas id="mCanvas" aria-label="Notes and drum pads heard"></canvas></div>
+<div class="hint" id="mInfo">Press HUM or BEATBOX. For better drums, CALIBRATE once first: 4 kicks on the first bar's clicks, 4 snares on the second, 4 hats on the third.</div></section>
+
+<section class="panel" id="jamPanel"><h2>8 · Live jam</h2>
+<p>A band that follows what you play. It listens for notes, works out the key, and changes chord on bar lines, a bar behind you, like a real band feeling its way. When it is unsure it holds the chord and thins out to bass and drums. Use headphones, or the band bleeds into the mic.</p>
+<div class="two"><label class="field"><span>You play with</span><select id="jIn" title="Where the band hears you"><option value="mic">Microphone (voice, whistle, single notes)</option><option value="midi">MIDI keyboard</option><option value="demo">Demo player (no instrument needed)</option></select></label>
+<label class="field"><span>Tempo (BPM)</span><input type="number" id="jBpm" value="90" min="50" max="240" title="Tempo of the band"></label></div>
+<label class="field"><span>Band behaviour</span><div class="sliderrow"><span class="hint">sticks to a progression</span><strong id="jFollowV">50</strong><span class="hint">chases every note</span></div><input type="range" id="jFollow" min="0" max="100" value="50" title="Left: the band cycles a classic progression in your key. Right: it picks each chord from what you just played"></label>
+<div class="buttons"><button id="jGo" class="primary" title="Start or stop the band">START THE BAND</button></div>
+<div class="metrics"><div class="metric"><small>Key</small><strong id="jKey">·</strong></div><div class="metric"><small>Chord</small><strong id="jChord">·</strong></div><div class="metric"><small>Confidence</small><strong id="jConf">·</strong></div><div class="metric"><small>Bar</small><strong id="jBar">·</strong></div></div>
+<div class="hint" id="jInfo">The first bar is just the beat. Play something and the band comes in.</div></section>
+
 <section class="panel"><h2>How to compare</h2><ol><li>Use HTTPS or <span class="kbd">localhost</span>, allow the mic and pick the built-in microphone.</li><li>Headphones on, monitor volume at zero unless you want to hear yourself.</li><li>Record a run for Direct, Native, Worklet JS and Worklet WASM.</li><li>Switch to the USB interface and repeat.</li><li>Measure the round trip with a loopback (section 2) for each input and output.</li><li>Export the JSON.</li></ol><p class="tiny">JS and WASM do the same gain, so they compare processing speed, not end-to-end delay. Runs only compare fairly with the same output route and capture settings.</p></section>
 </main>
+<script id="mouth-dsp">
+// Pure DSP and music logic for the mouth-to-MIDI and live-jam experiments. No DOM, no audio: tests/lab.test.js runs it in node.
+const MouthDSP=(()=>{
+const PCN=['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'],MAJ=[0,2,4,5,7,9,11],MIN=[0,2,3,5,7,8,10];
+const median=a=>{const s=[...a].sort((x,y)=>x-y),m=s.length>>1;return s.length%2?s[m]:(s[m-1]+s[m])/2};
+const decimate=(x,k)=>{if(k<=1)return x;const n=Math.floor(x.length/k),y=new Float32Array(n);for(let i=0;i<n;i++){let s=0;for(let j=0;j<k;j++)s+=x[i*k+j];y[i]=s/k}return y};
+
+// ---- pitch: YIN (de Cheveigne and Kawahara 2002) on x[start..start+W+tau]
+function yin(x,sr,start,W,fmin=70,fmax=1000){
+  const tmin=Math.max(2,Math.floor(sr/fmax)),tmax=Math.min(Math.floor(sr/fmin),x.length-start-W-2);
+  if(tmax<=tmin+2)return{f:0,clarity:0};
+  const dn=new Float32Array(tmax+2);dn[0]=1;let run=0;
+  for(let t=1;t<=tmax;t++){let s=0;for(let i=0;i<W;i++){const v=x[start+i]-x[start+i+t];s+=v*v}run+=s;dn[t]=run?s*t/run:1}
+  let tau=-1;
+  for(let t=tmin;t<tmax;t++)if(dn[t]<0.15){while(t+1<tmax&&dn[t+1]<dn[t])t++;tau=t;break}
+  if(tau<0)return{f:0,clarity:0};
+  const a=dn[tau-1],b=dn[tau],c=dn[tau+1],den=a-2*b+c,sh=den?0.5*(a-c)/den:0;
+  return{f:sr/(tau+sh),clarity:1-b};
+}
+const decimFor=sr=>Math.max(1,Math.floor(sr/12000));
+// one pitch reading of the last ~80 ms of x (live use); null when unvoiced
+function pitchNow(x,sr){
+  const k=decimFor(sr),y=decimate(x.length>sr*0.09?x.subarray(x.length-Math.floor(sr*0.09)):x,k),s=sr/k,W=Math.round(s*0.03);
+  let e=0;for(let i=0;i<y.length;i++)e+=y[i]*y[i];const rms=Math.sqrt(e/y.length),r=yin(y,s,0,W);
+  return{rms,midi:r.f&&r.clarity>0.8?69+12*Math.log2(r.f/440):null};
+}
+function pitchTrack(x,sr,hop=0.01){
+  const k=decimFor(sr),y=decimate(x,k),s=sr/k,W=Math.round(s*0.03),H=Math.round(s*hop),fr=[];let peak=0;
+  for(let i=0;i+W+Math.floor(s/70)+3<y.length;i+=H){
+    let e=0;for(let j=0;j<W;j++)e+=y[i+j]*y[i+j];const rms=Math.sqrt(e/W);peak=Math.max(peak,rms);
+    const r=yin(y,s,i,W);fr.push({t:(i+W/2)/s,rms,f:r.f,clarity:r.clarity});
+  }
+  for(const p of fr)p.midi=p.f&&p.clarity>0.8&&p.rms>peak*0.08?69+12*Math.log2(p.f/440):null;
+  return{frames:fr,hop:H/s};
+}
+// frames -> notes: a note ends after 30 ms of silence or 3 frames more than 0.7 semitone away
+function notes(fr,hop,minLen=0.06){
+  const out=[];let cur=null,gap=0,pend=[];
+  const close=()=>{if(cur&&cur.t1-cur.t0>=minLen)out.push({t0:cur.t0,t1:cur.t1,midi:Math.round(median(cur.v))});cur=null};
+  for(const f of fr){
+    if(f.midi==null){if(cur&&++gap>=3)close();pend=[];continue}
+    gap=0;
+    if(!cur){cur={t0:f.t,t1:f.t+hop,v:[f.midi]};continue}
+    if(Math.abs(f.midi-median(cur.v))>0.7){pend.push(f);if(pend.length>=3){close();cur={t0:pend[0].t,t1:f.t+hop,v:pend.map(p=>p.midi)};pend=[]}}
+    else{pend=[];cur.v.push(f.midi);cur.t1=f.t+hop}
+  }
+  close();return out;
+}
+// ---- keys
+function fitKey(w){
+  const tot=w.reduce((a,b)=>a+b,0),res=[];
+  for(let root=0;root<12;root++)for(const mode of['major','minor']){
+    const set=new Set((mode==='major'?MAJ:MIN).map(i=>(i+root)%12));let s=0;
+    for(let pc=0;pc<12;pc++)s+=set.has(pc)?w[pc]:-0.7*w[pc];
+    s+=0.3*(w[root]+w[(root+(mode==='major'?4:3))%12]+w[(root+7)%12]); // the tonic triad tells relative keys apart
+    res.push({root,mode,score:s,tot});
+  }
+  return res.sort((a,b)=>b.score-a.score);
+}
+const keyName=k=>k?PCN[k.root]+(k.mode==='minor'?' minor':' major'):'?';
+const snapToScale=(m,root,mode)=>{const sc=(mode==='major'?MAJ:MIN).map(i=>(i+root)%12);for(let d=0;d<7;d++)for(const c of[m-d,m+d])if(sc.includes(((c%12)+12)%12))return c;return m};
+function chordsOf(root,mode){
+  const sc=(mode==='major'?MAJ:MIN).map(i=>(i+root)%12);
+  return sc.map((r,d)=>{const pcs=[r,sc[(d+2)%7],sc[(d+4)%7]],third=(pcs[1]-r+12)%12,fifth=(pcs[2]-r+12)%12;
+    return{d,root:r,pcs,name:PCN[r]+(third===3?'m':'')+(fifth===6?'°':'')}});
+}
+// ---- quantise
+const quant=(t,t0,bpm,nudge=0)=>Math.round((t-t0-nudge)/(60/bpm/4));
+function humToEvents(x,sr,{bpm,t0,steps=64,snap=false,nudge=0}){
+  const pt=pitchTrack(x,sr),ns=notes(pt.frames,pt.hop);let key=null;
+  if(snap&&ns.length){const w=new Array(12).fill(0);for(const n of ns)w[((n.midi%12)+12)%12]+=n.t1-n.t0;key=fitKey(w)[0];for(const n of ns)n.midi=snapToScale(n.midi,key.root,key.mode)}
+  const ev=[];
+  for(const n of ns){const s=quant(n.t0,t0,bpm,nudge);if(s<0||s>=steps)continue;ev.push({step:s,len:Math.max(1,Math.round((n.t1-n.t0)/(60/bpm/4))),midi:n.midi})}
+  ev.sort((a,b)=>a.step-b.step||b.len-a.len);
+  const mono=[];for(const e of ev){const p=mono[mono.length-1];if(p&&p.step===e.step)continue;if(p&&p.step+p.len>e.step)p.len=e.step-p.step;mono.push(e)}
+  return{events:mono,notes:ns,key};
+}
+// ---- drums
+function fft(re,im){
+  const n=re.length;
+  for(let i=1,j=0;i<n;i++){let b=n>>1;for(;j&b;b>>=1)j^=b;j^=b;if(i<j){[re[i],re[j]]=[re[j],re[i]];[im[i],im[j]]=[im[j],im[i]]}}
+  for(let len=2;len<=n;len<<=1){const a=-2*Math.PI/len,wr=Math.cos(a),wi=Math.sin(a);
+    for(let i=0;i<n;i+=len){let cr=1,ci=0;for(let k=0;k<len/2;k++){const u=i+k,v=u+len/2,tr=re[v]*cr-im[v]*ci,ti=re[v]*ci+im[v]*cr;re[v]=re[u]-tr;im[v]=im[u]-ti;re[u]+=tr;im[u]+=ti;const nr=cr*wr-ci*wi;ci=cr*wi+ci*wr;cr=nr}}}
+}
+const dbOf=(x,i,n)=>{let s=0;for(let j=0;j<n;j++){const v=x[i+j]||0;s+=v*v}return 10*Math.log10(s/n+1e-12)};
+function onsets(x,sr){
+  const H=Math.round(sr*0.005),n=Math.floor(x.length/H),db=new Float32Array(n);let pk=-120;
+  for(let k=0;k<n;k++){db[k]=dbOf(x,k*H,H);pk=Math.max(pk,db[k])}
+  const out=[];let last=-99;
+  for(let k=6;k<n;k++){let mn=1e9;for(let j=1;j<=6;j++)mn=Math.min(mn,db[k-j]);
+    if(db[k]-mn>9&&db[k]>pk-30&&k-last>16){last=k;out.push((k-1)*H)}}
+  return out;
+}
+function features(x,sr,i0){
+  const N=1024,re=new Float64Array(N),im=new Float64Array(N);
+  for(let i=0;i<N;i++)re[i]=(x[i0+i]||0)*(0.5-0.5*Math.cos(2*Math.PI*i/(N-1)));
+  fft(re,im);const bw=sr/N;let tot=0,low=0,hi=0,cs=0;
+  for(let b=1;b<N/2;b++){const p=re[b]*re[b]+im[b]*im[b],f=b*bw;tot+=p;cs+=p*f;if(f<200)low+=p;if(f>=4000)hi+=p}
+  let zc=0;for(let i=1;i<N;i++)if(((x[i0+i-1]||0)>=0)!==((x[i0+i]||0)>=0))zc++;
+  const H=Math.round(sr*0.005);let pk=-120,pi=0;const d=[];for(let k=0;k<80;k++)d.push(dbOf(x,i0+k*H,H));
+  for(let k=0;k<8;k++)if(d[k]>pk){pk=d[k];pi=k}
+  let dur=0.4;for(let k=pi;k<80;k++)if(d[k]<pk-20){dur=Math.min(0.4,(k-pi)*H/sr);break}
+  return{lowR:low/(tot||1),hiR:hi/(tot||1),cen:cs/(tot||1),zcr:zc/N,dur};
+}
+const vec=f=>[f.lowR,f.hiR,Math.log2(Math.max(f.cen,50)/100)/5,Math.min(1,f.zcr*2),Math.min(f.dur,0.3)/0.3];
+function classify(f,cal){
+  let k;
+  if(cal){const v=vec(f);let bd=1e9;for(const c of['kick','snare','hat']){let d=0;for(let i=0;i<5;i++)d+=(v[i]-cal[c][i])**2;if(d<bd){bd=d;k=c}}
+    if(k==='hat'&&f.dur>Math.max(0.12,1.8*cal.hat[4]*0.3))k='ohat';return k}
+  if(f.lowR>0.5)return'kick';
+  if(f.cen>4500)return f.dur>0.12?'ohat':'hat';
+  return'snare';
+}
+// kick x4, snare x4, hat x4 -> a reference for this mouth
+function calibrate(feats){
+  if(feats.length!==12)return null;
+  const avg=a=>a.map(vec).reduce((s,v)=>s.map((x,i)=>x+v[i]/a.length),[0,0,0,0,0]);
+  return{kick:avg(feats.slice(0,4)),snare:avg(feats.slice(4,8)),hat:avg(feats.slice(8,12))};
+}
+const DRUM_NOTE={kick:36,snare:38,hat:42,ohat:46};
+function drumsToEvents(x,sr,{bpm,t0,steps=64,cal=null,nudge=0}){
+  const hits=onsets(x,sr).map(i=>({i,f:features(x,sr,i)})),ev=[],seen=new Set();
+  for(const h of hits){const s=quant(h.i/sr,t0,bpm,nudge),type=classify(h.f,cal),key=s+type;if(s<0||s>=steps||seen.has(key))continue;seen.add(key);ev.push({step:s,type})}
+  ev.sort((a,b)=>a.step-b.step);return{events:ev,hits:hits.length,feats:hits.map(h=>h.f)};
+}
+// ---- Standard MIDI File, type 1
+function midiFile({tempo,tracks}){
+  const PPQ=480,out=[],u32=n=>[(n>>>24)&255,(n>>>16)&255,(n>>>8)&255,n&255],u16=n=>[(n>>8)&255,n&255];
+  const vl=n=>{const b=[n&127];while((n>>=7))b.unshift((n&127)|128);return b};
+  const trk=ev=>{ev.sort((a,b)=>a.t-b.t||a.order-b.order);const body=[];let last=0;for(const e of ev){body.push(...vl(e.t-last),...e.bytes);last=e.t}body.push(0,0xff,0x2f,0);return[0x4d,0x54,0x72,0x6b,...u32(body.length),...body]};
+  const chunks=[trk([{t:0,order:0,bytes:[0xff,0x51,3,...u32(Math.round(6e7/tempo)).slice(1)]},{t:0,order:0,bytes:[0xff,0x58,4,4,2,24,8]}])];
+  for(const t of tracks){
+    const ev=[],nm=Array.from(t.name).map(c=>c.charCodeAt(0)&127);ev.push({t:0,order:0,bytes:[0xff,0x03,nm.length,...nm]});
+    if(t.channel!==9)ev.push({t:0,order:1,bytes:[0xc0|t.channel,t.program||0]});
+    for(const n of t.notes){const on=Math.round(n.beat*PPQ),off=on+Math.max(1,Math.round(n.dur*PPQ));ev.push({t:on,order:3,bytes:[0x90|t.channel,n.note&127,90]},{t:off,order:2,bytes:[0x80|t.channel,n.note&127,0]})}
+    chunks.push(trk(ev));
+  }
+  out.push(0x4d,0x54,0x68,0x64,...u32(6),...u16(1),...u16(chunks.length),...u16(PPQ));for(const c of chunks)out.push(...c);
+  return Uint8Array.from(out);
+}
+function toMidi({bpm,melody=[],drums=[]}){
+  const tracks=[];
+  if(melody.length)tracks.push({name:'Melody',channel:0,program:80,notes:melody.map(e=>({beat:e.step/4,dur:e.len/4,note:e.midi}))});
+  if(drums.length)tracks.push({name:'Drums',channel:9,notes:drums.map(e=>({beat:e.step/4,dur:0.1,note:DRUM_NOTE[e.type]}))});
+  return midiFile({tempo:bpm,tracks});
+}
+// ---- the jam brain: it listens to notes, keeps a key, and picks one chord per bar, a bar behind the player
+const PROG=[0,4,5,3]; // I V vi IV
+function jamBrain(){
+  const st={key:null,chord:null,conf:0,bars:0,hist:[]};
+  return{
+    st,
+    note(pc,w,bar){st.hist.push({pc:((pc%12)+12)%12,w,bar})},
+    // call when `bar` has just ended; follow 0 = stick to a progression, 1 = chase every note
+    endBar(bar,follow=0.5){
+      const wk=new Array(12).fill(0);let total=0;
+      for(const h of st.hist){if(h.bar>bar||h.bar<bar-7)continue;const w=h.w*Math.pow(0.8,bar-h.bar);wk[h.pc]+=w;total+=w}
+      if(total>=1){const c=fitKey(wk),cur=st.key&&c.find(k=>k.root===st.key.root&&k.mode===st.key.mode);
+        if(!st.key||c[0].score>cur.score+0.2*total)st.key=c[0]}
+      if(!st.key){st.conf=0;return st}
+      const cs=chordsOf(st.key.root,st.key.mode),wb=new Array(12).fill(0);let tb=0;
+      for(const h of st.hist){if(h.bar!==bar&&h.bar!==bar-1)continue;const w=h.w*(h.bar===bar?1:0.15);wb[h.pc]+=w;tb+=w}
+      if(tb<0.5){st.conf=0;if(!st.chord)st.chord=cs[0];st.bars++;return st}
+      const set=new Set((st.key.mode==='major'?MAJ:MIN).map(i=>(i+st.key.root)%12)),prog=PROG[st.bars%4];
+      const sc=cs.map(c=>{let s=0;for(let pc=0;pc<12;pc++)s+=wb[pc]*(c.pcs.includes(pc)?1:set.has(pc)?0.25:0);
+        return{c,s:s+(c.d===prog?(1-follow)*tb*1.2:0)+(c.d===0?0.05*tb:0)}}).sort((a,b)=>b.s-a.s);
+      st.conf=Math.min(1,2*(sc[0].s-sc[1].s)/sc[0].s+(follow<0.5?0.3:0));
+      if(st.conf>=0.2||!st.chord)st.chord=sc[0].c;
+      st.bars++;return st;
+    }
+  };
+}
+return{PCN,yin,pitchNow,pitchTrack,notes,fitKey,keyName,snapToScale,chordsOf,humToEvents,onsets,features,classify,calibrate,drumsToEvents,midiFile,toMidi,jamBrain,DRUM_NOTE};
+})();
+</script>
 <script type="module">
 const $ = id => document.getElementById(id);
 const VERSION='1.0.0', STORAGE='audio-latency-lab-v1';
@@ -455,4 +650,145 @@ $('pulse').onclick=async()=>{
  }catch(e){log('Chirp failed: '+e.message,true);if(temporary && ctx)ctx.close().catch(()=>{});}
 };
 redraw();
-</script></body></html>
+</script><script type="module">
+// Section 7 (mouth to MIDI) and 8 (live jam). The thinking is in script#mouth-dsp; this is audio in/out and drawing.
+const D=MouthDSP,$=id=>document.getElementById(id),say=(id,t)=>{$(id).textContent=t};
+let mctx=null,out=null,noiseBuf=null;
+let booting=null; // one setup shared by every button, even when two are pressed together
+const audio=()=>(booting||=(async()=>{
+  const c=new AudioContext({latencyHint:'interactive'});
+  const url=URL.createObjectURL(new Blob(["class R extends AudioWorkletProcessor{process(i){const c=i[0][0];if(c)this.port.postMessage({f:currentFrame,d:c.slice()});return true}}registerProcessor('lab-rec',R)"],{type:'text/javascript'}));
+  await c.audioWorklet.addModule(url);
+  out=c.createGain();out.gain.value=0.8;out.connect(c.destination);
+  const b=c.createBuffer(1,c.sampleRate,c.sampleRate),d=b.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1;noiseBuf=b;mctx=c;return c;
+})().catch(e=>{booting=null;throw e})).then(async c=>{await c.resume();return c});
+// microphone tap: no echo cancellation, noise suppression or auto gain, they flatten the clicks and pops we listen for
+async function tap(onChunk){
+  const c=await audio(),dev=$('inputDevice').value;
+  const s=await navigator.mediaDevices.getUserMedia({audio:{...(dev?{deviceId:{exact:dev}}:{}),echoCancellation:false,noiseSuppression:false,autoGainControl:false,channelCount:1}});
+  const src=c.createMediaStreamSource(s),n=new AudioWorkletNode(c,'lab-rec'),mute=c.createGain();mute.gain.value=0;
+  n.port.onmessage=e=>onChunk(e.data.d,e.data.f);src.connect(n);n.connect(mute);mute.connect(c.destination); // a worklet with no path to the destination may never run
+  return()=>{src.disconnect();n.disconnect();s.getTracks().forEach(t=>t.stop())};
+}
+// ---- voices
+const env=(c,t,a,len,g)=>{const o=c.createGain();o.gain.setValueAtTime(0.0001,t);o.gain.linearRampToValueAtTime(g,t+a);o.gain.exponentialRampToValueAtTime(0.0001,t+len);o.connect(out);return o};
+function drum(c,type,t,v=1){
+  if(type==='kick'){const o=c.createOscillator();o.frequency.setValueAtTime(150,t);o.frequency.exponentialRampToValueAtTime(45,t+0.12);o.connect(env(c,t,0.002,0.3,0.9*v));o.start(t);o.stop(t+0.32);return}
+  const n=c.createBufferSource(),f=c.createBiquadFilter();n.buffer=noiseBuf;
+  if(type==='snare'){f.type='bandpass';f.frequency.value=1800;f.Q.value=0.7;n.connect(f);f.connect(env(c,t,0.002,0.16,0.5*v));const o=c.createOscillator();o.type='triangle';o.frequency.value=190;o.connect(env(c,t,0.002,0.1,0.3*v));o.start(t);o.stop(t+0.12)}
+  else{f.type='highpass';f.frequency.value=7000;n.connect(f);f.connect(env(c,t,0.001,type==='ohat'?0.3:0.045,0.3*v))}
+  n.start(t);n.stop(t+0.35);
+}
+function tone(c,midi,t,len,type='triangle',g=0.25){const o=c.createOscillator();o.type=type;o.frequency.value=440*2**((midi-69)/12);const e=env(c,t,0.01,len+0.05,g);o.connect(e);o.start(t);o.stop(t+len+0.08)}
+const click=(c,t,hi)=>{const o=c.createOscillator();o.frequency.value=hi?1600:1000;o.connect(env(c,t,0.001,0.05,0.4));o.start(t);o.stop(t+0.06)};
+
+// ---- 7 · mouth to MIDI
+const M={bpm:100,bars:4,melody:[],drums:[]};let ph=-1,busy=false,playing=null;
+const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+function drawM(){
+  const cv=$('mCanvas'),dpr=devicePixelRatio||1,w=cv.clientWidth,h=230;cv.width=w*dpr;cv.height=h*dpr;
+  const g=cv.getContext('2d');g.scale(dpr,dpr);g.clearRect(0,0,w,h);
+  const n=M.bars*16,sw=w/n,melH=140,lanes=['kick','snare','hat','ohat'],col={kick:css('--hot'),snare:css('--acc2'),hat:css('--blue'),ohat:css('--acc')};
+  g.fillStyle=css('--bg');g.fillRect(0,0,w,h);
+  for(let s=0;s<=n;s+=4){g.fillStyle=s%16===0?css('--dim'):css('--line');g.fillRect(s*sw,0,1,h)}
+  const ms=M.melody.map(e=>e.midi),lo=ms.length?Math.min(...ms)-1:55,hi=ms.length?Math.max(...ms)+1:67,rows=Math.max(12,hi-lo+1);
+  g.fillStyle=css('--acc');for(const e of M.melody){const y=melH-((e.midi-lo+0.5)/rows)*melH;g.fillRect(e.step*sw,y-3,Math.max(3,e.len*sw-1),6)}
+  lanes.forEach((l,i)=>{const y=melH+8+i*20;g.fillStyle=css('--line');g.fillRect(0,y+9,w,1);g.fillStyle=col[l];for(const e of M.drums)if(e.type===l)g.fillRect(e.step*sw,y+2,Math.max(4,sw-1),14)});
+  if(ph>=0){g.fillStyle='#fff';g.fillRect(ph*sw,0,2,h)}
+}
+async function record(kind){
+  if(busy)return;busy=true;document.querySelectorAll('#mouthPanel button').forEach(b=>b.disabled=true);
+  const info=t=>say('mInfo',t);
+  try{
+    const bpm=+$('mBpm').value||100,bars=kind==='cal'?3:+$('mBars').value,beat=60/bpm,c=await audio(),chunks=[];let first=null;
+    const stop=await tap((d,f)=>{if(first===null)first=f;chunks.push(d)});
+    const tc0=c.currentTime+0.5,total=4+bars*4;
+    for(let i=0;i<total;i++)if(i<4||kind==='cal'||$('mClick').checked)click(c,tc0+i*beat,i%4===0);
+    const label=kind==='cal'?['kicks: boom','snares: pf','hats: tss']:[];
+    const tick=setInterval(()=>{const b=Math.floor((c.currentTime-tc0)/beat);
+      info(b<0?'Get ready…':b<4?'Count-in '+(b+1)+'/4':kind==='cal'?'Now: '+label[Math.min(2,Math.floor((b-4)/4))]+' ('+((b-4)%4+1)+'/4)':'Recording: bar '+(Math.floor((b-4)/4)+1)+' of '+bars)},60);
+    await new Promise(r=>setTimeout(r,(tc0-c.currentTime+total*beat+0.4)*1000));
+    clearInterval(tick);stop();
+    const sr=c.sampleRate,all=new Float32Array(chunks.reduce((a,d)=>a+d.length,0));let o=0;for(const d of chunks){all.set(d,o);o+=d.length}
+    const grid=tc0+4*beat-first/sr,from=Math.max(0,Math.round((grid-0.1)*sr)),x=all.subarray(from),t0=grid-from/sr; // drop the count-in, and any click bleed with it
+    const nudge=(+$('mNudge').value||0)/1000,steps=bars*16;
+    if(kind==='cal'){
+      const r=D.drumsToEvents(x,sr,{bpm,t0,steps:999});
+      if(r.feats.length!==12)info('Heard '+r.feats.length+' hits and I need 12 (4 kicks, 4 snares, 4 hats). Try again, close to the mic and on the clicks.');
+      else{const cal=D.calibrate(r.feats);localStorage.setItem('lab.mouthCal',JSON.stringify(cal));info('Calibrated: your beatbox sounds are saved on this device.')}
+    }else{
+      if(M.bpm!==bpm||M.bars!==bars){M.melody=[];M.drums=[]}M.bpm=bpm;M.bars=bars;
+      if(kind==='hum'){const r=D.humToEvents(x,sr,{bpm,t0,steps,snap:$('mSnap').checked,nudge});M.melody=r.events;
+        info(r.events.length?r.events.length+' notes'+(r.key?' in '+D.keyName(r.key):'')+'. Add drums with BEATBOX, or press PLAY.':'No notes heard. Hum louder and closer, or check the microphone in section 1.')}
+      else{let cal=null;try{cal=JSON.parse(localStorage.getItem('lab.mouthCal'))}catch{}
+        const r=D.drumsToEvents(x,sr,{bpm,t0,steps,cal,nudge});M.drums=r.events;
+        info(r.events.length?r.events.length+' hits'+(cal?'':' (not calibrated: CALIBRATE first for better kicks, snares and hats)')+'.':'No hits heard. Beatbox louder and closer to the mic.')}
+    }
+  }catch(e){info('Could not record: '+(e&&e.message||e))}
+  busy=false;document.querySelectorAll('#mouthPanel button').forEach(b=>b.disabled=false);drawM();
+}
+function mStop(){clearInterval(playing);playing=null;ph=-1;$('mPlay').classList.remove('on');$('mPlay').textContent='PLAY';drawM()}
+async function mPlay(){
+  if(playing){mStop();return}
+  if(!M.melody.length&&!M.drums.length){say('mInfo','Nothing to play yet.');return}
+  const c=await audio(),step=60/M.bpm/4,n=M.bars*16;let k=0,t=c.currentTime+0.1;
+  $('mPlay').classList.add('on');$('mPlay').textContent='STOP';
+  playing=setInterval(()=>{while(t<c.currentTime+0.15){const s=k%n;
+    for(const e of M.melody)if(e.step===s)tone(c,e.midi,t,e.len*step);
+    for(const e of M.drums)if(e.step===s)drum(c,e.type,t);
+    setTimeout(()=>{ph=s;drawM()},Math.max(0,(t-c.currentTime)*1000));t+=step;k++}},25);
+}
+$('mHum').onclick=()=>record('hum');$('mDrums').onclick=()=>record('drums');$('mCal').onclick=()=>record('cal');$('mPlay').onclick=mPlay;
+$('mClear').onclick=()=>{mStop();M.melody=[];M.drums=[];drawM();say('mInfo','Cleared.')};
+$('mMidi').onclick=()=>{
+  if(!M.melody.length&&!M.drums.length){say('mInfo','Nothing to save yet.');return}
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([D.toMidi({bpm:M.bpm,melody:M.melody,drums:M.drums})],{type:'audio/midi'}));a.download='mouth-'+M.bpm+'bpm.mid';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),2000);say('mInfo','Saved '+a.download);
+};
+addEventListener('resize',drawM);drawM();
+
+// ---- 8 · live jam
+const J={on:false};
+const DEMO=[[0,4,7],[7,11,2],[9,0,4],[5,9,0],[0,4,7],[7,11,2],[9,0,4],[5,9,0],[2,5,9],[7,10,2],[10,2,5],[0,4,7]]; // C major for 8 bars, then D minor
+async function jamStop(){
+  J.on=false;clearInterval(J.timer);clearInterval(J.listen);J.off&&J.off();J.midi&&J.midi.forEach(i=>i.onmidimessage=null);
+  $('jGo').classList.remove('on');$('jGo').textContent='START THE BAND';
+}
+async function jamStart(){
+  const c=await audio(),bpm=+$('jBpm').value||90,beat=60/bpm,bar=4*beat,mode=$('jIn').value,brain=D.jamBrain(),t0=c.currentTime+0.5,sr=c.sampleRate;
+  Object.assign(J,{on:true,brain,heard:[]});
+  const barOf=t=>Math.floor((t-t0)/bar),noteIn=(m,w,bb)=>{brain.note(m,w,bb??Math.max(0,barOf(c.currentTime)));J.heard=[...J.heard.slice(-11),D.PCN[((m%12)+12)%12]];say('jInfo','Heard: '+J.heard.join(' '))};
+  J.off=null;J.midi=null;
+  if(mode==='mic'){
+    const buf=new Float32Array(Math.floor(sr*0.12));let lastM=null,cnt=0;
+    J.off=await tap(d=>{buf.copyWithin(0,d.length);buf.set(d.subarray(Math.max(0,d.length-buf.length)),buf.length-Math.min(d.length,buf.length))});
+    J.listen=setInterval(()=>{const r=D.pitchNow(buf,sr);
+      if(r.midi!=null&&r.rms>0.005){const m=Math.round(r.midi);if(m===lastM)cnt++;else{lastM=m;cnt=1}
+        if(cnt===3)noteIn(m,0.8);else if(cnt>3)brain.note(m,0.1,Math.max(0,barOf(c.currentTime)))}else{lastM=null;cnt=0}},30);
+  }else if(mode==='midi'){
+    if(!navigator.requestMIDIAccess){say('jInfo','This browser has no Web MIDI.');return jamStop()}
+    const a=await navigator.requestMIDIAccess();J.midi=[...a.inputs.values()];
+    if(!J.midi.length)say('jInfo','No MIDI input found: the band will only keep time.');
+    J.midi.forEach(i=>i.onmidimessage=e=>{if((e.data[0]&0xf0)===0x90&&e.data[2]>0)noteIn(e.data[1],1)});
+  }
+  let n=0;const root=m=>36+(m%12);
+  J.timer=setInterval(()=>{
+    const follow=+$('jFollow').value/100;
+    while(t0+n*beat/2<c.currentTime+0.15){
+      const tn=t0+n*beat/2,b=Math.floor(n/8),pos=n%8;
+      if(pos===0&&b>=1){const s=brain.endBar(b-1,follow);setTimeout(()=>{say('jKey',D.keyName(s.key));say('jChord',s.chord?s.chord.name:'·');say('jConf',Math.round(s.conf*100)+'%')},Math.max(0,(tn-c.currentTime)*1000))}
+      setTimeout(()=>say('jBar',String(b+1)),Math.max(0,(tn-c.currentTime)*1000));
+      const s=brain.st,full=!!s.chord&&s.conf>=0.2;
+      drum(c,'hat',tn,pos%2?0.5:0.8);if(pos===0||(full&&pos===4))drum(c,'kick',tn);if(full&&(pos===2||pos===6))drum(c,'snare',tn);
+      if(s.chord&&(pos===0||pos===4)){tone(c,root(s.chord.root)+(pos===4&&full?7:0),tn,beat*1.4,'sine',0.35)}
+      if(full&&pos===0)for(const pc of s.chord.pcs)tone(c,48+pc,tn,bar,'sine',0.07);
+      if(mode==='demo'){const m=60+DEMO[b%DEMO.length][[0,1,2,1,0,1,2,1][pos]];tone(c,m,tn,beat*0.45,'sawtooth',0.09);noteIn(m,1,b)}
+      n++;
+    }},25);
+  $('jGo').classList.add('on');$('jGo').textContent='STOP THE BAND';
+  if(mode!=='demo')say('jInfo','The first bar is just the beat. Play something and the band comes in.');
+}
+$('jGo').onclick=()=>J.on?jamStop():jamStart().catch(e=>{say('jInfo','Could not start: '+(e&&e.message||e));jamStop()});
+$('jFollow').oninput=()=>say('jFollowV',$('jFollow').value);
+window.LAB={D,M,J}; // for tests/lab.py
+</script>
+</body></html>
