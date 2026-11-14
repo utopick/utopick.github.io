@@ -212,11 +212,13 @@
       #menu [data-sub="keys"] #pvKeys, #menu [data-sub="fx"] #pvFx, #menu [data-sub="midi"] #pvMidi, #menu [data-sub="inst"] #pvInst, #menu [data-sub="real"] #pvReal { display: flex; }
       #realRules { font-size: 12px; line-height: 1.4; padding: 8px 10px; border: 1px solid var(--rim); border-radius: 10px; color: var(--silk); }
       #realMap { font-size: 12px; line-height: 1.4; color: var(--silk); }
-      #realMapGrid { display: grid; grid-template-columns: repeat(32, 1fr); gap: 1px; margin: 6px 0; max-width: 520px; }
-      #realMapGrid i { aspect-ratio: 1; background: color-mix(in srgb, var(--silk) 12%, var(--body2)); }
-      #realMapGrid i.d { background: var(--lit); }
-      #realMapGrid i.r { outline: 2px solid var(--silk); outline-offset: -1px; z-index: 1; }
-      #realMapKey { margin: 0; padding-left: 16px; }
+      #realMapGrid { display: grid; grid-template-columns: repeat(16, 1fr); gap: 2px; margin: 6px 0; width: min(100%, 340px); aspect-ratio: 1; }
+      #realMapGrid i { aspect-ratio: 1; border-radius: 2px; background: var(--c); }
+      #realMapGrid i.b { opacity: 0.3; } /* blank sector inside a region */
+      #realMapGrid i.f { background: repeating-linear-gradient(45deg, #3a3532 0 2px, #2a2624 2px 4px); }
+      #realMapKey { margin: 0; padding-left: 0; list-style: none; }
+      #realMapKey li { display: flex; gap: 6px; align-items: baseline; }
+      #realMapKey li u { flex: none; width: 10px; height: 10px; border-radius: 2px; background: var(--c); align-self: center; }
       #realRules ol { margin: 4px 0 0; padding-left: 18px; }
       #menu [data-sub="skin"] #pvSkin { display: grid; grid-template-columns: repeat(auto-fill, minmax(max(130px, 16% - 8px), 1fr)); grid-auto-rows: max-content; align-content: start; overflow: auto; padding-right: 4px; }
       /* a skin card keeps its shape whatever the window: its little FM-1 is drawn to a fixed ratio */
@@ -392,7 +394,7 @@
             <p id="realNames">Not connected yet.</p>
             <p id="realMsg"></p>
             <div id="realMap" hidden>
-              <b>What is in the flash (1 square = 4 KiB, from 0x00000)</b>
+              <b>FLASH MAP · 1 MiB = 256 × 4 KiB</b> (colours as in M-Flasher; dim = nothing in it)
               <div id="realMapGrid" role="img" aria-label="Map of the flash: used and blank sectors"></div>
               <ul id="realMapKey"></ul>
             </div>
@@ -2648,19 +2650,31 @@ registerProcessor("fm1", Fm1);
       };
       // INSPECT: asks the firmware port who it is (0x11) and the update port what it is (0x12), both read-only, then copies a text report
       const hx = (n, w = 5) => "0x" + n.toString(16).toUpperCase().padStart(w, "0");
+      // M-Flasher's colours and regions for the stock FM-1 layout (a 16 x 16 map of 4 KiB sectors). A custom firmware may place its own data elsewhere:
+      // the colours say where the stock layout puts things, and a dim square is a sector with nothing in it.
+      const REGIONS = [["BOOT", 0, 0x4000, "#a2405a"], ["FIRMWARE", 0x4000, 0x93000, "#5ed4bf"], ["SETTINGS", 0x93000, 0xe9000, "#dcc395"], ["PAIRINGS", 0xe9000, 0xea000, "#6f97cf"], ["SOUNDS", 0xea000, 0xfc000, "#c6717a"], ["MAC", 0xff000, 0x100000, "#8f8b86"]];
+      const regionAt = (sec) => REGIONS.find(([, a, b]) => sec << 12 >= a && sec << 12 < b) || ["FREE", 0, 0, "#3a3532"];
+      const ranges = (list) => { const out = []; for (const n of list) { const l = out[out.length - 1]; l && l[1] === n - 1 ? (l[1] = n) : out.push([n, n]); } return out.map(([a, b]) => (a === b ? a.toString(16) : a.toString(16) + "-" + b.toString(16)).toUpperCase()).join(", "); };
+      const regionLines = (m) => ["BOOT", "FIRMWARE", "SETTINGS", "PAIRINGS", "SOUNDS", "MAC", "FREE"].map((n) => {
+        const secs = Array.from(m.sectors, (u, i) => i).filter((i) => regionAt(i)[0] === n);
+        return secs.length ? [n, regionAt(secs[0])[3], n + " · sectors " + ranges(secs) + (n === "FREE" ? "" : " · " + secs.filter((i) => m.sectors[i]).length + " of " + secs.length + " hold data")] : null;
+      }).filter(Boolean);
       const mapLines = (m) => [
         ...m.records.map((r) => hx(r.addr) + "  " + r.name + (r.len === 0xffffffff ? "" : " (" + r.len + " bytes)") + (r.name === "uboot.boot" ? " · " + (m.protector.installed ? "m-bootloader " + m.protector.version : "stock bootloader, no protector") : "")),
+        ...regionLines(m).map((l) => l[2]),
         m.used + " of " + m.sectors.length + " sectors hold data, " + (m.sectors.length - m.used) + " are blank",
       ];
       function realMapDraw(m) {
         const g = $("#realMapGrid"), k = $("#realMapKey");
         g.replaceChildren(...Array.from(m.sectors, (u, i) => {
-          const c = el("i");
-          c.className = (u ? "d" : "") + (m.records.some((r) => r.addr >> 12 === i) ? " r" : "");
-          c.title = hx(i << 12) + (u ? " · data" : " · blank");
+          const c = el("i"), [n, , , col] = regionAt(i);
+          c.style.setProperty("--c", col);
+          c.className = n === "FREE" ? "f" : u ? "" : "b";
+          c.title = "SECTOR " + i.toString(16).toUpperCase().padStart(2, "0") + " · " + hx(i << 12) + "-" + hx(((i + 1) << 12) - 1) + " · " + n + (u ? " · data" : " · blank");
           return c;
         }));
-        k.replaceChildren(...mapLines(m).map((t) => { const li = el("li"); li.textContent = t; return li; })); // names come from the flash: text only
+        const li = (text, col) => { const e = el("li"), sw = el("u"); if (col) sw.style.setProperty("--c", col); e.append(col ? sw : "", Object.assign(el("span"), { textContent: text })); return e; }; // names come from the flash: text only
+        k.replaceChildren(...regionLines(m).map(([, col, t]) => li(t, col)), ...m.records.map((r) => li(hx(r.addr) + "  " + r.name + (r.name === "uboot.boot" ? " · " + (m.protector.installed ? "m-bootloader " + m.protector.version : "stock bootloader, no protector") : ""))));
         $("#realMap").hidden = false;
       }
       const realReport = () => {
@@ -2682,7 +2696,7 @@ registerProcessor("fm1", Fm1);
           "stored copy in the list: " + (backup ? backup.name + " (" + backup.bytes.length + " bytes)" : "none"),
           "running here: " + (f ? f.name : "nothing") + " · screen: " + ($("#realMsg").textContent || ""),
           "flash map (from the backup this session):",
-          ...(REAL.map ? [...mapLines(REAL.map).map((t) => "  " + t), ...Array.from({ length: REAL.map.sectors.length / 32 }, (_, r) => "  " + hx(r * 32 * 4096) + " " + Array.from(REAL.map.sectors.subarray(r * 32, r * 32 + 32), (u) => (u ? "#" : ".")).join(""))] : ["  none"]),
+          ...(REAL.map ? [...mapLines(REAL.map).map((t) => "  " + t), ...Array.from({ length: REAL.map.sectors.length / 16 }, (_, r) => "  " + hx(r * 16 * 4096) + " " + Array.from(REAL.map.sectors.subarray(r * 16, r * 16 + 16), (u) => (u ? "#" : ".")).join(""))] : ["  none"]),
           "what happened:",
           ...REAL_LOG.slice(-25).map(([t, m]) => "  " + t + " " + m),
         ].join("\n");
@@ -2980,5 +2994,5 @@ registerProcessor("fm1", Fm1);
       refreshCatalog();
       navigator.storage?.persist?.(); // ask the browser not to clear the kept firmwares and saves
     </script>
-  <div style="position:fixed;left:4px;bottom:2px;z-index:99;font:700 9px monospace;opacity:.7;pointer-events:none;color:#ff5e7a">TEST BUILD · pocket · 448878d</div></body>
+  <div style="position:fixed;left:4px;bottom:2px;z-index:99;font:700 9px monospace;opacity:.7;pointer-events:none;color:#ff5e7a">TEST BUILD · pocket · 761c523</div></body>
 </html>
