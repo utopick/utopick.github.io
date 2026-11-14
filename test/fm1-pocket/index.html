@@ -167,7 +167,7 @@
       /* ---- the menu: the whole screen, a tab for each subject, each tab laid out across the width so nothing scrolls
          but the firmware list */
       /* the menu, the sheet and the dialog wear the skin: the body's colour, its print for the text, its buttons, its light for what is chosen */
-      #menu, #sheet, #sure { --m-panel: color-mix(in srgb, var(--body2), #000 16%); --m-dim: color-mix(in srgb, var(--silk) 72%, var(--body2)); }
+      #menu, #sheet, #sure, #job { --m-panel: color-mix(in srgb, var(--body2), #000 16%); --m-dim: color-mix(in srgb, var(--silk) 72%, var(--body2)); }
       #menu { position: fixed; inset: 0; z-index: 5; background: var(--body2); color: var(--silk); display: flex; touch-action: auto; font: 13px/1.35 system-ui, sans-serif; }
       #menu[hidden], #menu [hidden] { display: none; }
       #menu .card { flex: 1; min-width: 0; padding: 10px; display: flex; flex-direction: column; gap: 10px; }
@@ -186,16 +186,17 @@
       #menu #manBody h3:first-child { margin-top: 0; }
       #menu #manBody p, #menu #manBody ul, #menu #manBody li { margin: 6px 0; font-size: 15px; line-height: 1.5; color: inherit; }
       #menu #manBody ul { padding-left: 18px; }
-      #menu .cards { flex: 1; min-height: 0; overflow: auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(max(150px, 25% - 8px), 1fr)); gap: 8px; align-content: start; padding-right: 4px; }
-      #menu .fwc { display: grid; grid-template-columns: 64px 1fr; gap: 6px 8px; padding: 8px; border-radius: 12px; border: 1px solid var(--rim); background: var(--m-panel); min-width: 0; }
+      #menu .cards { flex: 1; min-height: 0; overflow: auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(max(300px, 25% - 8px), 1fr)); gap: 8px; align-content: start; padding-right: 4px; }
+      #menu .fwc { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-template-rows: 1fr auto; gap: 6px 10px; padding: 8px; border-radius: 12px; border: 1px solid var(--rim); background: var(--m-panel); min-width: 0; min-height: 190px; }
       #menu .fwc.on { border-color: var(--silk); box-shadow: inset 0 0 0 1px var(--lit); }
-      #menu .fwc img { width: 64px; height: 64px; border-radius: 8px; background: #06070a; object-fit: cover; image-rendering: pixelated; }
-      #menu .fwc .t { min-width: 0; display: flex; flex-direction: column; font-size: 11px; color: var(--m-dim); overflow: hidden; height: 64px; }
-      #menu .fwc .t b { color: var(--silk); font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: none; }
+      #menu .fwc img { grid-column: 1; grid-row: 1 / span 2; width: 100%; height: 100%; min-height: 0; border-radius: 8px; background: #06070a; object-fit: contain; image-rendering: pixelated; }
+      #menu .fwc .t { grid-column: 2; grid-row: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; gap: 2px; font-size: 11px; color: var(--m-dim); overflow: hidden; }
+      #menu .fwc .t b { color: var(--silk); font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: none; }
       #menu .fwc .t span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: none; }
-      #menu .fwc .t small { font-size: 10px; line-height: 1.25; overflow: hidden; }
-      #menu .fwc .act { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 6px; }
-      #menu .fwc .inst { flex-basis: 100%; }
+      #menu .fwc .t small { font-size: 11px; line-height: 1.3; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 5; -webkit-box-orient: vertical; }
+      #menu .fwc .act { grid-column: 2; grid-row: 2; display: flex; flex-wrap: wrap; gap: 6px; }
+      #menu .fwc .act button { width: auto; flex: 1 1 0; min-width: 0; }
+      #menu .fwc .inst { flex-basis: 100% !important; }
       #menu .fwc button { min-height: 38px; padding: 4px; }
       #menu .foot { flex: none; display: flex; flex-direction: column; gap: 6px; }
       /* the five actions stay on one row, even on a phone */
@@ -282,6 +283,16 @@
       #sure[hidden] { display: none; }
       #sure .box { width: min(92%, 460px); background: var(--m-panel); color: var(--silk); border: 1px solid var(--rim); border-radius: 16px; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
       #sure p { margin: 0; }
+      /* a job on the real unit (backup, protector, install...): a dialog that stays until it is read, so there is always an answer and nowhere else to go meanwhile */
+      #job { position: fixed; inset: 0; z-index: 8; background: #000c; display: grid; place-items: center; touch-action: auto; font: 14px/1.4 system-ui, sans-serif; }
+      #job[hidden] { display: none; }
+      #job .box { width: min(92%, 460px); background: var(--m-panel); color: var(--silk); border: 1px solid var(--rim); border-radius: 16px; padding: 16px; display: flex; flex-direction: column; gap: 12px; max-height: 90vh; overflow: auto; }
+      #job h3 { margin: 0; font: 800 14px ui-monospace, Menlo, monospace; letter-spacing: 2px; }
+      #job.bad h3 { color: #ff7a8c; }
+      #job.ok h3 { color: #8ff5df; }
+      #job p { margin: 0; white-space: pre-wrap; }
+      #jobBar { width: 100%; height: 14px; accent-color: var(--lit); }
+      #jobOk { min-height: 44px; border-radius: 10px; border: 1px solid var(--rim); background: linear-gradient(var(--btn1), var(--btn2)); color: var(--ink); cursor: pointer; }
       #sure .hint { font: 800 10px ui-monospace, Menlo, monospace; letter-spacing: 2px; color: var(--m-dim); text-align: center; }
       #sureSlide { appearance: none; -webkit-appearance: none; width: 100%; height: 52px; margin: 0; border-radius: 26px; background: linear-gradient(90deg, #3a1420, #ff5e7a); cursor: pointer; }
       #sureSlide::-webkit-slider-thumb { -webkit-appearance: none; width: 72px; height: 52px; border-radius: 26px; background: var(--silk); border: 0; box-shadow: 0 2px 6px #000a; }
@@ -481,6 +492,14 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 </pre>
+    <div id="job" hidden>
+      <div class="box" role="alertdialog" aria-modal="true" aria-labelledby="jobTitle" aria-describedby="jobText">
+        <h3 id="jobTitle"></h3>
+        <p id="jobText"></p>
+        <progress id="jobBar" max="100" value="0" hidden></progress>
+        <button id="jobOk" hidden>OK</button>
+      </div>
+    </div>
     <div id="sure" hidden>
       <div class="box" role="alertdialog" aria-modal="true" aria-labelledby="sureText">
         <p id="sureText"></p>
@@ -2205,6 +2224,7 @@ registerProcessor("fm1", Fm1);
           dl.onclick = () => (toast("Downloading " + f.name + "…"), packageOf(f).then(() => toast(f.name + " is kept on this device"), (e) => toast(f.name + ": " + e.message, 4000)));
           go.title = "Run " + f.name + " on the FM-1";
           go.onclick = () => use(f.id);
+          inst.dataset.own = f === backup ? "1" : "0"; // the card of the unit's own backup never installs
           inst.hidden = f === backup || !realReady(); // only when every check of REAL FM-1 is in place
           inst.title = "Install " + f.name + " on the real FM-1 (through the protector's MIDI mode). Asks first.";
           inst.onclick = () => realInstall(f);
@@ -2513,8 +2533,19 @@ registerProcessor("fm1", Fm1);
       const isUpdatePort = (name) => /update/i.test(name || "");
       const REAL = { acc: null, fw: null, up: null, fwLink: null, upLink: null, info: null, sync: false, busy: false, saved: null, stored: null, ident: "" };
       const REAL_LOG = [];
+      const jobOpen = (title) => ($("#job").className = "", ($("#jobTitle").textContent = title), ($("#jobText").textContent = ""), ($("#jobBar").hidden = true), ($("#jobOk").hidden = true), ($("#job").hidden = false));
+      const jobEnd = (ok) => { $("#job").className = ok ? "ok" : "bad"; $("#jobBar").hidden = true; $("#jobOk").hidden = false; $("#jobOk").focus(); };
+      $("#jobOk").onclick = () => ($("#job").hidden = true);
+      // a message the user has to see (a check that is not met, a failure): never only a toast
+      const realNotice = (title, text, ok = false) => (jobOpen(title), ($("#jobText").textContent = text), jobEnd(ok));
       const realSay = (t) => {
         $("#realMsg").textContent = t;
+        if (!$("#job").hidden) {
+          $("#jobText").textContent = t.replace(/:? ?\d+%$/, "");
+          const m = /(\d+)%$/.exec(t);
+          $("#jobBar").hidden = !m;
+          if (m) $("#jobBar").value = +m[1];
+        }
         if (REAL_LOG[REAL_LOG.length - 1]?.[1] !== t && !/\d+%$/.test(t)) REAL_LOG.push([new Date().toISOString().slice(11, 19), t]); // progress lines are not kept
       };
       const unb64 = (t) => Uint8Array.from(atob(t), (c) => c.charCodeAt(0));
@@ -2526,7 +2557,7 @@ registerProcessor("fm1", Fm1);
         const rec = REAL.saved || (REAL.stored?.uid === REAL.info?.uid ? REAL.stored : null), pr = rec?.protector, prText = !rec ? " · protector: back up to find out" : pr?.installed ? " · protector: installed " + pr.version + (rec === REAL.stored ? " (from the backup kept here, " + rec.date.slice(0, 10) + ")" : "") : " · protector: NOT installed";
         $("#realNames").textContent = !REAL.acc ? "Not connected yet." : names.length ? names.join(" · ") + (REAL.info ? " · " + (REAL.info.mboot ? REAL.info.kind + " " + REAL.info.version + ", flash " + (REAL.info.capacity >> 10) + " KiB, chip " + REAL.info.jedec.toString(16).toUpperCase() : "answers, but is not m-bootloader") : "") + prText : "No FM-1 found on USB MIDI. Plug it in, switched on. Ports this browser sees: " + ([...REAL.acc.inputs.values(), ...REAL.acc.outputs.values()].map((p) => p.name + (p.state === "disconnected" ? " (gone)" : "")).join(", ") || "none") + ". INSPECT · COPY lists them all.";
         $("#realConn").classList.toggle("on", !!REAL.acc && names.length > 0);
-        for (const b of $$("#fwList .inst")) b.hidden = !installReady();
+        for (const b of $$("#fwList .inst")) b.hidden = b.dataset.own === "1" || !installReady();
         const s = $("#realSync");
         s.classList.toggle("on", REAL.sync);
         label(s, "PLAY TOGETHER", REAL.sync ? "SYNC ON" : "SYNC OFF");
@@ -2591,14 +2622,17 @@ registerProcessor("fm1", Fm1);
         }
         return false;
       };
-      async function realRun(what, job) {
-        if (REAL.busy) return toast("Wait for the unit: it is busy");
+      async function realRun(what, job, modal = true) {
+        if (REAL.busy) return realNotice(what, "The unit is busy with another job. Wait for it to finish.");
         REAL.busy = true;
+        if (modal) jobOpen(what.toUpperCase() + "…");
         try {
           await job();
+          if (modal) { $("#jobTitle").textContent = what.toUpperCase() + " · DONE"; jobEnd(true); }
         } catch (e) {
           realSay(what + ": " + e.message);
-          toast(what + " failed: " + e.message, 5000);
+          if (modal) { $("#jobTitle").textContent = what.toUpperCase() + " · FAILED"; $("#jobText").textContent = e.message + "\n\nNothing else was sent. If the unit looks stuck, switch it off, unplug its cable for a few seconds and CONNECT again. Holding PLAY at power-on opens the recovery menu if the protector is installed."; jobEnd(false); }
+          else toast(what + " failed: " + e.message, 5000);
         } finally {
           REAL.busy = false;
           realFace();
@@ -2670,8 +2704,8 @@ registerProcessor("fm1", Fm1);
       const realMsgNow = () => $("#realMsg").textContent.replace(/ It (runs here|did not draw).*$/, "");
       $("#realBackup").onclick = () => {
         if (REAL.up && REAL.info?.mboot) return realRun("Backup", backupNow);
-        if (REAL.up) return toast("This unit answers, but it is not m-bootloader or its helper: nothing was sent");
-        if (!REAL.fw) return toast("Connect a real FM-1 first");
+        if (REAL.up) return realNotice("NOT A HELPER", "This unit answers, but it is not m-bootloader or its helper: nothing was sent.");
+        if (!REAL.fw) return realNotice("CONNECT FIRST", "Connect a real FM-1 first (CONNECT), with its firmware running.");
         sure("To read the whole flash, a small helper is sent to the unit and runs from RAM. It restarts the unit into the helper (no keys needed) and writes only the firmware's updater storage area, never the boot area or keys. When the backup is done, switch the unit off and on.", () =>
           realRun("Backup", async () => {
             await realIdent();
@@ -2750,10 +2784,10 @@ registerProcessor("fm1", Fm1);
             saveFile(new TextEncoder().encode(text), "fm1-report-" + new Date().toISOString().slice(0, 10) + ".txt");
             realSay("The browser would not copy: the report was saved as a .txt file instead.");
           }
-        });
+        }, false);
       // the helper runs from RAM and the unit stays powered by USB, so a backup leaves it there: m-bootloader's own restart message (F0 22 24 35 7E F7)
       $("#realRestart").onclick = () => {
-        if (!REAL.up) return toast("The unit is not in the helper: nothing to restart. If it seems stuck, switch it off and unplug its USB cable for a few seconds", 5000);
+        if (!REAL.up) return realNotice("NOTHING TO RESTART", "The unit is not in the helper. If it seems stuck, switch it off and unplug its USB cable for a few seconds.");
         sure("Restart the unit out of the helper mode? Nothing is written.", () =>
           realRun("Restart", async () => {
             REAL.upLink.send(RealFM1.soft(RealFM1.SOFT.RESTART));
@@ -2763,12 +2797,11 @@ registerProcessor("fm1", Fm1);
           }));
       };
       $("#realProt").onclick = () => {
-        if (!REAL.fw) return toast("Switch the unit on with its firmware running (not the helper) and connect it");
-        if (!REAL.saved) return toast("Step 1 first: save a backup of this unit");
-        if (REAL.saved.protector?.installed) return toast("The protector is already in this unit (" + REAL.saved.protector.version + ")", 4000);
+        if (!REAL.fw) return realNotice("CONNECT THE FIRMWARE FIRST", "Switch the unit on with its firmware running (not the helper; RESTART UNIT if it is in the helper) and press CONNECT.");
+        if (!REAL.saved) return realNotice("BACKUP FIRST", "Step 1 first: BACKUP this unit. The protector is only offered after a backup made in this session.");
+        if (REAL.saved.protector?.installed) return realNotice("ALREADY THERE", "The protector is already in this unit (" + REAL.saved.protector.version + ").", true);
         if (REAL.saved.jedec === 0xb36014) {
-          realSay("This unit has the newer flash chip (UC25HQ80, JEDEC B36014), which has had little testing with the protector: one unit did not start after it. Install the protector with M-Flasher (github.com/jvitkauskas/m-flasher), then BACKUP here again. This page will not write the protector on this chip.");
-          return toast("Newer flash chip: use M-Flasher for the protector", 6000);
+          return realNotice("NEWER FLASH CHIP: USE M-FLASHER", "This unit has the newer flash chip (UC25HQ80, JEDEC B36014), which has had little testing with the protector: one unit did not start after it.\n\nInstall the protector with M-Flasher (github.com/jvitkauskas/m-flasher), then BACKUP here again. This page will not write the protector on this chip.");
         }
         sure("Install the protector (m-bootloader v2.4, MIT) on this FM-1? It replaces the boot area. Do not unplug the cable or switch the unit off until it restarts: a power cut can leave the unit dead, and only a USB_KEY dongle brings it back. Have your backup file copied off this computer first. M-Flasher is the maker's tested way; this page does the same as M-VAVE's updater would, with its own code.", () =>
           realRun("Protector", async () => {
@@ -2802,17 +2835,15 @@ registerProcessor("fm1", Fm1);
         if (!f) return toast("Choose a firmware in FIRMWARE first");
         const i = REAL.info, have = [REAL.saved, REAL.stored].filter((r) => r && (!i?.uid || r.uid === i.uid));
         if (!have.length) {
-          realSay("Back this unit up first (BACKUP): custom firmware is only offered when a backup shows the protector in it. It reads straight from the unit when it is in the protector's MIDI mode.");
-          return toast("Back the unit up first: the backup has to show the protector", 5000);
+          return realNotice("INSTALL LOCKED", "Back this unit up first (BACKUP). A custom firmware is only offered when a backup of the unit shows the protector in it. In the protector's MIDI mode BACKUP reads straight from the unit.");
         }
         if (!have.some((r) => r.protector?.installed)) {
-          realSay("No protector, no custom firmware. Back this unit up (BACKUP) and the backup has to show the protector. Without it, install the protector first (PROTECTOR, or M-Flasher on the newer flash chip).");
-          return toast("No protector in a backup of this unit: custom firmware is locked", 5000);
+          return realNotice("NO PROTECTOR, NO CUSTOM FIRMWARE", "The backup of this unit does not show the protector. Install it first (PROTECTOR, or M-Flasher on the newer flash chip), then BACKUP again.");
         }
-        if (f.id === "backup") return toast("Putting a backup back is not built here: use M-Flasher for that", 5000);
-        if (!i?.mboot || i.kind !== "bootloader") return toast("Put the unit in the protector's MIDI mode: switch it off, hold PLAY while switching it on, choose MIDI mode, then CONNECT", 6000);
+        if (f.id === "backup") return realNotice("NOT HERE", "Putting a backup back is not built into this page: use M-Flasher for that.");
+        if (!i?.mboot || i.kind !== "bootloader") return realNotice("PUT THE UNIT IN MIDI MODE", "The protector is in the unit, but it is not in its MIDI mode now.\n\n1. Switch the unit off.\n2. Hold PLAY while switching it on.\n3. Choose MIDI mode on its screen.\n4. Press CONNECT here, then INSTALL again.");
         const ok = realVerified();
-        if (!ok) return toast("The backup shows another protector than the one running (" + i.version + "): back the unit up again", 6000);
+        if (!ok) return realNotice("BACK THE UNIT UP AGAIN", "The backup shows another protector than the one running now (" + i.version + "). BACKUP once more so the page can check this one.");
         sure("Install " + f.name + " on the real FM-1? Its present firmware is replaced (and its saved patches with it, unless you restore your backup)." + (ok.jedec === 0xb36014 ? " This unit has the newer flash chip, which has had little testing." : "") + " The unit checks the package before it erases anything and only writes the firmware area, never the boot area.", () =>
           realRun("Install", async () => {
             const { identity, image } = RealFM1.unweave(await packageOf(f));
@@ -3051,5 +3082,5 @@ registerProcessor("fm1", Fm1);
       refreshCatalog();
       navigator.storage?.persist?.(); // ask the browser not to clear the kept firmwares and saves
     </script>
-  <div style="position:fixed;left:4px;bottom:2px;z-index:99;font:700 9px monospace;opacity:.7;pointer-events:none;color:#ff5e7a">TEST BUILD · pocket · a832bea</div></body>
+  <div style="position:fixed;left:4px;bottom:2px;z-index:99;font:700 9px monospace;opacity:.7;pointer-events:none;color:#ff5e7a">TEST BUILD · pocket · eed211e</div></body>
 </html>
