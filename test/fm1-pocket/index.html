@@ -197,6 +197,10 @@
       #menu .fwc .act { grid-column: 1 / -1; display: flex; gap: 6px; }
       #menu .fwc button { min-height: 38px; padding: 4px; }
       #menu .foot { flex: none; display: flex; flex-direction: column; gap: 6px; }
+      /* the five actions stay on one row, even on a phone */
+      #menu .foot .grid { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px; }
+      #menu .foot .grid button { padding: 6px 1px; font-size: 11px; overflow: hidden; white-space: nowrap; }
+      #menu .foot .grid button i { letter-spacing: 0; font-size: 8px; }
       /* storage: a bar that fills with what the app keeps here. Its height is fixed, so the text in it never moves the buttons */
       #stor { position: relative; height: 20px; flex: none; border-radius: 10px; background: var(--btn2); border: 1px solid var(--rim); overflow: hidden; }
       #stor i { position: absolute; inset: 0 auto 0 0; min-width: 8px; background: var(--lit); }
@@ -2825,5 +2829,5 @@ registerProcessor("fm1", Fm1);
       refreshCatalog();
       navigator.storage?.persist?.(); // ask the browser not to clear the kept firmwares and saves
     </script>
-  <div style="position:fixed;left:4px;bottom:2px;z-index:99;font:700 9px monospace;opacity:.7;pointer-events:none;color:#ff5e7a">TEST BUILD · pocket · 8351d36</div></body>
+  <div style="position:fixed;left:4px;bottom:2px;z-index:99;font:700 9px monospace;opacity:.7;pointer-events:none;color:#ff5e7a">TEST BUILD · pocket · 62a519d</div></body>
 </html>
