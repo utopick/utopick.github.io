@@ -2442,7 +2442,7 @@ registerProcessor("fm1", Fm1);
       const realThru = (data) => REAL.sync && REAL.fw && data[0] < 0xf0 && REAL.fw.out.send(Uint8Array.from(data));
       function realFace() {
         const names = [REAL.fw && "firmware port: " + REAL.fw.name, REAL.up && "update port: " + REAL.up.name].filter(Boolean);
-        $("#realNames").textContent = !REAL.acc ? "Not connected yet." : names.length ? names.join(" · ") + (REAL.info ? " · " + (REAL.info.mboot ? REAL.info.kind + " " + REAL.info.version + ", flash " + (REAL.info.capacity >> 10) + " KiB, chip " + REAL.info.jedec.toString(16).toUpperCase() : "answers, but is not m-bootloader") : "") : "No FM-1 found on USB MIDI. Plug it in, switched on.";
+        $("#realNames").textContent = !REAL.acc ? "Not connected yet." : names.length ? names.join(" · ") + (REAL.info ? " · " + (REAL.info.mboot ? REAL.info.kind + " " + REAL.info.version + ", flash " + (REAL.info.capacity >> 10) + " KiB, chip " + REAL.info.jedec.toString(16).toUpperCase() : "answers, but is not m-bootloader") : "") : "No FM-1 found on USB MIDI. Plug it in, switched on. Ports this browser sees: " + ([...REAL.acc.inputs.values(), ...REAL.acc.outputs.values()].map((p) => p.name + (p.state === "disconnected" ? " (gone)" : "")).join(", ") || "none") + ". INSPECT · COPY lists them all.";
         $("#realConn").classList.toggle("on", !!REAL.acc && names.length > 0);
         const s = $("#realSync");
         s.classList.toggle("on", REAL.sync);
@@ -2872,5 +2872,5 @@ registerProcessor("fm1", Fm1);
       refreshCatalog();
       navigator.storage?.persist?.(); // ask the browser not to clear the kept firmwares and saves
     </script>
-  <div style="position:fixed;left:4px;bottom:2px;z-index:99;font:700 9px monospace;opacity:.7;pointer-events:none;color:#ff5e7a">TEST BUILD · pocket · c22d741</div></body>
+  <div style="position:fixed;left:4px;bottom:2px;z-index:99;font:700 9px monospace;opacity:.7;pointer-events:none;color:#ff5e7a">TEST BUILD · pocket · ff0f9d2</div></body>
 </html>
