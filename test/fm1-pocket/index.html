@@ -56,7 +56,7 @@
     </script>
     <title>TEST · FM1.Pocket · M-VAVE FM-1 emulator</title>
     <style>
-      /* ---- skins. The first nine are the colours the FM-1 is sold in, as shops list them (black from a photo of
+      /* ---- skins. The first thirteen are the colours the FM-1 is sold in, as shops list them (black from a photo of
          the real one, grey is fm1-emu's drawing, the others made from their names: not measured). The rest are ours. */
       [data-skin="grey"] { --body1: #5e6166; --body2: #4a4d52; --tray: #2b2c2f; --silk: #c9c6bd; --btn1: #4b4e54; --btn2: #3b3d42; --ink: #9c9a94; --key1: #6a5557; --key2: #4f3f42; --keyline: #8f7c7e; --cap: #1e1f22; --lit: #f2a33a; --go: #62d36e; --wk: #e9e6df; --bk: #1b1b1e; }
       :root, [data-skin="black"] { --body1: #303133; --body2: #242526; --tray: #18191a; --silk: #dcdcda; --btn1: #1f2022; --btn2: #121314; --ink: #f4f4f2; --key1: #202123; --key2: #111213; --keyline: #f6f6f4; --cap: #17181a; --lit: #f2a33a; --go: #62d36e; --wk: #e6e4de; --bk: #0e0e0f; }
@@ -64,7 +64,12 @@
       [data-skin="green"] { --body1: #40604b; --body2: #2f4838; --tray: #17241b; --silk: #e6ede6; --btn1: #1c241f; --btn2: #111713; --ink: #f2f6f2; --key1: #1b241e; --key2: #101612; --keyline: #f4f8f4; --cap: #141a16; --lit: #f2a33a; --go: #62d36e; --wk: #e9efe8; --bk: #111713; }
       [data-skin="wgrey"] { --body1: #f1f0ed; --body2: #dedcd7; --tray: #cbc9c4; --silk: #3a3a3a; --btn1: #74767a; --btn2: #5c5e62; --ink: #ffffff; --key1: #7b7d81; --key2: #5f6165; --keyline: #ffffff; --cap: #66686c; --lit: #ff8a1f; --go: #2fae48; --wk: #ffffff; --bk: #55575b; }
       [data-skin="wgreen"] { --body1: #f1f0ed; --body2: #dedcd7; --tray: #cbc9c4; --silk: #2f3a33; --btn1: #63a07d; --btn2: #4c8264; --ink: #ffffff; --key1: #69a683; --key2: #4e8466; --keyline: #ffffff; --cap: #4c8264; --lit: #ff8a1f; --go: #1f8a3a; --wk: #ffffff; --bk: #3f6e54; }
-      [data-skin="wblue"] { --body1: #f1f0ed; --body2: #dedcd7; --tray: #cbc9c4; --silk: #2f3440; --btn1: #5f88c8; --btn2: #496ca6; --ink: #ffffff; --key1: #658dcc; --key2: #4b6ea8; --keyline: #ffffff; --cap: #496ca6; --lit: #ff8a1f; --go: #2fae48; --wk: #ffffff; --bk: #3c5a8c; }
+      [data-skin="wblue"] { --body1: #f4f2e9; --body2: #e6e3d8; --tray: #d3d0c6; --silk: #2f3440; --btn1: #5b7692; --btn2: #46617b; --ink: #f4f6fa; --key1: #587592; --key2: #43607b; --keyline: #ffffff; --cap: #1f1b18; --lit: #ff8a1f; --go: #2fae48; --wk: #ffffff; --bk: #3c5a8c; }
+      /* measured on the product pictures: black & teal, pink & purple, cream & charcoal, orange & red; --home is the label of HOME, which the unit prints in white */
+      [data-skin="teal"] { --body1: #4a4a4c; --body2: #3b3b3d; --tray: #2c2c2e; --silk: #f0f0ee; --btn1: #72d0c4; --btn2: #58a69d; --ink: #1c2a2a; --key1: #72d0c4; --key2: #58a69d; --keyline: #26393a; --cap: #404042; --lit: #ff9d2e; --go: #62d36e; --wk: #e6f6f3; --bk: #2f4f4f; --home: #ffffff; }
+      [data-skin="pink"] { --body1: #e49ad3; --body2: #d98bc7; --tray: #b86aa6; --silk: #4a2a55; --btn1: #8a5aa0; --btn2: #6d4687; --ink: #fbeeff; --key1: #a06cb4; --key2: #7d4f95; --keyline: #f6e6ff; --cap: #1c1a1f; --lit: #ffd45e; --go: #7be08a; --wk: #fdeefa; --bk: #5b3a6e; --home: #ffffff; }
+      [data-skin="cream"] { --body1: #e5dcd2; --body2: #d8cfc5; --tray: #c9c0b6; --silk: #2b2b2e; --btn1: #44454a; --btn2: #2f3034; --ink: #d6d6d6; --key1: #44454a; --key2: #2e2f33; --keyline: #cfcfcf; --cap: #1f1d1d; --lit: #ff8a1f; --go: #62d36e; --wk: #ffffff; --bk: #3a3b3e; --home: #ffffff; }
+      [data-skin="ember"] { --body1: #f05a1f; --body2: #de461a; --tray: #b93417; --silk: #fff0e6; --btn1: #88372d; --btn2: #6a2720; --ink: #f7d6c8; --key1: #8c372c; --key2: #6c261e; --keyline: #f7d6c8; --cap: #1c1718; --lit: #ffd27a; --go: #7be08a; --wk: #f8e6dc; --bk: #6a241d; --home: #ffffff; }
       [data-skin="orange"] { --body1: #f08a2c; --body2: #cf6d17; --tray: #2a1c12; --silk: #2a1705; --btn1: #2a2422; --btn2: #181413; --ink: #f6efe6; --key1: #2a2422; --key2: #171312; --keyline: #f6efe6; --cap: #1c1816; --lit: #ffd27a; --go: #7be08a; --wk: #f5e9da; --bk: #201a17; }
       [data-skin="purple"] { --body1: #7a5fb3; --body2: #5c4590; --tray: #221a35; --silk: #f0eaff; --btn1: #2a2140; --btn2: #1a142b; --ink: #f4f0ff; --key1: #2a2140; --key2: #191329; --keyline: #f4f0ff; --cap: #1a1428; --lit: #ffc857; --go: #7be08a; --wk: #efe9ff; --bk: #1d1630; }
       [data-skin="pocket"] { --body1: #1d222a; --body2: #161a20; --tray: #0d0f12; --silk: #8a94a3; --btn1: #2a313b; --btn2: #1d222a; --ink: #e8ecf1; --key1: #2a313b; --key2: #1d222a; --keyline: #b48cff; --cap: #0d0f12; --lit: #b48cff; --go: #7cf29a; --wk: #e8ecf1; --bk: #161a20; }
@@ -131,6 +136,10 @@
       .pb { --led: 0; min-width: 0; padding: 0; border: 0; border-radius: calc(12 * var(--u)); cursor: pointer; font: 800 max(7px, calc(13 * var(--u))) system-ui, sans-serif; letter-spacing: 0; color: color-mix(in srgb, var(--ink), #2a1a03 calc(var(--led) * 100%)); background: linear-gradient(color-mix(in srgb, var(--btn1), var(--tint, var(--lit)) calc(var(--led) * 85%)), color-mix(in srgb, var(--btn2), var(--tint, var(--lit)) calc(var(--led) * 70%))); box-shadow: inset 0 0 0 1px var(--rim), inset 0 1px 0 #ffffff26, 0 calc(3 * var(--u)) calc(4 * var(--u)) #000c; }
       .pb.down { transform: translateY(1px) scale(0.97); box-shadow: inset 0 0 0 1px var(--rim), inset 0 2px 4px #000a; }
       .pb.go { --tint: var(--go); }
+      /* the unit prints HOME in white, and PLAY over STOP (one button) */
+      .pb.home { color: color-mix(in srgb, var(--home, #fff), #2a1a03 calc(var(--led) * 100%)); }
+      .pb .pl, .pb .st { display: block; line-height: 1.15; font-size: 0.8em; }
+      .pb .pl { border-bottom: 1px solid currentColor; padding-bottom: 1px; margin-bottom: 1px; }
       /* ---- the keys: F3 to G5. One row sideways, two rows upright. FM-1 pills (the upper ones with the stock firmware's names under them), or a piano */
       .krow { position: relative; flex: 1; min-height: 0; }
       .k { --led: 0; position: absolute; cursor: pointer; }
@@ -242,7 +251,7 @@
       #realMapKey { margin: 0; padding: 0; list-style: none; min-width: 0; flex: 1; }
       #realMapKey li { display: flex; gap: 4px; align-items: baseline; font-size: 9.5px; line-height: 1.25; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
       #realMapKey li u { flex: none; width: 10px; height: 10px; border-radius: 2px; background: var(--c); align-self: center; }
-      #menu [data-sub="skin"] #pvSkin { display: grid; grid-template-columns: repeat(auto-fill, minmax(max(130px, 16% - 8px), 1fr)); grid-auto-rows: max-content; align-content: start; overflow: auto; padding-right: 4px; }
+      #menu [data-sub="skin"] #pvSkin { display: grid; grid-template-columns: repeat(auto-fill, minmax(max(92px, 13% - 8px), 1fr)); grid-auto-rows: max-content; align-content: start; overflow: auto; padding-right: 4px; }
       /* a skin card keeps its shape whatever the window: its little FM-1 is drawn to a fixed ratio */
       #menu #pvSkin .pick { height: auto; }
       #menu #pvSkin .pick .pv { flex: none; aspect-ratio: 16 / 9; }
@@ -302,7 +311,11 @@
         #menu button { min-height: 34px; padding-top: 3px; padding-bottom: 3px; }
         #menu section > .grid button i { display: none; }
         #menu section > .grid { gap: 5px; }
-        #menu .fwc button { min-height: 32px; }
+        #menu .fwc button { min-height: 30px; }
+        #menu .fwc { min-height: 118px; padding: 6px; }
+        #menu .fwc .t small { -webkit-line-clamp: 2; }
+        #menu .fwc .act button { flex: 1 1 28%; font-size: 10.5px; }
+        #fwSearch { min-height: 30px; padding: 2px 10px; font-size: 13px; }
         #realBtns button { min-height: 30px; }
         #menu .box.pane { padding: 6px 8px; }
         #menu .thanks h3 { font-size: 9px; }
@@ -3943,7 +3956,9 @@ registerProcessor("fm1", Fm1);
         BTNS.forEach((n, id) => {
           const b = el("button", "pb" + (id === 12 ? " go" : ""), n);
           b.dataset.k = id;
-          b.title = "The FM-1's " + n + " button";
+          if (id === 12) b.replaceChildren(el("span", "pl", "PLAY"), el("span", "st", "STOP"));
+          if (id === 8) b.classList.add("home");
+          b.title = "The FM-1's " + n + (id === 12 ? " / STOP button (one button)" : " button");
           (id < 2 ? $("#oct") : $("#btns")).append(b);
           lights[id] = b;
         });
@@ -4496,7 +4511,7 @@ registerProcessor("fm1", Fm1);
       // views, keys and skins
       // ======================================================================
       const FXS = [["lcd", "LCD"], ["crt", "CRT"], ["off", "CLEAN"]];
-      const SKINS = [["black", "FM-1 BLACK"], ["grey", "FM-1 GREY"], ["purple", "FM-1 PURPLE"], ["orange", "FM-1 ORANGE"], ["navy", "FM-1 NAVY"], ["green", "FM-1 GREEN"], ["wgrey", "FM-1 WHITE & GREY"], ["wgreen", "FM-1 WHITE & GREEN"], ["wblue", "FM-1 WHITE & BLUE"], ["pocket", "POCKET"], ["term", "TERMINAL"], ["dmg", "DMG"], ["dungeon", "DUNGEON SYNTH"]];
+      const SKINS = [["black", "FM-1 BLACK"], ["grey", "FM-1 GREY"], ["purple", "FM-1 PURPLE"], ["orange", "FM-1 ORANGE"], ["navy", "FM-1 NAVY"], ["green", "FM-1 GREEN"], ["wgrey", "FM-1 WHITE & GREY"], ["wgreen", "FM-1 WHITE & GREEN"], ["wblue", "FM-1 WHITE & BLUE"], ["teal", "FM-1 BLACK & TEAL"], ["pink", "FM-1 PINK & PURPLE"], ["cream", "FM-1 CREAM & CHARCOAL"], ["ember", "FM-1 ORANGE & RED"], ["pocket", "POCKET"], ["term", "TERMINAL"], ["dmg", "DMG"], ["dungeon", "DUNGEON SYNTH"]];
       const pick = (k, list, d) => (list.includes(stored(k)) ? stored(k) : d);
       const tall = matchMedia("(orientation: portrait) and (pointer: fine)"), // the upright layout (a computer's narrow window)
         turned = matchMedia("(orientation: portrait) and (pointer: coarse)"); // a phone held upright: the page is drawn turned
@@ -4508,7 +4523,7 @@ registerProcessor("fm1", Fm1);
         const b = document.body.dataset,
           skin = SKINS.find((s) => s[0] === root.skin) || SKINS[0];
         label($("#keys"), "KEYS", kbd.keys === "fm" ? "FM-1" : "PIANO");
-        label($("#skin"), SKINS.indexOf(skin) < 9 ? "SKIN · FM-1 COLOUR" : "SKIN · OURS", skin[1]);
+        label($("#skin"), SKINS.indexOf(skin) < SKINS.findIndex((x) => x[0] === "pocket") ? "SKIN · FM-1 COLOUR" : "SKIN · OURS", skin[1]);
         label($("#fx"), "SCREEN FILTER", (FXS.find((f) => f[0] === scr.fx) || FXS[0])[1]);
         for (const [pane, now] of [["#pvKeys", kbd.keys], ["#pvSkin", root.skin], ["#pvFx", scr.fx]]) for (const c of $$(pane + " .pick")) c.classList.toggle("on", c.dataset.v === now);
         $("#flip").textContent = { complete: "KEYS", keys: "TOP", up: "ALL" }[b.view]; // what the next tap shows
@@ -5106,65 +5121,85 @@ registerProcessor("fm1", Fm1);
           "This part follows M-VAVE's own user manual for the firmware the FM-1 ships with. To run that firmware here, download **FM-1.fwsc** from M-VAVE and use **OPEN FILE**. The community firmwares use the same knobs and buttons in their own way: read each author's page. Newer versions of the stock firmware may differ from this.",
           "## The screen",
           "- **Top bar**: the number and name of the preset in use. **Centre**: what the current mode shows (the oscilloscope at home, parameters, the effect grid, the algorithm diagram). **Bottom bar**: the mode and its page, like 1/2 LFO, and what each knob is changing.",
-          "- Changing a preset, the algorithm, the octave, the transpose or the volume shows a small window for about a second.",
+          "- A battery symbol sits top right, and a LOW BATTERY screen covers everything until the unit is charged or switched off (real FM-1 only). Small windows pop up for about a second: the preset list (number and name, the current one lit), the algorithm drawing, Octave, Transpose, Volume and Preset Saved.",
           "## Left side",
           "- **MASTER**: the volume.",
           "- **SELECT**: the page of the current mode. Many modes have two pages. In FX it moves between the six effects.",
-          "- **PRESETS**: goes through the 128 presets (001 to 128, round and round). Each one loads at once, and a list shows where you are.",
-          "- **ALGORITHM**: chooses one of the 32 algorithms, the ways the six operators are connected. The screen draws it. Hold **OCT-** or **OCT+** and turn it to transpose, down or up to 12 semitones.",
-          "- **OCT-** and **OCT+**: move the keys an octave down or up, three at most. The light blinks slowly at 1, fast at 2 and stays on at 3. Press both together to put octave and transpose back to 0.",
+          "- **PRESETS**: goes through the 128 presets (001 to 128, round and round). Each one loads at once, and a list shows the number and name, with the current one lit.",
+          "- **ALGORITHM**: chooses one of the 32 algorithms, the ways the six operators are connected. The screen draws it. Hold **OCT-** or **OCT+** and turn it to transpose all notes by semitones, down or up to 12, without touching the octave; the transpose is remembered with the settings. (The transpose inside EDIT > GLO, 0 to 48, is a different thing.)",
+          "- **OCT-** and **OCT+**: move the keys an octave down or up, three at most. The light blinks slowly at 1, fast at 2 and stays on at 3, on the OCT- side for lower octaves and on the OCT+ side for higher ones. Press both together to put octave and transpose back to 0.",
           "## KNOB1 to KNOB4",
           "- They change four values of the mode you are in. The bottom bar of the screen names the one you are turning.",
           "## Upper row of buttons",
-          "- **FX**: the effect chain, a grid of six: Filter, Reverb, Delay, Distortion, Chorus, Phaser. SELECT moves the blinking dot. KNOB1 to 3 change the effect and KNOB4 turns it on (bright) or off (dim). Filter: type (low, band or high pass), cutoff, resonance. Reverb: type (room, hall, plate), decay, mix. Delay: decay, rate, mix. Distortion: gain, tone, level. Chorus and Phaser: frequency, depth, mix. FX again goes home.",
+          "- **FX**: the effect chain, a grid of six: Filter, Reverb, Delay, Distortion, Chorus, Phaser. SELECT moves the blinking dot. KNOB1 to 3 change the effect and KNOB4 turns it on (bright) or off (dim). Filter: type (low, band or high pass), cutoff, resonance. Reverb: type (room, hall, plate), decay, mix. For Filter and Reverb KNOB1 is the type, so their values sit on KNOB2 and KNOB3. Delay: decay, rate, mix. Distortion: gain, tone, level. Chorus and Phaser: frequency, depth, mix. Everything runs 0 to 100%, except the filter cutoff (100 Hz to 20 kHz) and the exact value shows in the bottom bar. FX again goes home.",
           "- **SEL**: only inside FX. Press it to pick up the effect under the dot, turn SELECT to move it along the chain, press SEL again to drop it there.",
-          "- **ENV**: the volume envelope. KNOB1 to 4 are Attack, Decay, Sustain and Release, 0 to 8 each.",
-          "- **LFO**: page 1 has the wave (triangle, saw down, saw up, square, sine, sample and hold), the speed, the pitch depth (PMD) and the volume depth (AMD). Page 2 has the delay, the pitch sensitivity, LFO sync and oscillator sync.",
-          "- **EDIT**: the FM sound itself. The upper keys become choices, with the names printed under them: **OP1** to **OP6** an operator, **PIT** the pitch envelope, **GLO** the algorithm, feedback, oscillator sync and transpose, **MONO** one note at a time, **POLY** up to 12 notes. SELECT turns the pages of the chosen one (for an operator: envelope rates, envelope levels, tuning, sensitivity and output level, and two pages of keyboard scaling). KNOB1 to 4 change the values. EDIT again goes home.",
-          "- **GLO**: the settings of the device. Page 1: the MIDI channel for notes, the MIDI channel for effects, pitch bend up and down. Page 2: KNOB1 resets the 128 presets to the factory ones (KNOB4 confirms, KNOB1 cancels) and KNOB2 saves these settings.",
+          "- **ENV**: the volume envelope. It starts off: press ENV to turn it on (its light comes on) and again to turn it off. KNOB1 to 4 are Attack, Decay, Sustain and Release, drawn as bars (M-VAVE's manual gives 0 to 100%). A short attack starts the note at once and a long one fades it in; sustain is the level while the key is held; release is how long it takes to die away, and 0 cuts it off.",
+          "- **LFO**: page 1 has the wave (triangle, saw down, saw up, square, sine, sample and hold), the speed 0 to 99, the pitch depth (PMD) 0 to 99 and the volume depth (AMD) 0 to 99. Page 2 has the delay 0 to 99, the pitch sensitivity 0 to 7, LFO sync and oscillator sync (on: it restarts with every new note, off: it runs free).",
+          "- **EDIT**: the FM sound itself. The upper keys become choices, with the names printed under them: **OP1** to **OP6** an operator, **PIT** the pitch envelope, **GLO** the algorithm, feedback, oscillator sync and transpose, **MONO** one note at a time (the last one wins), **POLY** up to 12 notes. A short press on an operator opens it on the page it had last; a long press **mutes** it until you change voice. The lights of OP1 to OP6, PIT and GLO blink and the chosen one is steady; MONO and POLY light the same way. SELECT turns the pages, KNOB1 to 4 change the values. EDIT again goes home.",
+          "- **Operator pages**: 1 tuning and level (detune -7 to 7, coarse 0 to 31, fine 0 to 99, output 0 to 99); 2 envelope rates; 3 envelope levels; 4 sensitivity (modulation 0 to 3, key velocity 0 to 7, ratio or fixed); 5 keyboard scaling depth, left and right, and the break point; 6 the scaling curves (-LN, -EX, +LN, +EX) and rate scaling 0 to 7. Rates and levels go 0 to 99. **PIT** has two pages: rates, then levels.",
+          "- **GLO inside EDIT**: page 1 has the algorithm 1 to 32, feedback 0 to 7, oscillator sync and transpose 0 to 48. Page 2 works on the voice: KNOB1 turned right resets it to the init voice; KNOB2 opens the rename panel (OP1 to OP5 pick or delete a character, KNOB3 chooses it, SELECT confirms, KNOB2 left cancels); KNOB3 opens the copy panel (KNOB4 picks the source voice, SELECT overwrites, KNOB3 left leaves).",
+          "- **GLO**: the settings of the device. Page 1: the MIDI channel for notes (ALL or 1 to 16), the MIDI channel for effects (1 to 16), pitch bend up and down (1 to 24 semitones). Page 2: KNOB1 turned right opens the factory reset (pick bank A, B, C or D with KNOB1 to 4, SELECT right confirms, left cancels; the screen says Reset Success and the bank returns to the voices last imported). KNOB2 is the overall velocity (1 to 127). KNOB3 and KNOB4 set the glide, only in MONO: Full Time glides on every note, Fingered only while the previous key is still held; the value 0 to 100 is 0 to 1 second.",
           "## Lower row of buttons",
-          "- **HOME**: back to the home screen and its oscilloscope. On the real FM-1 a long press turns Bluetooth on and off.",
-          "- **SAVE**: hold it to save the preset with its effects, the sequencer patterns and the settings. The screen says Preset Saved. Here it is saved on this device.",
-          "- **ARP**: the arpeggiator. Hold some keys and it plays them in a pattern. Page 1: mode (Up, Down, Inclusive, Exclusive, Random, Order, Repeat), octaves (1 to 4), rate and tempo (30 to 300). Page 2: gate, swing and latch, which keeps it playing after you let go. ARP again turns it off. It cannot be on together with SEQ.",
-          "- **SEQ**: a sequencer of 16 steps with 16 patterns. The keys show the steps: lit has notes, blinking is the one playing. Page 1: pattern, clear, rate, tempo. Page 2: gate and swing. SEQ again turns it off.",
-          "- **REC**: with SEQ on, starts recording: each note you play goes into the next step. REC again ends the recording and keeps playing.",
-          "- **PLAY**: with SEQ on, starts and stops the sequence.",
+          "- **HOME**: back to the home screen and its oscilloscope (a yellow line on grey). On the real FM-1 a long press turns Bluetooth on and off: the light blinks when it is on but not connected, is steady when connected and off when off.",
+          "- **SAVE**: hold it (its light stays on) to save the preset with its effects, the sequencer patterns and the settings. The screen says Preset Saved. Here it is saved on this device. If a DX7 bank arrives by SysEx, a screen asks which bank, A, B, C or D, with KNOB1 to 4.",
+          "- **ARP**: the arpeggiator. Hold some keys and it plays them in a pattern. Page 1: mode, octaves (1 to 4), rate and tempo (30 to 300). Modes: Up low to high; Down high to low; Inclusive and Exclusive bounce up and down (inclusive repeats the end notes, exclusive does not); Random; Order as you pressed; Repeat plays each note again before the next. Page 2: gate 20 to 100%, swing 50 to 75%, latch (keeps playing after you let go; press new keys to change it) and sync (follows an external MIDI clock). ARP again turns it off. With SEQ on it says Disable SEQ to enter.",
+          "- **SEQ**: a sequencer of 16 steps with 16 patterns. Turning it on lights SEQ and the STOP light orange; the keys become step lights: steady has a note, off is empty, blinking is the one playing. Page 1: pattern, clear, chain (how many patterns play in a row, 1 to 16) and step (loop length, 1 to 16). Page 2: the voice of this pattern, rate, tempo (30 to 300) and gate (20 to 100%). Page 3: swing (50 to 75%), sync and transpose (-24 to +24). Each pattern has its own voice, so PRESETS does nothing while SEQ is on, and patterns save by themselves. With ARP on it says Disable ARP to enter. SEQ again turns it off.",
+          "- **Recording**: REC (red light) writes each note into the next step, and the rate can be changed while recording. For a long note, hold it on the active step, turn SELECT and let go at the last step; the other notes stay. For a rest, or to replace a note, hold REC, turn SELECT to the step, then play or leave it empty.",
+          "- **REC**: with SEQ on, starts recording: each note you play goes into the next step. REC again ends the recording and keeps playing (the STOP light stays on).",
+          "- **PLAY**: starts and stops the sequence, with one button: green is playing, orange is stopped. With SEQ off, PLAY and REC say Enable SEQ first.",
           "## The keys",
-          "- 27 keys, F3 to G5 before any octave change. The names under the upper keys only count in EDIT.",
+          "- 27 keys, F3 to G5 before any octave change. The note sent is the key's place + 53 + 12 x octave + transpose (octave -3 to +3). Each key has a light. In ARP the keys feed the arpeggiator; in SEQ they write steps. The names under the upper keys only count in EDIT.",
           "## MIDI on the real FM-1",
-          "- It takes notes with velocity, pitch bend, control changes and DX7 voice banks by SysEx (32 voices, kept in bank A, B, C or D). It sends the notes of its keys, arpeggiator and sequencer. In this app your controller arrives at its MIDI IN.",
+          "- It takes notes with velocity (a Note On with velocity 0 counts as a Note Off), pitch bend, program changes (0 to 127 change the voice), control changes and DX7 voice banks by SysEx (32 voices, kept in bank A, B, C or D). It sends the notes of its keys, arpeggiator and sequencer. M-VAVE publishes a separate MIDI response table for control changes. In this app your controller arrives at its MIDI IN.",
+          "- The real FM-1 takes three inputs at once: USB, Bluetooth MIDI (iOS, Android, Mac, Windows) and a 3.5 mm MIDI IN at 31250 baud (an adapter is needed). (real FM-1 only)",
+          "## The real FM-1: body and care",
+          "- **Power**: the switch is at the back. It runs on its battery (about 12 hours, 2000 mAh) or from USB power. (real FM-1 only)",
+          "- **Sound out**: a 3.5 mm jack, and a speaker that goes quiet when headphones are plugged in. Use headphones with a plain TRS plug: other plugs can hiss and may leave the speaker on. (real FM-1 only)",
+          "- **Back panel**: audio out, MIDI in (3.5 mm), USB-C and the power switch. About 161.5 x 96.5 x 28.6 mm and 251 g, with 27 silicone keys and 8 knobs (one for the volume). (real FM-1 only)",
+          "## The official manual",
+          "- M-VAVE publishes its manual as a PDF, in English and Chinese, with the FM-1 downloads (https://manualf.oss-cn-hongkong.aliyuncs.com/manual/MIDI-KEYBOARD/FM-1-manual.pdf). This part follows it in our own words. If they differ, the PDF is right for the firmware it describes.",
         ],
         es: [
           "Esta parte sigue el manual de usuario de M-VAVE para el firmware con el que se vende el FM-1. Para usar ese firmware aquí, descarga **FM-1.fwsc** de M-VAVE y usa **OPEN FILE**. Los firmwares de la comunidad usan los mismos potes y botones a su manera: lee la página de cada autor. Las versiones nuevas del firmware original pueden ser distintas.",
           "## La pantalla",
           "- **Barra superior**: el número y el nombre del preset en uso. **Centro**: lo que muestra el modo actual (el osciloscopio en inicio, parámetros, la rejilla de efectos, el diagrama del algoritmo). **Barra inferior**: el modo y su página, como 1/2 LFO, y lo que cambia cada pote.",
-          "- Al cambiar de preset, de algoritmo, de octava, de transposición o de volumen aparece una ventanita durante un segundo.",
+          "- Arriba a la derecha hay un símbolo de batería, y una pantalla LOW BATTERY lo tapa todo hasta que cargas el aparato o lo apagas (solo FM-1 real). Salen ventanitas durante un segundo: la lista de presets (número y nombre, el actual iluminado), el dibujo del algoritmo, Octave, Transpose, Volume y Preset Saved.",
           "## Lado izquierdo",
           "- **MASTER**: el volumen.",
           "- **SELECT**: la página del modo actual. Muchos modos tienen dos páginas. En FX pasa de un efecto a otro.",
-          "- **PRESETS**: recorre los 128 presets (001 a 128, en círculo). Cada uno se carga al momento, y una lista muestra dónde estás.",
-          "- **ALGORITHM**: elige uno de los 32 algoritmos, las maneras de conectar los seis operadores. La pantalla lo dibuja. Mantén **OCT-** u **OCT+** y gíralo para transponer, hasta 12 semitonos abajo o arriba.",
-          "- **OCT-** y **OCT+**: bajan o suben las teclas una octava, tres como mucho. La luz parpadea despacio en 1, rápido en 2 y queda fija en 3. Pulsa los dos a la vez para volver a octava 0 y transposición 0.",
+          "- **PRESETS**: recorre los 128 presets (001 a 128, en círculo). Cada uno se carga al momento, y una lista muestra el número y el nombre, con el actual iluminado.",
+          "- **ALGORITHM**: elige uno de los 32 algoritmos, las maneras de conectar los seis operadores. La pantalla lo dibuja. Mantén **OCT-** u **OCT+** y gíralo para transponer todas las notas en semitonos, hasta 12 abajo o arriba, sin tocar la octava; la transposición se recuerda con los ajustes. (La transposición de EDIT > GLO, de 0 a 48, es otra cosa.)",
+          "- **OCT-** y **OCT+**: bajan o suben las teclas una octava, tres como mucho. La luz parpadea despacio en 1, rápido en 2 y queda fija en 3, del lado de OCT- con octavas más graves y del lado de OCT+ con más agudas. Pulsa los dos a la vez para volver a octava 0 y transposición 0.",
           "## KNOB1 a KNOB4",
           "- Cambian cuatro valores del modo en que estás. La barra inferior de la pantalla nombra el que giras.",
           "## Fila superior de botones",
-          "- **FX**: la cadena de efectos, una rejilla de seis: Filter, Reverb, Delay, Distortion, Chorus, Phaser. SELECT mueve el punto que parpadea. KNOB1 a 3 cambian el efecto y KNOB4 lo enciende (brillante) o lo apaga (tenue). Filter: tipo (paso bajo, banda o alto), corte, resonancia. Reverb: tipo (room, hall, plate), caída, mezcla. Delay: caída, velocidad, mezcla. Distortion: ganancia, tono, nivel. Chorus y Phaser: frecuencia, profundidad, mezcla. FX otra vez vuelve a inicio.",
+          "- **FX**: la cadena de efectos, una rejilla de seis: Filter, Reverb, Delay, Distortion, Chorus, Phaser. SELECT mueve el punto que parpadea. KNOB1 a 3 cambian el efecto y KNOB4 lo enciende (brillante) o lo apaga (tenue). Filter: tipo (paso bajo, banda o alto), corte, resonancia. Reverb: tipo (room, hall, plate), caída, mezcla. En Filter y Reverb KNOB1 es el tipo, así que sus valores están en KNOB2 y KNOB3. Delay: caída, velocidad, mezcla. Distortion: ganancia, tono, nivel. Chorus y Phaser: frecuencia, profundidad, mezcla. Todo va de 0 a 100%, salvo el corte del filtro (100 Hz a 20 kHz), y el valor exacto sale en la barra inferior. FX otra vez vuelve al inicio.",
           "- **SEL**: solo dentro de FX. Púlsalo para coger el efecto bajo el punto, gira SELECT para moverlo por la cadena y pulsa SEL otra vez para soltarlo ahí.",
-          "- **ENV**: la envolvente de volumen. KNOB1 a 4 son ataque, caída, sostenido y relajación, de 0 a 8.",
-          "- **LFO**: la página 1 tiene la onda (triángulo, sierra abajo, sierra arriba, cuadrada, seno, sample and hold), la velocidad, la profundidad de tono (PMD) y la de volumen (AMD). La página 2 tiene el retardo, la sensibilidad de tono, la sincronía del LFO y la del oscilador.",
-          "- **EDIT**: el sonido FM en sí. Las teclas de arriba pasan a ser opciones, con los nombres impresos debajo: **OP1** a **OP6** un operador, **PIT** la envolvente de tono, **GLO** el algoritmo, la realimentación, la sincronía del oscilador y la transposición, **MONO** una nota cada vez, **POLY** hasta 12 notas. SELECT pasa las páginas de lo elegido (en un operador: tiempos de la envolvente, niveles de la envolvente, afinación, sensibilidad y nivel de salida, y dos páginas de escalado de teclado). KNOB1 a 4 cambian los valores. EDIT otra vez vuelve a inicio.",
-          "- **GLO**: los ajustes del aparato. Página 1: el canal MIDI de las notas, el canal MIDI de los efectos, pitch bend arriba y abajo. Página 2: KNOB1 devuelve los 128 presets a los de fábrica (KNOB4 confirma, KNOB1 cancela) y KNOB2 guarda estos ajustes.",
+          "- **ENV**: la envolvente de volumen. Empieza apagada: pulsa ENV para encenderla (se enciende su luz) y otra vez para apagarla. KNOB1 a 4 son ataque, caída, sostenido y relajación, dibujados como barras (el manual de M-VAVE da de 0 a 100%). Un ataque corto empieza la nota de golpe y uno largo la hace entrar poco a poco; el sostenido es el nivel mientras mantienes la tecla; la relajación es lo que tarda en apagarse, y 0 la corta.",
+          "- **LFO**: la página 1 tiene la onda (triángulo, sierra abajo, sierra arriba, cuadrada, seno, sample and hold), la velocidad 0 a 99, la profundidad de tono (PMD) 0 a 99 y la de volumen (AMD) 0 a 99. La página 2 tiene el retardo 0 a 99, la sensibilidad de tono 0 a 7, la sincronía del LFO y la del oscilador (activa: reinicia con cada nota nueva, apagada: va libre).",
+          "- **EDIT**: el sonido FM en sí. Las teclas de arriba pasan a ser opciones, con los nombres impresos debajo: **OP1** a **OP6** un operador, **PIT** la envolvente de tono, **GLO** el algoritmo, la realimentación, la sincronía del oscilador y la transposición, **MONO** una nota cada vez (gana la última), **POLY** hasta 12 notas. Una pulsación corta en un operador lo abre en la página que tenía; una larga lo **silencia** hasta que cambias de voz. Las luces de OP1 a OP6, PIT y GLO parpadean y la elegida queda fija; MONO y POLY igual. SELECT pasa las páginas y KNOB1 a 4 cambian los valores. EDIT otra vez vuelve al inicio.",
+          "- **Páginas de operador**: 1 afinación y nivel (detune -7 a 7, grueso 0 a 31, fino 0 a 99, salida 0 a 99); 2 tiempos de la envolvente; 3 niveles de la envolvente; 4 sensibilidad (modulación 0 a 3, velocidad de tecla 0 a 7, ratio o fijo); 5 profundidad del escalado de teclado, izquierda y derecha, y el punto de corte; 6 las curvas de escalado (-LN, -EX, +LN, +EX) y el escalado de tiempo 0 a 7. Tiempos y niveles van de 0 a 99. **PIT** tiene dos páginas: tiempos y luego niveles.",
+          "- **GLO dentro de EDIT**: la página 1 tiene el algoritmo 1 a 32, la realimentación 0 a 7, la sincronía del oscilador y la transposición 0 a 48. La página 2 trabaja sobre la voz: KNOB1 a la derecha la deja como la voz inicial; KNOB2 abre el panel de renombrar (OP1 a OP5 eligen o borran un carácter, KNOB3 lo elige, SELECT confirma, KNOB2 a la izquierda cancela); KNOB3 abre el panel de copiar (KNOB4 elige la voz de origen, SELECT sobrescribe, KNOB3 a la izquierda sale).",
+          "- **GLO**: los ajustes del aparato. Página 1: el canal MIDI de las notas (ALL o 1 a 16), el canal MIDI de los efectos (1 a 16), pitch bend arriba y abajo (1 a 24 semitonos). Página 2: KNOB1 a la derecha abre el reinicio de fábrica (elige el banco A, B, C o D con KNOB1 a 4, SELECT a la derecha confirma, a la izquierda cancela; la pantalla dice Reset Success y el banco vuelve a las voces importadas por última vez). KNOB2 es la velocidad general (1 a 127). KNOB3 y KNOB4 fijan el glide, solo en MONO: Full Time desliza en todas las notas, Fingered solo mientras la tecla anterior sigue pulsada; el valor 0 a 100 son 0 a 1 segundo.",
           "## Fila inferior de botones",
-          "- **HOME**: vuelve a la pantalla de inicio y su osciloscopio. En el FM-1 real, una pulsación larga enciende y apaga el Bluetooth.",
-          "- **SAVE**: mantenlo para guardar el preset con sus efectos, los patrones del secuenciador y los ajustes. La pantalla dice Preset Saved. Aquí se guarda en este dispositivo.",
-          "- **ARP**: el arpegiador. Mantén unas teclas y las toca siguiendo un patrón. Página 1: modo (Up, Down, Inclusive, Exclusive, Random, Order, Repeat), octavas (1 a 4), velocidad y tempo (30 a 300). Página 2: gate, swing y latch, que lo deja sonando al soltar. ARP otra vez lo apaga. No puede estar encendido a la vez que SEQ.",
-          "- **SEQ**: un secuenciador de 16 pasos con 16 patrones. Las teclas muestran los pasos: encendido tiene notas, parpadeando es el que suena. Página 1: patrón, borrar, velocidad, tempo. Página 2: gate y swing. SEQ otra vez lo apaga.",
-          "- **REC**: con SEQ encendido, empieza a grabar: cada nota que tocas entra en el paso siguiente. REC otra vez termina la grabación y sigue sonando.",
-          "- **PLAY**: con SEQ encendido, arranca y para la secuencia.",
+          "- **HOME**: vuelve a la pantalla de inicio y su osciloscopio (una línea amarilla sobre gris). En el FM-1 real, una pulsación larga enciende y apaga el Bluetooth: la luz parpadea si está encendido sin conexión, queda fija si está conectado y apagada si está apagado.",
+          "- **SAVE**: mantenlo (su luz queda encendida) para guardar el preset con sus efectos, los patrones del secuenciador y los ajustes. La pantalla dice Preset Saved. Aquí se guarda en este dispositivo. Si llega un banco DX7 por SysEx, una pantalla pregunta en qué banco, A, B, C o D, con KNOB1 a 4.",
+          "- **ARP**: el arpegiador. Mantén unas teclas y las toca siguiendo un patrón. Página 1: modo, octavas (1 a 4), velocidad y tempo (30 a 300). Modos: Up de grave a agudo; Down de agudo a grave; Inclusive y Exclusive suben y bajan (inclusive repite las notas de los extremos, exclusive no); Random; Order como las pulsaste; Repeat toca cada nota otra vez antes de la siguiente. Página 2: gate 20 a 100%, swing 50 a 75%, latch (sigue sonando al soltar; pulsa teclas nuevas para cambiarlo) y sync (sigue un reloj MIDI externo). ARP otra vez lo apaga. Con SEQ encendido dice Disable SEQ to enter.",
+          "- **SEQ**: un secuenciador de 16 pasos con 16 patrones. Al encenderlo se encienden SEQ y la luz de STOP en naranja; las teclas pasan a ser luces de paso: fija tiene nota, apagada está vacío, parpadeando es el que suena. Página 1: patrón, borrar, cadena (cuántos patrones suenan seguidos, 1 a 16) y paso (longitud del bucle, 1 a 16). Página 2: la voz de este patrón, velocidad, tempo (30 a 300) y gate (20 a 100%). Página 3: swing (50 a 75%), sync y transposición (-24 a +24). Cada patrón tiene su voz, así que PRESETS no hace nada con SEQ encendido, y los patrones se guardan solos. Con ARP encendido dice Disable ARP to enter. SEQ otra vez lo apaga.",
+          "- **Grabar**: REC (luz roja) escribe cada nota en el paso siguiente, y la velocidad se puede cambiar mientras grabas. Para una nota larga, mantenla en el paso activo, gira SELECT y suéltala en el último paso; las demás notas se quedan. Para un silencio, o para cambiar una nota, mantén REC, gira SELECT hasta el paso y toca o déjalo vacío.",
+          "- **REC**: con SEQ encendido, empieza a grabar: cada nota que tocas entra en el paso siguiente. REC otra vez termina la grabación y sigue sonando (la luz de STOP se queda encendida).",
+          "- **PLAY**: arranca y para la secuencia, con un solo botón: verde suena, naranja está parado. Con SEQ apagado, PLAY y REC dicen Enable SEQ first.",
           "## Las teclas",
-          "- 27 teclas, de F3 a G5 antes de cambiar de octava. Los nombres bajo las teclas de arriba solo cuentan en EDIT.",
+          "- 27 teclas, de F3 a G5 antes de cambiar de octava. La nota enviada es el lugar de la tecla + 53 + 12 x octava + transposición (octava -3 a +3). Cada tecla tiene una luz. En ARP las teclas alimentan el arpegiador; en SEQ escriben pasos. Los nombres bajo las teclas de arriba solo cuentan en EDIT.",
           "## MIDI en el FM-1 real",
-          "- Recibe notas con velocidad, pitch bend, cambios de control y bancos de voces DX7 por SysEx (32 voces, guardadas en el banco A, B, C o D). Envía las notas de sus teclas, del arpegiador y del secuenciador. En esta app tu controlador llega a su MIDI IN.",
+          "- Recibe notas con velocidad (un Note On con velocidad 0 cuenta como Note Off), pitch bend, cambios de programa (0 a 127 cambian la voz), cambios de control y bancos de voces DX7 por SysEx (32 voces, guardadas en el banco A, B, C o D). Envía las notas de sus teclas, del arpegiador y del secuenciador. M-VAVE publica aparte una tabla de respuesta MIDI para los cambios de control. En esta app tu controlador llega a su MIDI IN.",
+          "- El FM-1 real tiene tres entradas a la vez: USB, MIDI por Bluetooth (iOS, Android, Mac, Windows) y un MIDI IN de 3,5 mm a 31250 baudios (hace falta un adaptador). (solo FM-1 real)",
+          "## El FM-1 real: cuerpo y cuidados",
+          "- **Encendido**: el interruptor está detrás. Funciona con su batería (unas 12 horas, 2000 mAh) o con alimentación USB. (solo FM-1 real)",
+          "- **Salida de sonido**: un jack de 3,5 mm, y un altavoz que se calla al enchufar unos auriculares. Usa auriculares con conector TRS normal: otros conectores pueden meter ruido y dejar sonando el altavoz. (solo FM-1 real)",
+          "- **Panel trasero**: salida de audio, entrada MIDI (3,5 mm), USB-C y el interruptor. Unos 161,5 x 96,5 x 28,6 mm y 251 g, con 27 teclas de silicona y 8 potes (uno es el volumen). (solo FM-1 real)",
+          "## El manual oficial",
+          "- M-VAVE publica su manual como PDF, en inglés y chino, junto a las descargas del FM-1 (https://manualf.oss-cn-hongkong.aliyuncs.com/manual/MIDI-KEYBOARD/FM-1-manual.pdf). Esta parte lo sigue con nuestras palabras. Si difieren, el PDF manda para el firmware que describe.",
         ],
       };
       const HELP = {
@@ -5185,11 +5220,13 @@ registerProcessor("fm1", Fm1);
           "- **LOOK**: the keys (the FM-1's own or a piano), the skin (the colours the FM-1 is sold in, then ours) and the screen filter (LCD, CRT or clean).",
           "- **OPTIONS**: MIDI, a real FM-1 on USB, and installing the app.",
           "## Real FM-1 on USB",
-          "- **CONNECT** (OPTIONS, REAL FM-1) finds an FM-1 on USB MIDI. Chrome or Edge on a computer or an Android phone; not iPhone. The browser asks to use SysEx: allow it.",
-          "- **SYNC** plays together: what you play on your controller goes to the real FM-1 too, and its notes, pitch bend, clock and start/stop come to this one. This one cannot send its own notes out.",
-          "- **BACKUP** (step 1) saves the whole flash of the real FM-1 to a file, checked against the chip's own checksum. It sends a small helper that runs from RAM and writes only the firmware's updater storage. Always do this first.",
-          "- **PROTECTOR** (step 2) installs m-bootloader (MIT, by jvitkauskas) in the boot area: a checked start, a recovery menu (hold PLAY at power-on) and a MIDI mode that reinstalls firmware over USB. It writes the boot area: do it with the unit on a charger or a steady USB port.",
-          "- **INSTALL FIRMWARE** (step 3) writes the firmware chosen in FIRMWARE to the real FM-1, from the protector's MIDI mode. The unit checks the package before it erases anything. To go back, use M-Flasher with your backup.",
+          "- A real FM-1 on USB, in OPTIONS, REAL FM-1. Chrome or Edge on a computer or an Android phone; not iPhone. The browser asks to use SysEx: allow it. Buttons you cannot press yet are greyed out and a line says what comes next; HOW IT GOES lists the steps and WARNINGS what can go wrong. This is an unofficial tool: writing to a unit can leave it dead, at your own risk.",
+          "- **PLAY WITH THE REAL FM-1** plays together: what you play here goes to the real FM-1 too, and its notes, pitch bend, clock and start/stop come to this one. It is not a MIDI keyboard setting and it installs nothing. This one cannot send its own notes out.",
+          "- **BACKUP** saves the whole flash of the real FM-1 to a file (the first time) and keeps it in this browser, checked against the chip's own checksum. It sends a small helper that runs from RAM and writes only the firmware's updater storage. **RESTART UNIT** takes the unit out of the helper. **SAVE BACKUP** gives the kept one as a file. **INSPECT · COPY** copies a report of what the unit says (nothing is written).",
+          "- **PROTECTOR** installs m-bootloader (MIT, by jvitkauskas) in the boot area: a checked start, a recovery menu (hold PLAY at power-on) and a MIDI mode that reinstalls firmware over USB. It writes the boot area: do it with the unit on a steady USB port. On the newer flash chip use M-Flasher instead.",
+          "- **INSTALL ON MY FM-1** appears on each firmware card only when the unit is in the protector's MIDI mode and a backup of it shows the protector (no protector, no custom firmware). The unit checks the package before it erases anything. To go back, use M-Flasher with your backup.",
+          "## Firmwares",
+          "- Type in the box at the top of FIRMWARE to search by name, author or text. **MANUAL** on a card shows the README of the firmware's repository (kept on this device once read); **?** in the left column opens the manual of the running firmware.",
           "## MIDI",
           "- **CONNECT MIDI** finds your keyboards and controllers. Their keys play the FM-1 through its MIDI IN.",
           "- On known controllers (Akai MPK mini, Launchkey) the knobs and pads start on the FM-1's controls: knobs 1 to 4 are KNOB1 to 4, knobs 5 to 8 are MASTER, SELECT, PRESETS and ALGORITHM. Pads 1 to 4 are HOME, SAVE, PLAY and REC, pads 5 to 8 are FX, SEL, ENV and LFO.",
@@ -5217,11 +5254,13 @@ registerProcessor("fm1", Fm1);
           "- **LOOK**: las teclas (las del FM-1 o un piano), el aspecto (los colores en que se vende el FM-1 y luego los nuestros) y el filtro de pantalla (LCD, CRT o limpio).",
           "- **OPTIONS**: MIDI, un FM-1 real por USB e instalar la app.",
           "## FM-1 real por USB",
-          "- **CONNECT** (OPTIONS, REAL FM-1) busca un FM-1 por USB MIDI. Chrome o Edge en ordenador o en un móvil Android; no en iPhone. El navegador pide usar SysEx: permítelo.",
-          "- **SYNC** toca juntos: lo que tocas en tu controlador va también al FM-1 real, y sus notas, pitch bend, reloj y start/stop llegan a este. Este no puede enviar sus propias notas.",
-          "- **BACKUP** (paso 1) guarda toda la flash del FM-1 real en un archivo, comprobada con el checksum del propio chip. Envía un pequeño ayudante que corre desde la RAM y solo escribe en el almacén de actualizaciones del firmware. Hazlo siempre primero.",
-          "- **PROTECTOR** (paso 2) instala m-bootloader (MIT, de jvitkauskas) en el área de arranque: un arranque comprobado, un menú de recuperación (mantén PLAY al encender) y un modo MIDI que reinstala firmware por USB. Escribe el área de arranque: hazlo con el aparato en un cargador o un USB estable.",
-          "- **INSTALL FIRMWARE** (paso 3) escribe en el FM-1 real el firmware elegido en FIRMWARE, desde el modo MIDI del protector. El aparato comprueba el paquete antes de borrar nada. Para volver atrás, usa M-Flasher con tu copia.",
+          "- Un FM-1 real por USB, en OPTIONS, REAL FM-1. Chrome o Edge en un ordenador o un móvil Android; no iPhone. El navegador pide usar SysEx: permítelo. Los botones que aún no se pueden pulsar salen apagados y una línea dice qué toca ahora; HOW IT GOES lista los pasos y WARNINGS lo que puede salir mal. Es una herramienta no oficial: escribir en un aparato puede dejarlo muerto, bajo tu riesgo.",
+          "- **PLAY WITH THE REAL FM-1** toca a la vez: lo que tocas aquí va también al FM-1 real, y sus notas, pitch bend, reloj y start/stop llegan a este. No es un ajuste de teclado MIDI y no instala nada. Este no puede enviar sus propias notas.",
+          "- **BACKUP** guarda toda la flash del FM-1 real en un archivo (la primera vez) y la conserva en este navegador, comprobada con el checksum del propio chip. Envía un pequeño ayudante que corre en la RAM y solo escribe el almacén de actualizaciones del firmware. **RESTART UNIT** saca al aparato del ayudante. **SAVE BACKUP** da la copia guardada como archivo. **INSPECT · COPY** copia un informe de lo que dice el aparato (no escribe nada).",
+          "- **PROTECTOR** instala m-bootloader (MIT, de jvitkauskas) en el área de arranque: un arranque comprobado, un menú de recuperación (mantén PLAY al encender) y un modo MIDI que reinstala firmware por USB. Escribe el área de arranque: hazlo con el aparato en un USB estable. Con el chip de flash nuevo usa M-Flasher.",
+          "- **INSTALL ON MY FM-1** aparece en cada tarjeta de firmware solo cuando el aparato está en el modo MIDI del protector y una copia suya muestra el protector (sin protector, sin firmware propio). El aparato comprueba el paquete antes de borrar nada. Para volver, usa M-Flasher con tu copia.",
+          "## Firmwares",
+          "- Escribe en la caja de arriba de FIRMWARE para buscar por nombre, autor o texto. **MANUAL** en una tarjeta muestra el README del repositorio del firmware (se guarda en este dispositivo al leerlo); **?** en la columna de la izquierda abre el manual del firmware que corre.",
           "## MIDI",
           "- **CONNECT MIDI** busca tus teclados y controladores. Sus teclas tocan el FM-1 por su MIDI IN.",
           "- En los controladores conocidos (Akai MPK mini, Launchkey) los potes y los pads empiezan en los controles del FM-1: los potes 1 a 4 son KNOB1 a 4, los potes 5 a 8 son MASTER, SELECT, PRESETS y ALGORITHM. Los pads 1 a 4 son HOME, SAVE, PLAY y REC, los pads 5 a 8 son FX, SEL, ENV y LFO.",
@@ -5301,5 +5340,5 @@ registerProcessor("fm1", Fm1);
       refreshCatalog();
       navigator.storage?.persist?.(); // ask the browser not to clear the kept firmwares and saves
     </script>
-  <div style="position:fixed;left:4px;bottom:2px;z-index:99;font:700 9px monospace;opacity:.7;pointer-events:none;color:#ff5e7a">TEST BUILD · pocket · 75bca99</div></body>
+  <div style="position:fixed;left:4px;bottom:2px;z-index:99;font:700 9px monospace;opacity:.7;pointer-events:none;color:#ff5e7a">TEST BUILD · pocket · e2b0836</div></body>
 </html>
