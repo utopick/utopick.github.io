@@ -379,6 +379,7 @@
               <button id="realBackup" title="Step 1: save a copy of the whole flash of the real FM-1 to a file. Nothing is written to the unit except a small helper in RAM"><i>STEP 1 · SAFE</i>BACKUP</button>
               <button id="realProt" title="Step 2: install the protected bootloader (m-bootloader), so a bad firmware can always be replaced over USB"><i>STEP 2 · WRITES</i>PROTECTOR</button>
               <button id="realInfo" title="Read what the unit says about itself (nothing is written) and copy a text report: ports, identity, chip, flash, backup, and what happened. Paste it in a message."><i>NO WRITES</i>INSPECT · COPY</button>
+              <button id="realRestart" title="If the unit stays in the helper after a backup: ask the helper to restart it. (Switching it off and unplugging the USB cable does the same.)"><i>HELPER MODE</i>RESTART UNIT</button>
               <button id="realFw" title="Step 3: install the firmware chosen in FIRMWARE on the real FM-1, through the protector's MIDI mode"><i>STEP 3 · WRITES</i>INSTALL FIRMWARE</button>
             </div>
           </div>
@@ -2619,6 +2620,17 @@ registerProcessor("fm1", Fm1);
             realSay("The browser would not copy: the report was saved as a .txt file instead.");
           }
         });
+      // the helper runs from RAM and the unit stays powered by USB, so a backup leaves it there: m-bootloader's own restart message (F0 22 24 35 7E F7)
+      $("#realRestart").onclick = () => {
+        if (!REAL.up) return toast("The unit is not in the helper: nothing to restart. If it seems stuck, switch it off and unplug its USB cable for a few seconds", 5000);
+        sure("Restart the unit out of the helper mode? Nothing is written.", () =>
+          realRun("Restart", async () => {
+            REAL.upLink.send(RealFM1.soft(RealFM1.SOFT.RESTART));
+            realSay("Restart asked. Waiting for the unit to come back…");
+            if (await realWait(() => REAL.fw && !REAL.up, 20000)) realSay("The unit is back on its firmware.");
+            else realSay("It did not come back by itself. Switch it off and unplug its USB cable for a few seconds, then plug it in and press CONNECT.");
+          }));
+      };
       $("#realProt").onclick = () => {
         if (!REAL.fw) return toast("Switch the unit on with its firmware running (not the helper) and connect it");
         if (!REAL.saved) return toast("Step 1 first: save a backup of this unit");
@@ -2872,5 +2884,5 @@ registerProcessor("fm1", Fm1);
       refreshCatalog();
       navigator.storage?.persist?.(); // ask the browser not to clear the kept firmwares and saves
     </script>
-  <div style="position:fixed;left:4px;bottom:2px;z-index:99;font:700 9px monospace;opacity:.7;pointer-events:none;color:#ff5e7a">TEST BUILD · pocket · ff0f9d2</div></body>
+  <div style="position:fixed;left:4px;bottom:2px;z-index:99;font:700 9px monospace;opacity:.7;pointer-events:none;color:#ff5e7a">TEST BUILD · pocket · f580b49</div></body>
 </html>
