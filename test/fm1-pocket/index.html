@@ -210,6 +210,8 @@
       #menu section.row { flex-direction: row; }
       #menu .pane { flex: 1; min-height: 0; display: none; gap: 8px; }
       #menu [data-sub="keys"] #pvKeys, #menu [data-sub="fx"] #pvFx, #menu [data-sub="midi"] #pvMidi, #menu [data-sub="inst"] #pvInst, #menu [data-sub="real"] #pvReal { display: flex; }
+      #realRules { font-size: 12px; line-height: 1.4; padding: 8px 10px; border: 1px solid var(--rim); border-radius: 10px; color: var(--silk); }
+      #realRules ol { margin: 4px 0 0; padding-left: 18px; }
       #menu [data-sub="skin"] #pvSkin { display: grid; grid-template-columns: repeat(auto-fill, minmax(max(130px, 16% - 8px), 1fr)); grid-auto-rows: max-content; align-content: start; overflow: auto; padding-right: 4px; }
       /* a skin card keeps its shape whatever the window: its little FM-1 is drawn to a fixed ratio */
       #menu #pvSkin .pick { height: auto; }
@@ -371,6 +373,16 @@
           <div class="box pane" id="pvReal">
             <h3>REAL FM-1</h3>
             <p>Connect a real FM-1 with a USB cable (Chrome or Edge, a computer or an Android phone; not iPhone). It can play along with this one, and this page can back up its flash and install firmwares on it. Do the steps in order and read what each one says.</p>
+            <div id="realRules">
+              <b>Before anything is written to the unit</b>
+              <ol>
+                <li>BACKUP first, and copy the file off this computer.</li>
+                <li>The protector (<a href="https://github.com/jvitkauskas/m-bootloader" target="_blank" rel="noopener">m-bootloader</a>) goes in before any custom firmware. Without it a bad firmware can leave the unit dead, and only a USB_KEY dongle, or a second working unit running <a href="https://jvitkauskas.github.io/m-apps/unbricker/" target="_blank" rel="noopener">M-Unbricker</a>, brings it back.</li>
+                <li>A unit with the newer flash chip (UC25HQ80, JEDEC B36014) has had little testing: install the protector with <a href="https://github.com/jvitkauskas/m-flasher" target="_blank" rel="noopener">M-Flasher</a> first, not here.</li>
+                <li>After the protector, BACKUP again here: a custom firmware is only offered when that backup shows the protector.</li>
+                <li>Do not unplug or switch off during a write.</li>
+              </ol>
+            </div>
             <p id="realNames">Not connected yet.</p>
             <p id="realMsg"></p>
             <div class="grid">
@@ -579,6 +591,15 @@ const RealFM1 = (() => {
     return out;
   }
 
+  // ---- is m-bootloader in this flash? Its boot container (physical 0xA0, ENC 0xFFFF over the whole payload) holds a 48-byte identity at
+  // payload offset 0x40: "AC79BLID", the board tag ("fm1"), a version text (m-bootloader's specification, 8.1). The stock bootloader has none.
+  function protector(flash) {
+    if (!flash || flash.length < 0xb0 + 0x70) return { installed: false };
+    const d = enc(0xffff, flash.subarray(0xb0, 0xb0 + 0x70)), text = (from, to) => String.fromCharCode(...Array.from(d.subarray(from, to)).filter(Boolean).filter((c) => c >= 32 && c < 127));
+    if (text(0x40, 0x48) !== "AC79BLID") return { installed: false };
+    return { installed: true, board: text(0x48, 0x50), version: text(0x50, 0x70) };
+  }
+
   // ---- a package (.fwsc): identity bytes sit in the 48th byte of the first blocks; the unit reads the image without them
   function unweave(raw) {
     const B = 48, K = 47, MIN = 20, S = 0x7d;
@@ -656,7 +677,7 @@ const RealFM1 = (() => {
     }
   }
 
-  return { CMD, SOFT, frame, parse, soft, Link, probe, backup, unweave, wrap, servePackage, crc16, crc32, enc };
+  return { CMD, SOFT, frame, parse, soft, Link, probe, backup, protector, unweave, wrap, servePackage, crc16, crc32, enc };
 })();
 if (typeof module !== "undefined") module.exports = RealFM1;
 
@@ -2450,7 +2471,8 @@ registerProcessor("fm1", Fm1);
       const realThru = (data) => REAL.sync && REAL.fw && data[0] < 0xf0 && REAL.fw.out.send(Uint8Array.from(data));
       function realFace() {
         const names = [REAL.fw && "firmware port: " + REAL.fw.name, REAL.up && "update port: " + REAL.up.name].filter(Boolean);
-        $("#realNames").textContent = !REAL.acc ? "Not connected yet." : names.length ? names.join(" · ") + (REAL.info ? " · " + (REAL.info.mboot ? REAL.info.kind + " " + REAL.info.version + ", flash " + (REAL.info.capacity >> 10) + " KiB, chip " + REAL.info.jedec.toString(16).toUpperCase() : "answers, but is not m-bootloader") : "") : "No FM-1 found on USB MIDI. Plug it in, switched on. Ports this browser sees: " + ([...REAL.acc.inputs.values(), ...REAL.acc.outputs.values()].map((p) => p.name + (p.state === "disconnected" ? " (gone)" : "")).join(", ") || "none") + ". INSPECT · COPY lists them all.";
+        const pr = REAL.saved?.protector, prText = !REAL.saved ? " · protector: back up to find out" : pr?.installed ? " · protector: installed " + pr.version : " · protector: NOT installed";
+        $("#realNames").textContent = !REAL.acc ? "Not connected yet." : names.length ? names.join(" · ") + (REAL.info ? " · " + (REAL.info.mboot ? REAL.info.kind + " " + REAL.info.version + ", flash " + (REAL.info.capacity >> 10) + " KiB, chip " + REAL.info.jedec.toString(16).toUpperCase() : "answers, but is not m-bootloader") : "") + prText : "No FM-1 found on USB MIDI. Plug it in, switched on. Ports this browser sees: " + ([...REAL.acc.inputs.values(), ...REAL.acc.outputs.values()].map((p) => p.name + (p.state === "disconnected" ? " (gone)" : "")).join(", ") || "none") + ". INSPECT · COPY lists them all.";
         $("#realConn").classList.toggle("on", !!REAL.acc && names.length > 0);
         const s = $("#realSync");
         s.classList.toggle("on", REAL.sync);
@@ -2554,8 +2576,11 @@ registerProcessor("fm1", Fm1);
         const bytes = await RealFM1.backup(REAL.upLink, info, (f) => realSay("Backup: " + Math.round(f * 100) + "%"));
         const name = "fm1-backup-" + info.uid + "-" + new Date().toISOString().slice(0, 10) + ".bin";
         saveFile(bytes, name);
-        REAL.saved = { uid: info.uid, jedec: info.jedec, size: bytes.length, crc32: RealFM1.crc32(bytes) };
-        realSay("Backup saved as " + name + " (" + (bytes.length >> 10) + " KiB, checked against the chip's own checksum). Keep it somewhere safe.");
+        const protector = RealFM1.protector(bytes);
+        REAL.saved = { uid: info.uid, jedec: info.jedec, size: bytes.length, crc32: RealFM1.crc32(bytes), protector };
+        realFace();
+        const verdict = protector.installed ? " The protector (m-bootloader " + protector.version + ") is in this flash: custom firmwares can be installed (hold PLAY at power-on, choose MIDI mode, CONNECT)." : " The protector is NOT in this flash: no custom firmware can be installed yet.";
+        realSay("Backup saved as " + name + " (" + (bytes.length >> 10) + " KiB, checked against the chip's own checksum). Keep it somewhere safe." + verdict);
         toast("Backup saved: " + name, 5000);
         // kept as the first firmware of the list, and run here: if it draws its screen, the copy is a good one
         const pkg = RealFM1.wrap(bytes, (/FM-1_\d+/.exec(REAL.ident) || ["FM-1_000"])[0]);
@@ -2641,20 +2666,32 @@ registerProcessor("fm1", Fm1);
       $("#realProt").onclick = () => {
         if (!REAL.fw) return toast("Switch the unit on with its firmware running (not the helper) and connect it");
         if (!REAL.saved) return toast("Step 1 first: save a backup of this unit");
-        const risky = REAL.saved.jedec === 0xb36014 ? " WARNING: this unit has the newer flash chip (UC25HQ80). It has had little testing with the protector and one unit did not start after it. Only go on if you accept that." : "";
-        sure("Install the protected bootloader (m-bootloader v2.4, MIT) on this FM-1? It replaces the boot area. It restarts the unit when done. A power cut during this can leave the unit dead (a USB_KEY dongle is then the way back)." + risky, () =>
+        if (REAL.saved.protector?.installed) return toast("The protector is already in this unit (" + REAL.saved.protector.version + ")", 4000);
+        if (REAL.saved.jedec === 0xb36014) {
+          realSay("This unit has the newer flash chip (UC25HQ80, JEDEC B36014), which has had little testing with the protector: one unit did not start after it. Install the protector with M-Flasher (github.com/jvitkauskas/m-flasher), then BACKUP here again. This page will not write the protector on this chip.");
+          return toast("Newer flash chip: use M-Flasher for the protector", 6000);
+        }
+        sure("Install the protector (m-bootloader v2.4, MIT) on this FM-1? It replaces the boot area. Do not unplug the cable or switch the unit off until it restarts: a power cut can leave the unit dead, and only a USB_KEY dongle brings it back. Have your backup file copied off this computer first. M-Flasher is the maker's tested way; this page does the same as M-VAVE's updater would, with its own code.", () =>
           realRun("Protector", async () => {
             await realIdent();
             await realServe(REAL.fwLink, await mbootImage("uboot"), true, "Installing the protector");
-            realSay("Done. The unit restarts. To check it, switch it off, hold PLAY, switch it on: the recovery menu of m-bootloader opens.");
-            toast("Protector installed", 5000);
+            REAL.saved = null; // what was backed up is the unit before: it has to be checked again
+            realFace();
+            realSay("Sent. The unit restarts by itself. Then BACKUP here again: the protector is only counted when that new backup shows it. (To look at it first: switch the unit off, hold PLAY, switch it on: the m-bootloader menu opens.)");
+            toast("Protector sent: back up again to check it", 6000);
           }));
       };
       $("#realFw").onclick = () => {
         const f = current();
         if (!f) return toast("Choose a firmware in FIRMWARE first");
-        if (!REAL.info?.mboot || REAL.info.kind !== "bootloader") return toast("Put the unit in MIDI mode: with the protector installed, hold PLAY while switching on and choose MIDI mode, then CONNECT");
-        sure("Install " + f.name + " on the real FM-1? Its present firmware is replaced (and its saved patches with it, unless you restore your backup). The unit checks the package before it erases anything and only writes the firmware area, never the boot area.", () =>
+        if (!REAL.saved?.protector?.installed) {
+          realSay("No protector, no custom firmware. Back this unit up (BACKUP) and the backup has to show the protector. Without it, install the protector first (PROTECTOR, or M-Flasher on the newer flash chip).");
+          return toast("No protector in a backup of this unit: custom firmware is locked", 5000);
+        }
+        if (f.id === "backup") return toast("Putting a backup back is not built here: use M-Flasher for that", 5000);
+        if (!REAL.info?.mboot || REAL.info.kind !== "bootloader") return toast("Put the unit in MIDI mode: hold PLAY while switching on and choose MIDI mode, then CONNECT");
+        if (REAL.saved.uid !== REAL.info.uid) return toast("The backup with the protector is of another unit: back this one up", 5000);
+        sure("Install " + f.name + " on the real FM-1? Its present firmware is replaced (and its saved patches with it, unless you restore your backup)." + (REAL.saved.jedec === 0xb36014 ? " This unit has the newer flash chip, which has had little testing." : "") + " The unit checks the package before it erases anything and only writes the firmware area, never the boot area.", () =>
           realRun("Install", async () => {
             const { identity, image } = RealFM1.unweave(await packageOf(f));
             if (!/FM-1/i.test(identity)) throw Error("this package says it is for " + identity);
@@ -2891,5 +2928,5 @@ registerProcessor("fm1", Fm1);
       refreshCatalog();
       navigator.storage?.persist?.(); // ask the browser not to clear the kept firmwares and saves
     </script>
-  <div style="position:fixed;left:4px;bottom:2px;z-index:99;font:700 9px monospace;opacity:.7;pointer-events:none;color:#ff5e7a">TEST BUILD · pocket · f9c11d0</div></body>
+  <div style="position:fixed;left:4px;bottom:2px;z-index:99;font:700 9px monospace;opacity:.7;pointer-events:none;color:#ff5e7a">TEST BUILD · pocket · 48a1e90</div></body>
 </html>
