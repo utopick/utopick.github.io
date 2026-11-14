@@ -178,7 +178,7 @@
       /* ---- the menu: the whole screen, a tab for each subject, each tab laid out across the width so nothing scrolls
          but the firmware list */
       /* the menu, the sheet and the dialog wear the skin: the body's colour, its print for the text, its buttons, its light for what is chosen */
-      #menu, #sheet, #sure, #job { --m-panel: color-mix(in srgb, var(--body2), #000 16%); --m-dim: color-mix(in srgb, var(--silk) 72%, var(--body2)); }
+      #menu, #sheet, #sure, #job, #more { --m-panel: color-mix(in srgb, var(--body2), #000 16%); --m-dim: color-mix(in srgb, var(--silk) 72%, var(--body2)); }
       #menu { position: fixed; inset: 0; z-index: 5; background: var(--body2); color: var(--silk); display: flex; touch-action: auto; font: 13px/1.35 system-ui, sans-serif; }
       #menu[hidden], #menu [hidden] { display: none; }
       #menu .card { flex: 1; min-width: 0; padding: 10px; display: flex; flex-direction: column; gap: 10px; }
@@ -227,30 +227,55 @@
       #menu [data-sub="keys"] #pvKeys, #menu [data-sub="fx"] #pvFx, #menu [data-sub="midi"] #pvMidi, #menu [data-sub="inst"] #pvInst { display: flex; }
       #menu [data-sub="real"] #pvReal { display: grid; }
       /* the REAL FM-1 pane never scrolls: two columns (status and buttons | the flash map), one column in a narrow window; the long texts are dialogs */
-      #menu #pvReal { overflow: hidden; }
-      #pvReal { grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 10px; align-content: start; overflow: hidden; font-size: 11px; line-height: 1.3; color: var(--silk); }
+      /* the REAL FM-1 pane: four numbered steps (an infographic that is also the buttons), one sentence, the play button and the flash map (always there, grey until
+         there is data). Everything is in em and the em follows the window (11 px on a phone held sideways, up to 21 px on a big screen), so it looks the same everywhere. */
+      #menu #pvReal { overflow: hidden; font-size: clamp(11px, 2.6vmin, 30px); align-content: center; }
+      #pvReal { grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 1.3em; color: var(--silk); max-width: 120em; width: 100%; margin: 0 auto; }
       @media (max-aspect-ratio: 1/1) { #pvReal { grid-template-columns: minmax(0, 1fr); } }
-      #realLeft { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
-      #pvReal p { margin: 0; font-size: 11px; line-height: 1.3; color: var(--m-dim); display: -webkit-box; -webkit-box-orient: vertical; overflow: hidden; }
-      #realNames { -webkit-line-clamp: 1; }
-      #realMsg { -webkit-line-clamp: 1; }
-      #realNext { color: var(--silk); font-weight: 700; -webkit-line-clamp: 2; }
-      #realBtns { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; }
-      #realBtns button { min-height: 30px; padding: 2px; font-size: 10.5px; line-height: 1.15; }
-      #realBtns .play { grid-column: 1 / -1; min-height: 36px; }
-      #realBtns .writes { box-shadow: inset 0 0 0 1px #ff7a8c88; }
-      #realBtns button:disabled { opacity: 0.38; cursor: default; }
-      #realRight { min-width: 0; display: flex; flex-direction: column; gap: 6px; }
-      #pvReal #realDisclaimer { font-size: 10px; line-height: 1.25; color: #ffb3bd; border: 1px solid #ff7a8c66; border-radius: 8px; padding: 4px 6px; -webkit-line-clamp: unset; }
-      #realMap { min-width: 0; font-size: 10px; line-height: 1.2; color: var(--silk); }
-      #realMapFlex { display: flex; gap: 8px; align-items: flex-start; margin-top: 4px; }
-      #realMapGrid { display: grid; grid-template-columns: repeat(16, 1fr); gap: 1px; flex: none; width: min(42%, 132px); aspect-ratio: 1; }
+      #realLeft { display: flex; flex-direction: column; gap: 0.7em; min-width: 0; }
+      #menu #pvReal p { margin: 0; color: var(--m-dim); display: -webkit-box; -webkit-box-orient: vertical; overflow: hidden; }
+      #menu #realNames { font-size: 1.1em; line-height: 1.3; -webkit-line-clamp: 1; }
+      #menu #pvReal #realNext { font-size: 1.3em; line-height: 1.3; font-weight: 700; color: var(--silk); -webkit-line-clamp: 2; min-height: 2.6em; }
+      #realSteps { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.9em; }
+      #realSteps .step { position: relative; min-height: 5.8em; padding: 0.3em 0.2em 0.3em; font-size: 1.15em; font-weight: 800; line-height: 1.2; overflow: visible; }
+      #realSteps .step i { font-size: 0.68em; letter-spacing: 0.5px; margin-bottom: 0.4em; }
+      /* the number, and an arrow to the next step */
+      #realSteps .step::before { content: attr(data-n); position: absolute; left: 0.4em; top: 0.35em; width: 1.5em; height: 1.5em; border-radius: 50%; display: grid; place-items: center; background: var(--rim); color: var(--silk); font-size: 0.8em; font-weight: 800; }
+      #realSteps .step:not(:last-child)::after { content: "›"; position: absolute; right: -0.72em; top: 50%; transform: translateY(-50%); font-size: 1.4em; color: var(--m-dim); pointer-events: none; }
+      #realSteps .writes { box-shadow: inset 0 0 0 1px #ff7a8c88; }
+      #realSteps .done { background: linear-gradient(#1d3a30, #12261f); border-color: #4fd1a8; color: #aef0dc; }
+      #realSteps .done::before { content: "✓"; background: #4fd1a8; color: #0b1f18; }
+      #realSteps .done i { color: #7fdcc0; }
+      #realSteps .next { border-color: var(--lit); box-shadow: inset 0 0 0 2px var(--lit); }
+      #realSteps .next::before { background: var(--lit); color: #14091f; }
+      #pvReal button:disabled { opacity: 0.38; cursor: default; }
+      #realRow { display: grid; grid-template-columns: minmax(0, 1fr) 7em; gap: 0.6em; }
+      #realRow button { min-height: 4.6em; font-size: 1.15em; }
+      #realRow .play i { font-size: 0.68em; letter-spacing: 0.5px; }
+      #menu #pvReal #realDisclaimer { font-size: 0.92em; line-height: 1.3; color: #ffb3bd; }
+      #realRight { min-width: 0; display: flex; flex-direction: column; }
+      #realMap { min-width: 0; font-size: 1em; line-height: 1.25; color: var(--silk); }
+      #realMapHint { font-weight: 400; color: var(--m-dim); }
+      #realMapFlex { display: flex; gap: 1em; align-items: flex-start; margin-top: 0.6em; }
+      #realMapGrid { display: grid; grid-template-columns: repeat(16, 1fr); gap: 1px; flex: none; width: min(52%, 18em); aspect-ratio: 1; }
       #realMapGrid i { aspect-ratio: 1; border-radius: 2px; background: var(--c); }
       #realMapGrid i.b { opacity: 0.3; } /* blank sector inside a region */
       #realMapGrid i.f { background: repeating-linear-gradient(45deg, #3a3532 0 2px, #2a2624 2px 4px); }
+      #realMap.empty #realMapGrid i { background: #6b6b70; opacity: 0.22; } /* nothing read yet: the same picture, grey */
+      #realMap.empty li u { background: #6b6b70; }
+      #realMap.empty li { opacity: 0.5; }
       #realMapKey { margin: 0; padding: 0; list-style: none; min-width: 0; flex: 1; }
-      #realMapKey li { display: flex; gap: 4px; align-items: baseline; font-size: 9.5px; line-height: 1.25; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
-      #realMapKey li u { flex: none; width: 10px; height: 10px; border-radius: 2px; background: var(--c); align-self: center; }
+      #realMapKey li { display: flex; gap: 0.5em; align-items: baseline; font-size: 0.95em; line-height: 1.45; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+      #realMapKey li u { flex: none; width: 0.9em; height: 0.9em; border-radius: 2px; background: var(--c); align-self: center; }
+      /* MORE: big buttons over the menu */
+      #more { position: fixed; inset: 0; z-index: 6; background: #000c; display: grid; place-items: center; touch-action: auto; font: clamp(13px, 2vmin, 20px)/1.4 system-ui, sans-serif; }
+      #more[hidden] { display: none; }
+      #more .box { width: min(92%, 36em); background: var(--m-panel); color: var(--silk); border: 1px solid var(--rim); border-radius: 1.1em; padding: 1em; display: flex; flex-direction: column; gap: 0.8em; }
+      #more h3 { margin: 0; font: 800 0.85em ui-monospace, Menlo, monospace; letter-spacing: 2px; }
+      #more .grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.6em; }
+      #more button { min-height: 4em; border-radius: 0.7em; border: 1px solid var(--rim); background: linear-gradient(var(--btn1), var(--btn2)); color: var(--ink); font-weight: 800; cursor: pointer; }
+      #more button:disabled { opacity: 0.38; cursor: default; }
+      #more button i { display: block; font: 700 0.65em ui-monospace, Menlo, monospace; font-style: normal; letter-spacing: 1px; opacity: 0.7; margin-bottom: 0.25em; }
       #menu [data-sub="skin"] #pvSkin { display: grid; grid-template-columns: repeat(auto-fill, minmax(max(92px, 13% - 8px), 1fr)); grid-auto-rows: max-content; align-content: start; overflow: auto; padding-right: 4px; }
       /* a skin card keeps its shape whatever the window: its little FM-1 is drawn to a fixed ratio */
       #menu #pvSkin .pick { height: auto; }
@@ -316,7 +341,6 @@
         #menu .fwc .t small { -webkit-line-clamp: 2; }
         #menu .fwc .act button { flex: 1 1 28%; font-size: 10.5px; }
         #fwSearch { min-height: 30px; padding: 2px 10px; font-size: 13px; }
-        #realBtns button { min-height: 30px; }
         #menu .box.pane { padding: 6px 8px; }
         #menu .thanks h3 { font-size: 9px; }
         #menu .thanks .lead { font-size: 15px; }
@@ -446,29 +470,28 @@
           <div class="box pane" id="pvReal">
             <div id="realLeft">
               <p id="realNames">Not connected yet.</p>
-              <p id="realNext"></p>
-              <div id="realBtns">
-                <button id="realSync" class="play" title="Play with the real FM-1: what you play on this screen goes to the real unit too, and what the real unit plays (notes and clock) comes here. Not a MIDI keyboard, not a firmware installer."></button>
-                <button id="realConn" title="Connect a real FM-1 over USB MIDI (asks to use SysEx)">CONNECT</button>
-                <button id="realBackup" title="Save a copy of the whole flash of the real FM-1. Nothing is written to the unit except a small helper in RAM">BACKUP</button>
-                <button id="realProt" class="writes" title="Install the protected bootloader (m-bootloader), so a bad firmware can always be replaced over USB. WRITES to the unit">PROTECTOR</button>
-                <button id="realRestart" title="If the unit stays in the helper after a backup: ask the helper to restart it. (Switching it off and unplugging the USB cable does the same.)">RESTART UNIT</button>
-                <button id="realInfo" title="Read what the unit says about itself (nothing is written) and copy a text report: ports, identity, chip, flash, backup, and what happened. Paste it in a message.">INSPECT · COPY</button>
-                <button id="realSave" title="Save the last backup kept in this browser for the connected unit as a file">SAVE BACKUP</button>
-                <button id="realHow" title="The steps, in order">HOW IT GOES</button>
-                <button id="realWarn" title="What can go wrong, and what to do first">WARNINGS</button>
+              <div id="realSteps">
+                <button id="realConn" data-n="1" class="step" title="Step 1: connect a real FM-1 over USB MIDI (asks to use SysEx)"></button>
+                <button id="realBackup" data-n="2" class="step" title="Step 2: save a copy of the whole flash of the real FM-1. Nothing is written to the unit except a small helper in RAM"></button>
+                <button id="realProt" data-n="3" class="step writes" title="Step 3: install the protected bootloader (m-bootloader), so a bad firmware can always be replaced over USB. WRITES to the unit"></button>
+                <button id="realGo" data-n="4" class="step" title="Step 4: choose a firmware: its card has the INSTALL button once every check is in place"></button>
               </div>
-              <p id="realMsg"></p>
+              <p id="realNext"></p>
+              <div id="realRow">
+                <button id="realSync" class="play" title="Play with the real FM-1: what you play on this screen goes to the real unit too, and what the real unit plays (notes and clock) comes here. Not a MIDI keyboard, not a firmware installer."></button>
+                <button id="realMoreBtn" title="Restart the unit, inspect it, save the backup file, the steps and the warnings">MORE</button>
+              </div>
+              <p id="realDisclaimer"></p>
+              <p id="realMsg" hidden></p>
             </div>
             <div id="realRight">
-              <div id="realMap" hidden>
-                <b>FLASH MAP · 1 square = 4 KiB</b>
+              <div id="realMap" class="empty">
+                <b>FLASH MAP<span id="realMapHint"> · back up to see what is in the flash</span></b>
                 <div id="realMapFlex">
                   <div id="realMapGrid" role="img" aria-label="Map of the flash: used and blank sectors"></div>
                   <ul id="realMapKey"></ul>
                 </div>
               </div>
-              <p id="realDisclaimer"></p>
             </div>
             <template id="tplHow"><b>How it goes</b>
               <ol>
@@ -580,6 +603,19 @@ SOFTWARE.
         <div id="jobText"></div>
         <progress id="jobBar" max="100" value="0" hidden></progress>
         <button id="jobOk" hidden>OK</button>
+      </div>
+    </div>
+    <div id="more" hidden>
+      <div class="box" role="dialog" aria-modal="true" aria-label="More">
+        <h3>REAL FM-1 · MORE</h3>
+        <div class="grid">
+          <button id="realRestart" title="If the unit stays in the helper after a backup: ask the helper to restart it. (Switching it off and unplugging the USB cable does the same.)"><i>HELPER MODE</i>RESTART UNIT</button>
+          <button id="realInfo" title="Read what the unit says about itself (nothing is written) and copy a text report: ports, identity, chip, flash, backup, and what happened. Paste it in a message."><i>NO WRITES</i>INSPECT · COPY</button>
+          <button id="realSave" title="Save the last backup kept in this browser for the connected unit as a file"><i>KEPT IN THIS BROWSER</i>SAVE BACKUP</button>
+          <button id="realHow" title="The steps, in order"><i>READ</i>HOW IT GOES</button>
+          <button id="realWarn" title="What can go wrong, and what to do first"><i>READ</i>WARNINGS</button>
+          <button id="moreClose" title="Close"><i>BACK</i>CLOSE</button>
+        </div>
       </div>
     </div>
     <div id="sure" hidden>
@@ -4606,7 +4642,7 @@ registerProcessor("fm1", Fm1);
         for (const b of $$("#menu .tabs button")) b.classList.toggle("on", b.dataset.tab === t);
       }
       for (const b of $$("#menu .tabs button")) b.onclick = () => menuTab(b.dataset.tab);
-      const menuShow = (on) => (($("#menu").hidden = !on), on && (listFace(), $("#fwList .fwc.on")?.scrollIntoView({ block: "nearest" })));
+      const menuShow = (on) => (($("#menu").hidden = !on), on && (listFace(), realFace(), $("#fwList .fwc.on")?.scrollIntoView({ block: "nearest" })));
       menuTab("fw");
       $("#logo").onclick = () => menuShow(true);
       $("#menuClose").onclick = () => menuShow(false);
@@ -4717,7 +4753,7 @@ registerProcessor("fm1", Fm1);
       const REAL_LOG = [];
       // said on the pane and over every slider that touches the unit
       const REAL_DISCLAIMER = "CAUTION. Unofficial tool, not affiliated with M-VAVE, JieLi or the makers of m-bootloader. Writing to a unit can leave it dead: you use it at your own risk, with no warranty. Back up first and never unplug or switch off while it works.";
-      $("#realDisclaimer").textContent = REAL_DISCLAIMER;
+      $("#realDisclaimer").textContent = "⚠ Unofficial tool. Writing to a unit can leave it dead: at your own risk. Read WARNINGS (MORE).";
       const realSure = (text, go) => (sure(text, go), ($("#sureWarn").textContent = REAL_DISCLAIMER), ($("#sureWarn").hidden = false));
       const jobOpen = (title) => ($("#job").className = "", ($("#jobTitle").textContent = title), ($("#jobText").textContent = ""), ($("#jobBar").hidden = true), ($("#jobOk").hidden = true), ($("#job").hidden = false));
       const jobEnd = (ok) => { $("#job").className = ok ? "ok" : "bad"; $("#jobBar").hidden = true; $("#jobOk").hidden = false; $("#jobOk").focus(); };
@@ -4743,11 +4779,10 @@ registerProcessor("fm1", Fm1);
         const rec = REAL.saved || (REAL.stored?.uid === REAL.info?.uid ? REAL.stored : null), pr = rec?.protector, prText = !rec ? " · protector: back up to find out" : pr?.installed ? " · protector: installed " + pr.version + (rec === REAL.stored ? " (from the backup kept here, " + rec.date.slice(0, 10) + ")" : "") : " · protector: NOT installed";
         $("#realNames").textContent = !REAL.acc ? "Not connected yet." : names.length ? names.join(" · ") + (REAL.info ? " · " + (REAL.info.mboot ? REAL.info.kind + " " + REAL.info.version + ", flash " + (REAL.info.capacity >> 10) + " KiB, chip " + REAL.info.jedec.toString(16).toUpperCase() : "answers, but is not m-bootloader") : "") + prText : "No FM-1 found on USB MIDI. Plug it in, switched on. Ports this browser sees: " + ([...REAL.acc.inputs.values(), ...REAL.acc.outputs.values()].map((p) => p.name + (p.state === "disconnected" ? " (gone)" : "")).join(", ") || "none") + ". INSPECT · COPY lists them all.";
         $("#realNames").title = $("#realNames").textContent;
-        $("#realConn").classList.toggle("on", !!REAL.acc && names.length > 0);
         for (const b of $$("#fwList .inst")) b.hidden = b.dataset.own === "1" || !installReady();
         const s = $("#realSync");
         s.classList.toggle("on", REAL.sync);
-        label(s, "THIS FM-1 ⇄ THE REAL ONE · NOT A KEYBOARD, NOT AN INSTALL", REAL.sync ? "PLAYING TOGETHER · ON" : "PLAY WITH THE REAL FM-1 · OFF");
+        label(s, "THIS FM-1 ⇄ THE REAL ONE · NOT A KEYBOARD", REAL.sync ? "PLAYING TOGETHER · ON" : "PLAY WITH THE REAL FM-1 · OFF");
         // what cannot be pressed now is greyed out; the line under the status says what comes next
         const i = REAL.info, idle = !REAL.busy; // rec: as above
         const newer = (rec?.jedec ?? i?.jedec) === 0xb36014, can = {
@@ -4758,7 +4793,15 @@ registerProcessor("fm1", Fm1);
           realRestart: idle && !!REAL.up,
           realInfo: idle && !!REAL.acc,
           realSave: idle && !!(REAL.saved || REAL.stored),
+          realGo: idle && !!realVerified(),
         };
+        // the four steps: what is done, what is next
+        const done = [!!REAL.acc && !!(REAL.fw || REAL.up), !!rec, !!rec?.protector?.installed || i?.kind === "bootloader", false], first = done.indexOf(false);
+        [["realConn", done[0] ? "✓ FOUND" : "STEP 1", "CONNECT"], ["realBackup", done[1] ? "✓ SAVED" : "STEP 2 · SAFE", "BACKUP"], ["realProt", done[2] ? "✓ IN THE UNIT" : newer ? "USE M-FLASHER" : "STEP 3 · WRITES", "PROTECTOR"], ["realGo", realVerified() ? "STEP 4 · READY" : "STEP 4 · LOCKED", "INSTALL"]].forEach(([id, cap, name], n) => {
+          label($("#" + id), cap, name);
+          $("#" + id).classList.toggle("done", !!done[n]);
+          $("#" + id).classList.toggle("next", n === first && !REAL.busy);
+        });
         for (const [id, on] of Object.entries(can)) $("#" + id).disabled = !on;
         $("#realNext").textContent = !REAL.acc ? "Next: press CONNECT, with the unit on and its USB cable in."
           : !REAL.fw && !REAL.up ? "No FM-1 found. Check the cable and that the unit is on, then CONNECT again."
@@ -4958,8 +5001,17 @@ registerProcessor("fm1", Fm1);
         }));
         const li = (text, col) => { const e = el("li"), sw = el("u"); if (col) sw.style.setProperty("--c", col); e.append(col ? sw : "", Object.assign(el("span"), { textContent: text })); return e; }; // names come from the flash: text only
         k.replaceChildren(...regionLines(m).map(([, col, t]) => li(t, col)), ...m.records.map((r) => li(hx(r.addr) + "  " + r.name + (r.name === "uboot.boot" ? " · " + (m.protector.installed ? "m-bootloader " + m.protector.version : "stock bootloader, no protector") : ""))));
-        $("#realMap").hidden = false;
+        $("#realMap").classList.remove("empty");
+        $("#realMapHint").textContent = " · " + m.used + " of " + m.sectors.length + " sectors hold data";
       }
+      // before there is a read, the same picture in grey: it is always on the screen
+      function realMapEmpty() {
+        $("#realMapGrid").replaceChildren(...Array.from({ length: 256 }, () => el("i")));
+        $("#realMapKey").replaceChildren(...REGIONS.map(([n]) => { const li = el("li"); li.append(el("u"), Object.assign(el("span"), { textContent: n })); return li; }));
+        $("#realMap").classList.add("empty");
+        $("#realMapHint").textContent = " · back up to see what is in the flash";
+      }
+      realMapEmpty();
       const realReport = () => {
         const h = (n) => (n == null ? "?" : "0x" + (n >>> 0).toString(16).toUpperCase());
         const ports = (m) => (m ? [...m.values()].map((p) => "  " + p.name + " [" + (p.manufacturer || "?") + ", " + p.state + "/" + p.connection + "]").join("\n") || "  (none)" : "  (not connected)");
@@ -5025,7 +5077,7 @@ registerProcessor("fm1", Fm1);
             await realServe(REAL.fwLink, await mbootImage("uboot"), true, "Installing the protector");
             REAL.saved = null; // what was backed up is the unit before: it has to be checked again
             REAL.map = null;
-            $("#realMap").hidden = true;
+            realMapEmpty();
             realFace();
             realSay("Sent. The unit restarts by itself. Then BACKUP here again: the protector is only counted when that new backup shows it. (To look at it first: switch the unit off, hold PLAY, switch it on: the m-bootloader menu opens.)");
             toast("Protector sent: back up again to check it", 6000);
@@ -5077,6 +5129,9 @@ registerProcessor("fm1", Fm1);
             toast(f.name + " installed", 5000);
           }));
       };
+      $("#realGo").onclick = () => menuTab("fw"); // the INSTALL buttons are on the cards
+      $("#realMoreBtn").onclick = () => ($("#more").hidden = false);
+      $("#more").onclick = (e) => { if (e.target === $("#more") || e.target.closest("button")) $("#more").hidden = true; }; // any button, or a tap outside, closes it after its own handler
       $("#realHow").onclick = () => realNotice("HOW IT GOES", $("#tplHow").content, true);
       $("#realWarn").onclick = () => realNotice("BEFORE ANYTHING IS WRITTEN", $("#tplWarn").content, false);
 
@@ -5337,8 +5392,9 @@ registerProcessor("fm1", Fm1);
       pwaFace();
       status("off: tap ON");
       listFace();
+      realFace(); // the steps of REAL FM-1 show their state from the start
       refreshCatalog();
       navigator.storage?.persist?.(); // ask the browser not to clear the kept firmwares and saves
     </script>
-  <div style="position:fixed;left:4px;bottom:2px;z-index:99;font:700 9px monospace;opacity:.7;pointer-events:none;color:#ff5e7a">TEST BUILD · pocket · e2b0836</div></body>
+  <div style="position:fixed;left:4px;bottom:2px;z-index:99;font:700 9px monospace;opacity:.7;pointer-events:none;color:#ff5e7a">TEST BUILD · pocket · 348dd21</div></body>
 </html>
