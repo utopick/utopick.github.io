@@ -5,7 +5,7 @@
 
   Layout of this file
     <head>    <style>
-    <body>    header (the six numbered stages), the stage, the keyboard, dialogs
+    <body>    the stage (on a phone its two columns take turns: LEARN / TRY), the keyboard, the bottom bar (BACK, the six numbered stages); nothing scrolls on a 390 x 844 phone (tests/e2e.py checks it)
     script#theory  the music theory as plain functions (scales, chords, voice leading, arranging, a MIDI file writer, judging a melody): tests/theory.test.js runs it in Node
     script  genres (data), sound (WebAudio), player, the six stages, progress, boot
 
@@ -28,8 +28,11 @@
       button:disabled { opacity: 0.38; cursor: default; }
       button.on { background: var(--acc); color: #06251c; border-color: var(--acc); font-weight: 700; }
       button.big { min-height: 64px; font-size: 1.1em; font-weight: 700; }
-      #app { display: flex; flex-direction: column; height: 100%; max-width: 1400px; margin: 0 auto; }
-      #top { flex: none; display: flex; gap: 10px; align-items: center; padding: 8px 12px; border-bottom: 1px solid var(--line); }
+      /* like FM1.Pocket: the screen never scrolls as a page. The stage fills it, the keyboard sits under it, the bar with BACK and the stages at the bottom (thumb reach) */
+      #app { display: flex; flex-direction: column; height: 100%; height: 100dvh; max-width: 1400px; margin: 0 auto; padding: env(safe-area-inset-top) env(safe-area-inset-right) 0 env(safe-area-inset-left); }
+      #top { flex: none; display: flex; gap: 10px; align-items: center; padding: 8px 12px calc(8px + env(safe-area-inset-bottom)); border-top: 1px solid var(--line); background: #0a0c0f; }
+      #app.home #kbwrap, #app.nokb #kbwrap, #app.home #stages { display: none; }
+      #app:not(.home) #lvl { display: none; }
       .logo { font: 900 20px var(--mono); letter-spacing: 1px; } .logo i { color: var(--acc); font-style: normal; }
       #lvl { font: 700 11px var(--mono); letter-spacing: 1px; color: var(--acc2); border: 1px solid var(--acc2); border-radius: 99px; padding: 3px 10px; white-space: nowrap; }
       #genre { font-weight: 700; white-space: nowrap; }
@@ -41,15 +44,30 @@
       #stages button.cur b { background: var(--acc); color: #06251c; }
       #stages button.done b { background: var(--acc); color: #06251c; }
       #stage { flex: 1; min-height: 0; overflow: auto; padding: 14px 14px 8px; }
+      #app.home #stage { display: flex; flex-direction: column; }
       .cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); gap: 16px; align-items: start; }
-      @media (max-width: 760px) { .cols { grid-template-columns: 1fr; } #stages span { display: none; } }
+      /* the stage title, and on a phone the LEARN / TRY switch: the two columns of a stage take turns instead of stacking into a scroll */
+      .shead { display: flex; gap: 8px; align-items: center; margin-bottom: 10px; }
+      .shead h3 { flex: 1; min-width: 0; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .seg { display: none; gap: 4px; } .seg button { min-height: 40px; padding: 4px 12px; font: 800 12px var(--mono); letter-spacing: 1px; }
+      @media (max-width: 760px) {
+        .cols { grid-template-columns: 1fr; } #stages span, #genre, #home i { display: none; }
+        .seg { display: flex; } .cols.p0 > :nth-child(2), .cols.p1 > :nth-child(1) { display: none; }
+        #stages { gap: 4px; } #stages button { padding: 4px 0; min-height: 48px; } #stages button b { width: 26px; height: 26px; font-size: 14px; }
+        #home { min-height: 48px; padding: 6px 10px; } #app:not(.home) .logo { display: none; }
+        #app .genres { flex: 1; min-height: 0; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-rows: minmax(0, 1fr); gap: 8px; }
+        #app .genres button { min-height: 0; padding: 10px; gap: 4px; overflow: hidden; } .genres button b { font-size: 16px; } .genres small { font-size: 12px; line-height: 1.3; }
+        #kb { height: clamp(80px, 17vh, 150px); }
+      }
+      #home i { font-style: normal; }
+      .levels { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin-top: 10px; font-size: 13px; }
       h1, h2, h3 { margin: 0 0 6px; }
       h2 { font-size: 22px; } h3 { font: 800 12px var(--mono); letter-spacing: 2px; color: var(--dim); text-transform: uppercase; }
       p { margin: 0 0 10px; } .dim { color: var(--dim); } .small { font-size: 13px; }
       .card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); padding: 12px; }
       .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
       .grid { display: grid; gap: 8px; }
-      .g2 { grid-template-columns: repeat(2, minmax(0, 1fr)); } .g3 { grid-template-columns: repeat(3, minmax(0, 1fr)); } .g4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+      .g2 { grid-template-columns: repeat(2, minmax(0, 1fr)); } .g3 { grid-template-columns: repeat(3, minmax(0, 1fr)); } .g4 { grid-template-columns: repeat(4, minmax(0, 1fr)); } .g6 { grid-template-columns: repeat(6, minmax(0, 1fr)); }
       .genres { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 10px; }
       .genres button { text-align: left; padding: 12px; min-height: 120px; display: flex; flex-direction: column; gap: 6px; }
       .genres button b { font-size: 18px; } .genres small { color: var(--dim); }
@@ -72,9 +90,9 @@
       input[type="range"] { width: 100%; accent-color: var(--acc); min-height: 32px; }
       label.sl { display: grid; gap: 2px; font-size: 13px; } label.sl span { display: flex; justify-content: space-between; color: var(--dim); }
       /* the keyboard */
-      #kbwrap { flex: none; padding: 8px 10px 10px; border-top: 1px solid var(--line); background: #0a0c0f; }
-      #oct { display: flex; gap: 4px; align-items: center; font: 700 11px var(--mono); color: var(--dim); white-space: nowrap; } #oct button { min-height: 32px; min-width: 32px; padding: 2px 8px; }
-      #kb { position: relative; height: clamp(90px, 22vh, 190px); user-select: none; touch-action: none; }
+      #kbwrap { flex: none; display: flex; gap: 6px; padding: 8px 8px 6px; border-top: 1px solid var(--line); background: #0a0c0f; }
+      #oct { flex: none; display: flex; flex-direction: column; gap: 4px; align-items: stretch; justify-content: center; font: 700 10px var(--mono); color: var(--dim); white-space: nowrap; text-align: center; } #oct button { flex: 1; min-height: 0; min-width: 34px; padding: 2px 6px; }
+      #kb { flex: 1; min-width: 0; position: relative; height: clamp(90px, 22vh, 190px); user-select: none; touch-action: none; }
       .k { position: absolute; top: 0; border: 1px solid #000; cursor: pointer; display: flex; align-items: flex-end; justify-content: center; font: 700 10px var(--mono); padding-bottom: 4px; }
       .k.w { background: #e9e6df; color: #666; height: 100%; border-radius: 0 0 6px 6px; z-index: 1; }
       .k.b { background: #15171a; height: 62%; border-radius: 0 0 4px 4px; z-index: 2; color: #999; }
@@ -88,24 +106,24 @@
       /* a phone held sideways: the keyboard gets lower and the chrome thinner, the stage keeps the room */
       @media (max-height: 460px) {
         #kb { height: 70px; } #kbwrap { padding: 4px 8px 6px; } #oct span { display: none; }
-        #top { padding: 4px 8px; gap: 6px; } button { min-height: 38px; } button.big { min-height: 48px; } #stage { padding: 8px 10px 4px; }
+        #top { padding: 4px 8px calc(4px + env(safe-area-inset-bottom)); gap: 6px; } #stages button { min-height: 38px; } button { min-height: 38px; } button.big { min-height: 48px; } #stage { padding: 8px 10px 4px; }
         h2 { font-size: 18px; } p { margin-bottom: 6px; } .chord { min-height: 64px; } .slot { min-height: 56px; } .tl { height: 110px; }
       }
     </style>
   </head>
   <body>
     <div id="app">
-      <header id="top">
+      <main id="stage"></main>
+      <div id="kbwrap">
+        <span id="oct" title="The octaves of the keyboard"><button id="octUp" title="One octave up">▴</button><span id="octl"></span><button id="octDown" title="One octave down">▾</button></span>
+        <div id="kb"></div>
+      </div>
+      <footer id="top">
         <b class="logo">LEARN<i>.</i></b>
-        <button id="home" title="Choose another genre">GENRES</button>
+        <button id="home" title="Back to the genres">◂ BACK<i> TO GENRES</i></button>
         <span id="genre"></span>
         <nav id="stages" aria-label="The six stages"></nav>
-        <span id="oct" title="The octaves of the keyboard"><button id="octDown" title="One octave down">◂</button><span id="octl"></span><button id="octUp" title="One octave up">▸</button></span>
         <span id="lvl" title="Finish a whole evening to open the next level"></span>
-      </header>
-      <main id="stage"></main>
-      <footer id="kbwrap">
-        <div id="kb"></div>
       </footer>
     </div>
     <div class="toast" id="toast" role="status"></div>
@@ -307,7 +325,7 @@ if (typeof window !== "undefined") window.LearnTheory = LearnTheory;
       const load = () => { try { return JSON.parse(localStorage.getItem("learn-test.v1")) || {}; } catch { return {}; } };
       const SAVE = Object.assign({ level: 1, done: {}, cleared: [], tunes: {} }, load());
       const save = () => { try { localStorage.setItem("learn-test.v1", JSON.stringify(SAVE)); } catch {} };
-      const S = { genre: null, stage: 0, tune: null, tone: null, kb: { base: 60 }, q: {}, tick: 0, ab: "genre", touched: 0 };
+      const S = { genre: null, stage: 0, pane: 0, tune: null, tone: null, kb: { base: 60 }, q: {}, tick: 0, ab: "genre", touched: 0 };
       const G = () => GENRES.find((g) => g.id === S.genre);
       const degrees = () => S.tune.degrees.map((d) => ({ deg: d.deg, flavour: d.flavour === "t" && S.tune.sev ? "7" : d.flavour }));
       const chordsOf = () => degrees().map((d) => LT.chord(S.tune.key, S.tune.mode, d.deg, d.flavour));
@@ -322,7 +340,7 @@ if (typeof window !== "undefined") window.LearnTheory = LearnTheory;
         S.genre = id; const g = G(), saved = SAVE.tunes[id];
         S.tune = saved || { key: g.key, mode: g.mode, degrees: g.progs[0].d.map(([deg, flavour]) => ({ deg, flavour })), tempo: g.tempo, swing: g.swing, sev: false, prog: 0, melody: [] };
         S.tone = Object.assign({ swing: S.tune.swing, human: 0.3 }, g.sound);
-        S.stage = 0; S.q = {}; S.ab = "genre"; S.touched = 0; stop(); render();
+        S.stage = 0; S.pane = 0; S.q = {}; S.ab = "genre"; S.touched = 0; stop(); render();
       }
       const saveTune = () => { SAVE.tunes[S.genre] = S.tune; save(); };
 
@@ -501,29 +519,35 @@ if (typeof window !== "undefined") window.LearnTheory = LearnTheory;
         const nav = $("#stages"); nav.replaceChildren();
         if (!S.genre) return;
         const d = doneOf(S.genre);
-        STAGES.forEach((n, i) => nav.append(h("button", { class: (i === S.stage ? "cur " : "") + (d[i] ? "done" : ""), title: n, onclick: () => { S.stage = i; render(); } }, h("b", {}, d[i] ? "✓" : String(i + 1)), h("span", {}, n))));
+        STAGES.forEach((n, i) => nav.append(h("button", { class: (i === S.stage ? "cur " : "") + (d[i] ? "done" : ""), title: n, onclick: () => { S.stage = i; S.pane = 0; render(); } }, h("b", {}, d[i] ? "✓" : String(i + 1)), h("span", {}, n))));
       }
       const lock = (need) => h("p", { class: "lockmsg" }, "Locked until level " + need + ": finish a whole evening in any genre to open it.");
       function render() {
         stop(); S.onKey = null; S.q = Object.assign({}, S.q, { find: false });
         head();
         const el = $("#stage"); el.replaceChildren();
+        $("#app").classList.toggle("home", !S.genre);
+        $("#app").classList.toggle("nokb", S.stage >= 4);  // TONE and FINISH do not use the keyboard: their stage gets the room
         if (!S.genre) { setLit({ scale: null, chord: null, tonic: null }); return el.append(...home()); }
-        el.append(...[stageScale, stageChords, stageProg, stageMelody, stageTone, stageFinish][S.stage]());
+        const pane = (n, label, title) => h("button", { class: S.pane === n ? "on" : "", title, onclick: () => { S.pane = n; render(); } }, label);
+        el.append(h("div", { class: "shead" }, h("h3", {}, S.stage + 1 + " · " + STAGES[S.stage] + " · " + G().name),
+          h("div", { class: "seg" }, pane(0, "LEARN", "What this stage is about"), pane(1, "TRY", "Play it: the controls and the challenge"))),
+          ...[stageScale, stageChords, stageProg, stageMelody, stageTone, stageFinish][S.stage]());
+        el.querySelector(".cols")?.classList.add("p" + S.pane);
         el.scrollTop = 0; syncPlayButtons();
       }
       function home() {
         const next = LEVELS[SAVE.level] || null;
         return [
           h("h2", {}, "What do you want to play?"),
-          h("p", { class: "dim" }, "Pick a genre. Six short stages take you from the notes to a finished tune: key and scale, chords, a progression with its groove, a melody, the sound, and a MIDI file you keep."),
+          h("p", { class: "dim small" }, "Pick a genre. Six short stages take you from the notes to a finished tune you keep as a MIDI file."),
           h("div", { class: "genres" }, GENRES.map((g) => {
             const d = doneOf(g.id), n = d.filter(Boolean).length, first = g.progs[0];
             return h("button", { onclick: () => pickGenre(g.id) }, h("b", {}, g.name), h("small", {}, g.blurb), h("span", { class: "chips" }, first.d.slice(0, 4).map(([deg, f]) => h("span", { class: "chip " + LT.chord(g.key, first.mode || g.mode, deg, f).fn }, LT.chord(g.key, first.mode || g.mode, deg, f).roman))), h("small", {}, n + " of 6 stages · " + g.tempo + " bpm"));
           })),
-          h("h3", { style: "margin-top:18px" }, "Levels"),
-          h("div", { class: "card" }, LEVELS.map(([name, what], i) => h("div", { class: "row", style: "padding:3px 0;opacity:" + (i < SAVE.level ? 1 : 0.5) }, h("b", { class: "chip", style: i < SAVE.level ? "background:var(--acc);color:#06251c" : "" }, String(i + 1)), h("b", {}, name), h("span", { class: "dim small" }, what, i >= SAVE.level ? " · locked" : "")))),
-          h("p", { class: "dim small", style: "margin-top:8px" }, next && SAVE.level < 3 ? "Finish all six stages of any genre to open level " + (SAVE.level + 1) + "." : "Levels 4 and 5 are still being written: this is an alpha."),
+          // the levels in one line: a chip for each (its name and what it opens in the title), then what the current one is
+          h("div", { class: "levels" }, h("b", { class: "dim" }, "LEVELS"), LEVELS.map(([name, what], i) => h("b", { class: "chip", title: name + ": " + what + (i >= SAVE.level ? " (locked)" : ""), style: i < SAVE.level ? "background:var(--acc);color:#06251c" : "opacity:.5" }, String(i + 1))),
+            h("span", { class: "dim" }, LEVELS[SAVE.level - 1][0] + ": " + LEVELS[SAVE.level - 1][1] + ". " + (next && SAVE.level < 3 ? "Finish all six stages of a genre to open level " + (SAVE.level + 1) + "." : "Levels 4 and 5 are still being written."))),
         ];
       }
 
@@ -544,7 +568,7 @@ if (typeof window !== "undefined") window.LearnTheory = LearnTheory;
               h("h2", {}, "Pick a key. Stay inside its notes."),
               h("p", {}, "A scale is a set of seven notes that sound good together. Play only these notes (the lit keys) and you cannot hit a wrong one. The first note, with the dot, is the home note: everything else is measured from it."),
               h("h3", {}, "Key"),
-              h("div", { class: "grid g4", style: "margin-bottom:10px" }, Array.from({ length: 12 }, (_, pc) => h("button", { class: "keynote" + (pc === T.key ? " on" : ""), onclick: () => { T.key = pc; saveTune(); render(); } }, LT.noteName(pc, flats)))),
+              h("div", { class: "grid g6", style: "margin-bottom:10px" }, Array.from({ length: 12 }, (_, pc) => h("button", { class: "keynote" + (pc === T.key ? " on" : ""), onclick: () => { T.key = pc; saveTune(); render(); } }, LT.noteName(pc, flats)))),
               h("h3", {}, "Mode (the colour of the scale)"),
               h("div", { class: "grid g2" }, Object.entries(LT.MODES).map(([id, m]) => h("button", { class: id === T.mode ? "on" : "", disabled: !(id === g.mode || SAVE.level >= 3), onclick: () => { T.mode = id; saveTune(); render(); }, title: m.feel }, m.name, h("br"), h("small", {}, m.feel)))),
               SAVE.level < 3 ? lock(3) : null),
@@ -631,11 +655,11 @@ if (typeof window !== "undefined") window.LearnTheory = LearnTheory;
             h("div", {},
               h("h2", {}, "Now sing over it."),
               h("p", {}, "The lit keys are the scale: they cannot clash. Press RECORD: you get one bar of clicks, then the chords loop once and the keyboard records what you play. Dots turn green on a chord note on a strong beat, red when they leave the scale."),
-              h("div", { class: "row" }, h("button", { class: "big", "data-rec": "1", onclick: () => (PL.on && PL.rec ? stop() : play({ countIn: true, record: true, loops: 1, melody: false })) }, "● RECORD"), h("button", { class: "big", "data-play": "1", onclick: () => (PL.on ? stop() : play({ melody: true })) }, "▶ PLAY"), h("button", { onclick: () => { T.melody = []; saveTune(); paintTl(); } }, "CLEAR")),
-              h("p", { class: "small", style: "margin-top:10px" }, h("b", {}, "Tip: "), tips[Math.floor(Math.random() * tips.length)]),
-              h("h3", {}, "How it sits"),
+              h("p", { class: "small", style: "margin-top:10px" }, h("b", {}, "Tip: "), tips[Math.floor(Math.random() * tips.length)])),
+            h("div", {},
+              h("div", { class: "row", style: "margin-bottom:10px" }, h("button", { class: "big", "data-rec": "1", onclick: () => (PL.on && PL.rec ? stop() : play({ countIn: true, record: true, loops: 1, melody: false })) }, "● RECORD"), h("button", { class: "big", "data-play": "1", onclick: () => (PL.on ? stop() : play({ melody: true })) }, "▶ PLAY"), h("button", { onclick: () => { T.melody = []; saveTune(); paintTl(); } }, "CLEAR")),
+              h("div", { class: "tl" }, h("div", { class: "cursor" })), h("div", { class: "legend", style: "margin:8px 0" }, h("span", {}, h("i", { style: "background:var(--acc)" }), "chord note on a strong beat"), h("span", {}, h("i", { style: "background:var(--blue)" }), "in the scale"), h("span", {}, h("i", { style: "background:var(--hot)" }), "outside the scale")),
               h("div", { class: "meter", id: "st1" }, h("i", {})), h("p", { class: "small" }, ""), h("div", { class: "meter", id: "st2" }, h("i", {})), h("p", { class: "small" }, "")),
-            h("div", {}, h("div", { class: "tl" }, h("div", { class: "cursor" })), h("div", { class: "legend", style: "margin-top:8px" }, h("span", {}, h("i", { style: "background:var(--acc)" }), "chord note on a strong beat"), h("span", {}, h("i", { style: "background:var(--blue)" }), "in the scale"), h("span", {}, h("i", { style: "background:var(--hot)" }), "outside the scale"))),
           ),
         ];
       }
@@ -651,11 +675,11 @@ if (typeof window !== "undefined") window.LearnTheory = LearnTheory;
             h("div", {},
               h("h2", {}, "The sound makes the genre."),
               h("p", {}, "Same notes, different tone. Switch between a flat sound and the " + g.name + " sound while it plays, and listen to what changes."),
-              h("div", { class: "row" }, h("button", { class: "big", "data-play": "1", onclick: () => (PL.on ? stop() : play({ melody: true })) }, "▶ PLAY"),
-                h("button", { class: "big " + (S.ab === "flat" ? "on" : ""), onclick: () => { S.ab = S.ab === "flat" ? "genre" : "flat"; S.q.abUsed = true; const was = PL.on; render(); touch(); if (was) play({ melody: true }); } }, S.ab === "flat" ? "FLAT SOUND ✓" : "GENRE SOUND ✓")),
               h("h3", { style: "margin-top:12px" }, "What makes it " + g.name),
               h("ul", { class: "small", style: "margin:0;padding-left:18px" }, g.tips.map((t) => h("li", {}, t)))),
             h("div", {},
+              h("div", { class: "row", style: "margin-bottom:10px" }, h("button", { class: "big", "data-play": "1", onclick: () => (PL.on ? stop() : play({ melody: true })) }, "▶ PLAY"),
+                h("button", { class: "big " + (S.ab === "flat" ? "on" : ""), onclick: () => { S.ab = S.ab === "flat" ? "genre" : "flat"; S.q.abUsed = true; const was = PL.on; render(); touch(); if (was) play({ melody: true }); } }, S.ab === "flat" ? "FLAT SOUND ✓" : "GENRE SOUND ✓")),
               h("h3", {}, "Instrument"),
               h("div", { class: "grid g3", style: "margin-bottom:10px" }, [["epiano", "E-PIANO"], ["pad", "PAD"], ["pluck", "PLUCK"], ["organ", "ORGAN"], ["lead", "SAW LEAD"]].map(([id, n]) => h("button", { class: tn.timbre === id ? "on" : "", onclick: () => { tn.timbre = id; note(id, 60, au().currentTime, 0.6, 0.9, tn, AU.bus); touch(); render(); } }, n))),
               slider("bright", "Brightness (dark ↔ bright)", 0, 1, 0.01, (v) => Math.round(v * 100) + "%"),
@@ -729,5 +753,5 @@ if (typeof window !== "undefined") window.LearnTheory = LearnTheory;
       render();
 
     </script>
-  <div style="position:fixed;left:4px;bottom:2px;z-index:99;font:700 9px monospace;opacity:.7;pointer-events:none;color:#ff5e7a">TEST BUILD · main · 4020a3d</div></body>
+  <div style="position:fixed;left:4px;bottom:2px;z-index:99;font:700 9px monospace;opacity:.7;pointer-events:none;color:#ff5e7a">TEST BUILD · main · e672386</div></body>
 </html>
