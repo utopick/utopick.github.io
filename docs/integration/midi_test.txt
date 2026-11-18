@@ -130,3 +130,11 @@ What it showed (read from the first messages):
 - The joystick sends pitch bend, and CC 1 and CC 11 together with RPN/NRPN data: CC 98 = 0, 99 = 55 and data entry CC 6 (67 to 85). CC 6 is not a knob.
 - Before this report the profile counted knobs as CC 2, 3, 4... and pads as note - 36, so the panel saw one "knob" (CC 6) and the pads collided (36 38 42 46 48 45 51 49 landed on 0 2 6 2 4 1 7 5).
 - Fix in the apps: the akai profile has padNotes (the two banks above) and ccs (74 71 91 93 73 72). Knobs 7 and 8 of bank B still need a report.
+
+
+Novation Launchkey MK4 37 (report from FM1.Pocket's MIDI panel, 2026-11-17, trimmed: the first-messages dump was only note and CC streams):
+Device: Launchkey MK4 37 — Novation Launchkey · 37 keys
+Notes: 189 presses, C2 to C9. Channels: 10 (pads), 16. Velocity 1 to 121. Note off: note-on with velocity 0.
+CC: 1 (mod wheel), 21-28 and 31-38 (knobs, two banks), 64 (sustain), 74-77 and 102-103, 117 (function buttons). Pitch bend, aftertouch, clock 119.8 BPM, start/stop. No sysex.
+Map: {"keys":37,"padCh":9,"pads":16,"padNotes":[[40,41,42,43,48,49,50,51,36,37,38,39,44,45,46,47]],"knobs":15,"ccs":[21,22,23,24,25,26,27,28,31,33,34,35,36,37,38],"cc0":0,"sus":64,"modKey":"c15:74","bend":15,"mod":1,"fn":{"play":"rt:250","stop":"rt:252","rec":"c15:117","f1":"c15:75","f2":"c15:76","f3":"c15:77"}}
+Notes on it: the profile guess (novation37) assumes 8 knobs from CC 21 and pads on the channel the panel finds; this unit has 16 knob CCs (32 is the fader or a second control: 389 events, 0-127), pads on channel 10 with notes 36-51 in two banks, transport as realtime start/stop (250/252), and function buttons as CC 117/75/76/77 on channel 16 (DAW mode).
