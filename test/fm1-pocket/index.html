@@ -495,6 +495,8 @@
       <button id="power" title="Power: turn the FM-1 on with the chosen firmware, or off" aria-label="Power" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v9M6.6 6.6a7.6 7.6 0 1 0 10.8 0" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" /></svg></button>
       <button id="flip" title="Next view: the whole FM-1, the keys with the upper part shrunk above them, or only the upper part (knobs, screen, buttons), full screen">KEYS</button>
       <button id="helpFw" title="Manual of the firmware that is running (its own, from its repository), or this app's manual" aria-label="Manual">?</button>
+      <button id="railScreen" hidden title="Tether: show this screen on the real FM-1, or only use it as a controller (a lighter link)"></button>
+      <button id="railSound" hidden title="Tether: this page's sound on the real FM-1's own output, or here"></button>
       <div class="grow"><span id="status" role="status"></span></div>
     </div>
     <div id="fm" title="The FM-1: press its keys and buttons, drag a knob up or down to turn it">
@@ -737,6 +739,8 @@ SOFTWARE.
           <button id="realRestart" title="If the unit stays in the helper after a backup: ask the helper to restart it. (Switching it off and unplugging the USB cable does the same.)"><i>HELPER MODE</i>RESTART UNIT</button>
           <button id="realInfo" title="Read what the unit says about itself (nothing is written) and copy a text report: ports, identity, chip, flash, backup, and what happened. Paste it in a message."><i>NO WRITES</i>INSPECT · COPY</button>
           <button id="realSave" title="Save the last backup kept in this browser for the connected unit as a file"><i>KEPT IN THIS BROWSER</i>SAVE BACKUP</button>
+          <button id="optScreen" title="Tether: show this screen on the real FM-1. Off, the unit only sends its keys, pads and knobs (a lighter link: for a bigger screen, or to try firmwares quickly). Takes effect now."><i></i>SCREEN ON THE FM-1</button>
+          <button id="optSound" title="Tether: offer this page's sound on the FM-1's own output when it connects. Off, the sound always stays here."><i></i>SOUND OFFER</button>
           <button id="realHow" title="The steps, in order"><i>READ</i>HOW IT GOES</button>
           <button id="realWarn" title="What can go wrong, and what to do first"><i>READ</i>WARNINGS</button>
           <button id="moreClose" title="Close"><i>BACK</i>CLOSE</button>
@@ -6432,13 +6436,35 @@ registerProcessor("fm1", Fm1);
       // said on the pane and over every slider that touches the unit
       const REAL_DISCLAIMER = "CAUTION. Unofficial tool, not affiliated with M-VAVE, JieLi or the makers of m-bootloader. Writing to a unit can stop it from starting (usually recoverable: see WARNINGS), and you use it at your own risk, with no warranty. Back up first and never unplug or switch off while it works.";
       const realSure = (text, go) => (sure(text, go), ($("#sureWarn").textContent = REAL_DISCLAIMER), ($("#sureWarn").hidden = false));
-      const jobOpen = (title) => ($("#job").className = "", ($("#jobTitle").textContent = title), ($("#jobText").textContent = ""), ($("#jobBar").hidden = true), ($("#jobOk").hidden = true), ($("#job").hidden = false));
-      const jobEnd = (ok) => { $("#job").className = ok ? "ok" : "bad"; $("#jobBar").hidden = true; $("#jobOk").hidden = false; $("#jobOk").focus(); };
-      $("#jobOk").onclick = () => ($("#job").hidden = true);
+      // a job that says nothing for 45 s is stuck (the unit left, or failed on its own screen): the dialog gets a way out
+      let jobSeen = 0, jobDog = 0;
+      const jobOpen = (title) => {
+        $("#job").className = "";
+        $("#jobTitle").textContent = title;
+        $("#jobText").textContent = "";
+        $("#jobBar").hidden = true;
+        $("#jobOk").hidden = true;
+        $("#jobOk").textContent = "OK";
+        $("#job").hidden = false;
+        jobSeen = Date.now();
+        clearInterval(jobDog);
+        jobDog = setInterval(() => {
+          if ($("#job").hidden || !$("#jobOk").hidden || Date.now() - jobSeen < 45000) return;
+          $("#job").className = "bad";
+          $("#jobTitle").textContent += " · NO ANSWER";
+          $("#jobText").textContent += "\n\nNo news from the unit for 45 seconds. If it shows UPDATE FAILED or looks stuck, switch it off, unplug its cable for a few seconds and CONNECT again.";
+          $("#jobBar").hidden = true;
+          $("#jobOk").hidden = false;
+          $("#jobOk").textContent = "CLOSE";
+        }, 2000);
+      };
+      const jobEnd = (ok) => { clearInterval(jobDog); $("#job").className = ok ? "ok" : "bad"; $("#jobBar").hidden = true; $("#jobOk").hidden = false; $("#jobOk").focus(); };
+      $("#jobOk").onclick = () => { $("#job").hidden = true; clearInterval(jobDog); if (REAL.busy && !$("#jobTitle").textContent.includes("DONE")) { REAL.busy = false; realFace(); realScan(); } };
       // a message the user has to see (a check that is not met, a failure): never only a toast
       const realNotice = (title, text, ok = false) => (jobOpen(title), text instanceof Node ? $("#jobText").replaceChildren(text.cloneNode(true)) : ($("#jobText").textContent = text), jobEnd(ok));
       const realSay = (t) => {
         $("#realMsg").textContent = t;
+        jobSeen = Date.now();
         if (!$("#job").hidden) {
           $("#jobText").textContent = t.replace(/:? ?\d+%$/, "");
           const m = /(\d+)%$/.exec(t);
@@ -6451,7 +6477,12 @@ registerProcessor("fm1", Fm1);
       const sha256 = async (bytes) => hex(await crypto.subtle.digest("SHA-256", bytes));
       // the real unit's notes, bend, clock and start/stop arrive in the emulator when SYNC is on; what you play goes the other way
       const realThru = (data) => REAL.sync && !REAL.tether && REAL.fw && data[0] < 0xf0 && REAL.fw.out.send(Uint8Array.from(data));
+      function railFace() {
+        $("#railScreen").hidden = !REAL.tether;
+        $("#railSound").hidden = !REAL.tether?.info?.audioOut || /Android/i.test(navigator.userAgent); // (Android sends the sound to a plugged USB speaker itself)
+      }
       function realFace() {
+        railFace();
         const names = [REAL.fw && "firmware port: " + REAL.fw.name, REAL.up && "update port: " + REAL.up.name].filter(Boolean);
         const rec = REAL.saved || (REAL.stored?.uid === REAL.info?.uid ? REAL.stored : null), pr = rec?.protector, prText = !rec ? " · protector: back up to find out" : pr?.installed ? " · protector: installed " + pr.version + (rec === REAL.stored ? " (from the backup kept here, " + rec.date.slice(0, 10) + ")" : "") : " · protector: NOT installed";
         $("#realNames").textContent = !REAL.acc ? "Not connected yet." : names.length ? names.join(" · ") + (REAL.info ? " · " + (REAL.info.mboot ? REAL.info.kind + " " + REAL.info.version + ", flash " + (REAL.info.capacity >> 10) + " KiB, chip " + REAL.info.jedec.toString(16).toUpperCase() : "answers, but is not m-bootloader") : "") + prText : "No FM-1 found on USB MIDI. Plug it in, switched on. Ports this browser sees: " + ([...REAL.acc.inputs.values(), ...REAL.acc.outputs.values()].map((p) => p.name + (p.state === "disconnected" ? " (gone)" : "")).join(", ") || "none") + ". INSPECT · COPY lists them all.";
@@ -6544,20 +6575,35 @@ registerProcessor("fm1", Fm1);
         if (!navigator.requestMIDIAccess) return toast("This browser has no MIDI (use Chrome or Edge)", 3000);
         try {
           REAL.acc = REAL.acc || (await navigator.requestMIDIAccess({ sysex: true }));
-          REAL.acc.onstatechange = realScan;
+          REAL.acc.onstatechange = () => realScan().then(realOffer);
           await realScan();
           toast(REAL.fw || REAL.up ? "Real FM-1 found" : "No FM-1 on USB MIDI", 3000);
         } catch {
           toast("MIDI with SysEx was not allowed", 3000);
         }
       };
+      // A unit that shows up while the browser already allows MIDI with SysEx (nothing is asked, nothing is sent): offered once, from the main screen
+      let offered = null;
+      function realOffer() {
+        if (!REAL.fw) return (offered = null);
+        if (offered === REAL.fw.in.id || REAL.sync || REAL.tether || REAL.busy || !$("#sure").hidden || !$("#menu").hidden) return;
+        offered = REAL.fw.in.id;
+        sure("A real FM-1 is connected (" + REAL.fw.name + "). Use it as the panel of this one?", (pick) => pick === 0 && $("#realSync").onclick(), ["USE THE REAL FM-1", "NOT NOW"]);
+      }
+      navigator.permissions?.query({ name: "midi", sysex: true }).then(async (p) => {
+        if (p.state !== "granted" || !navigator.requestMIDIAccess) return;
+        REAL.acc = REAL.acc || (await navigator.requestMIDIAccess({ sysex: true }));
+        REAL.acc.onstatechange = () => realScan().then(realOffer);
+        await realScan();
+        realOffer();
+      }).catch(() => {});
       // ---- Tether: a real FM-1 running the Tether firmware (pocket/firmware, protocol in firmware/PROTOCOL.md) is the emulator's panel.
       // Its keys, buttons, encoders and MASTER play the emulator; the emulator's screen and LEDs go to the unit (SysEx, tiles that changed,
       // one frame at a time: the next waits for the unit's ACK, and no ACK in 500 ms means a keyframe).
       const tether = { waitHello: null, lcd: null, ledKey: "" };
       function tetherFlush() {
         const st = REAL.tether;
-        if (!st || REAL.busy || st.inflight || !tether.lcd) return;
+        if (!st || REAL.busy || st.inflight || !tether.lcd || !tetherOpt.screen) return;
         const msgs = st.enc.encode(tether.lcd);
         if (!msgs.length) return;
         st.inflight = true;
@@ -6599,6 +6645,7 @@ registerProcessor("fm1", Fm1);
         try {
           if (ac) await ac.setSinkId(id);
           sink = id;
+          optFace();
           toast(id ? "The sound plays on " + label : "The sound plays on this device again", 3000);
         } catch (e) {
           toast("Could not move the sound" + (label ? " to " + label : "") + ": " + e.message, 4000);
@@ -6620,6 +6667,29 @@ registerProcessor("fm1", Fm1);
         const names = list.map((d, i) => d.label || "OUTPUT " + (i + 1));
         sure("Which output is the FM-1? Its USB speaker is called Tether.", (pick) => soundTo(list[pick].deviceId, names[pick]), names);
       }
+      // Tether as a plain controller: the screen mirror and the sound offer can each be switched off before connecting (kept: fm1.tscreen, fm1.tsound)
+      const tetherOpt = { screen: stored("fm1-test.tscreen") !== "0", sound: stored("fm1-test.tsound") !== "0" };
+      const optFace = () => {
+        $("#optScreen i").textContent = tetherOpt.screen ? "ON" : "OFF";
+        $("#optSound i").textContent = tetherOpt.sound ? "ON" : "OFF";
+        $("#railScreen").textContent = "SCREEN " + (tetherOpt.screen ? "ON" : "OFF");
+        $("#railSound").textContent = "SOUND " + (sink ? "FM-1" : "HERE");
+      };
+      $("#optScreen").onclick = () => {
+        store("fm1-test.tscreen", (tetherOpt.screen = !tetherOpt.screen) ? "1" : "0");
+        optFace();
+        if (tetherOpt.screen && REAL.tether) (REAL.tether.enc.needKey(), (tether.ledKey = ""), tetherFlush(), tetherHook.leds());
+        toast(tetherOpt.screen ? "Tether shows this screen on the FM-1" : "Tether: the FM-1 only sends its keys, pads and knobs", 3000);
+      };
+      $("#optSound").onclick = () => {
+        store("fm1-test.tsound", (tetherOpt.sound = !tetherOpt.sound) ? "1" : "0");
+        optFace();
+        if (!tetherOpt.sound && sink) soundTo("", "");
+        toast(tetherOpt.sound ? "Tether offers the sound on the FM-1" : "The sound stays on this device", 3000);
+      };
+      optFace();
+      $("#railScreen").onclick = () => $("#optScreen").click();
+      $("#railSound").onclick = () => (sink ? soundTo("", "") : tetherSound()); // the rail's sound button moves the sound now: FM-1 <-> here
       tetherHook = {
         frame(px) {
           if (!REAL.tether) return;
@@ -6663,7 +6733,7 @@ registerProcessor("fm1", Fm1);
         tetherHook.leds();
         realFace();
         toast("Tether found: the real FM-1 is the panel of this one (keys, buttons, knobs), and its screen shows this screen");
-        if (hello.audioOut && !sink) sure("This unit can also play the sound, on its own output and headphones (its MASTER knob sets the level). Send this page's sound to the FM-1?", (pick) => pick === 0 && tetherSound(), ["SOUND ON THE FM-1", "KEEP IT HERE"]);
+        if (hello.audioOut && tetherOpt.sound && !sink && !/Android/i.test(navigator.userAgent)) sure("This unit can also play the sound, on its own output and headphones (its MASTER knob sets the level). Send this page's sound to the FM-1?", (pick) => pick === 0 && tetherSound(), ["SOUND ON THE FM-1", "KEEP IT HERE"]);
       };
       // wait for a port to come back (the unit restarts into another mode after a write)
       const realWait = async (test, ms) => {
@@ -6767,6 +6837,7 @@ registerProcessor("fm1", Fm1);
         if (REAL.up && REAL.info?.mboot) return realRun("Backup", backupNow);
         if (REAL.up) return realNotice("NOT A HELPER", "This unit answers, but it is not m-bootloader or its helper: nothing was sent.");
         if (!REAL.fw) return realNotice("CONNECT FIRST", "Connect a real FM-1 first (CONNECT), with its firmware running.");
+        if (REAL.tether) return realNotice("BACK UP IN MIDI MODE", "Tether is running, and its updater cannot send the helper for a backup. Switch the unit off, hold PLAY while switching it on, choose the protector's MIDI mode, press CONNECT here and then BACKUP.");
         realSure("To read the whole flash, a small helper is sent to the unit and runs from RAM. It restarts the unit into the helper (no keys needed) and writes only the firmware's updater storage area, never the boot area or keys. When the backup is done, switch the unit off and on.", () =>
           realRun("Backup", async () => {
             await realIdent();
@@ -7283,5 +7354,5 @@ registerProcessor("fm1", Fm1);
       refreshCatalog();
       navigator.storage?.persist?.(); // ask the browser not to clear the kept firmwares and saves
     </script>
-  <div style="position:fixed;left:4px;bottom:2px;z-index:99;font:700 9px monospace;opacity:.7;pointer-events:none;color:#ff5e7a">TEST BUILD · pocket · dbdfb0a</div></body>
+  <div style="position:fixed;left:4px;bottom:2px;z-index:99;font:700 9px monospace;opacity:.7;pointer-events:none;color:#ff5e7a">TEST BUILD · pocket · 4f664e2</div></body>
 </html>
