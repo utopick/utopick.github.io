@@ -95,7 +95,9 @@
       #Ltop > #rail button { flex: 1; min-height: 0; min-width: 0; width: calc(102 * var(--u)); border-radius: calc(14 * var(--u)); font-size: max(9px, calc(16 * var(--u))); }
       #Ltop > #rail #logo { font-size: max(12px, calc(22 * var(--u))); }
       #rail button { min-width: 44px; min-height: 40px; padding: 4px; border-radius: 10px; border: 0; background: linear-gradient(var(--btn1), var(--btn2)); box-shadow: 0 3px 0 #0009; color: var(--ink); cursor: pointer; }
+      #rail button:active { transform: translateY(2px); box-shadow: 0 1px 0 #0009; }
       #rail #power { position: relative; }
+      #rail #railScreen[aria-pressed="false"], #rail #railSound[aria-pressed="false"] { opacity: 0.5; box-shadow: none; }
       #rail #power svg { display: block; height: 1.5em; margin: auto; }
       #rail #power::after { content: ""; position: absolute; top: 9%; right: 9%; width: 0.5em; height: 0.5em; border-radius: 50%; background: #ff3b4e; box-shadow: 0 0 0 1px #0008; }
       #rail #power.on::after { background: #35e06a; box-shadow: 0 0 0 1px #0008, 0 0 6px #35e06a; }
@@ -108,12 +110,12 @@
          between the parts, and height for the keys. */
       #fm { flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; gap: 6px; padding: 6px; container-type: size; }
       /* the shell: matt, lit from above, with a bevel at its edge */
-      body::before { content: ""; position: absolute; inset: 0; pointer-events: none; background: radial-gradient(120% 80% at 35% 0%, #ffffff12, transparent 60%); box-shadow: inset 0 0 0 1px #ffffff1c, inset 0 -10px 18px #0005, inset 0 6px 10px #ffffff0a; }
+      body::before { content: ""; position: absolute; inset: 0; pointer-events: none; background: radial-gradient(120% 80% at 35% 0%, #ffffff12, transparent 60%), url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .22 0 0 0 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); box-shadow: inset 0 0 0 1px #ffffff1c, inset 0 -10px 18px #0005, inset 0 6px 10px #ffffff0a; }
       #up { --u: min(calc(100cqw / 1400), calc(100cqh / 760)); flex: none; display: flex; align-items: center; }
       #kb { flex: 1; min-height: 0; background: var(--tray); border-radius: 22px; padding: 1.2% 1%; display: flex; flex-direction: column; gap: 4%; box-shadow: inset 0 0 0 1px var(--rim), inset 0 3px 8px #000a; }
       #L, #R { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: space-evenly; align-self: stretch; gap: calc(14 * var(--u)); }
       /* the screen: a glossy black window, the display well inside it */
-      .scr { --pad: calc(30 * var(--u)); position: relative; width: calc(540 * var(--u)); height: calc(540 * var(--u)); flex: none; background: linear-gradient(150deg, #1d1d20, #060607 45%, #0b0b0c); border-radius: calc(64 * var(--u)); padding: calc(30 * var(--u)); display: flex; box-shadow: inset 0 0 0 1px #ffffff1a, inset 0 2px 3px #ffffff14, 0 2px 5px #000a; }
+      .scr { --pad: calc(30 * var(--u)); position: relative; width: calc(540 * var(--u)); height: calc(540 * var(--u)); flex: none; background: linear-gradient(150deg, #1d1d20, #060607 45%, #0b0b0c); border-radius: calc(64 * var(--u)); padding: calc(30 * var(--u)); display: flex; box-shadow: inset 0 0 0 1px #ffffff1a, inset 0 2px 3px #ffffff14, 0 2px 5px #000a, 0 0 0 calc(2 * var(--u)) #000c, 0 calc(2 * var(--u)) 0 calc(2 * var(--u)) #ffffff26; }
       .lcd { width: 100%; height: 100%; image-rendering: pixelated; border-radius: calc(8 * var(--u)); background: #000; }
       .scr::after { content: ""; position: absolute; inset: var(--pad); border-radius: calc(8 * var(--u)); pointer-events: none; }
       /* screen filters: LCD = the panel's pixel grid, its pale colours and the glass over it. CRT = scan lines, glow and dark corners */
@@ -126,15 +128,18 @@
       #R .knobs { --d: calc(72 * var(--u)); grid-template-columns: repeat(4, auto); gap: calc(20 * var(--u)); }
       .kn { display: flex; flex-direction: column; align-items: center; gap: calc(8 * var(--u)); width: var(--d); cursor: ns-resize; }
       .kn label { font: 500 max(7px, calc(14 * var(--u))) system-ui, sans-serif; letter-spacing: 1px; color: var(--silk); pointer-events: none; white-space: nowrap; }
-      /* a knob: a knurled rim, a flat top, a white mark */
-      .kn .cap { width: var(--d); height: var(--d); border-radius: 50%; background: radial-gradient(circle at 50% 38%, color-mix(in srgb, var(--cap), #fff 16%), var(--cap) 62%, transparent 64%), repeating-conic-gradient(color-mix(in srgb, var(--cap), #000 35%) 0 5deg, color-mix(in srgb, var(--cap), #fff 22%) 5deg 10deg); box-shadow: 0 calc(7 * var(--u)) calc(9 * var(--u)) #000b, 0 0 0 1px #000a, inset 0 0 0 1px #ffffff14; transform: rotate(var(--a, 0deg)); position: relative; pointer-events: none; }
-      .kn .cap::after { content: ""; position: absolute; left: 50%; top: 6%; width: 9%; height: 36%; margin-left: -4.5%; border-radius: 99px; background: var(--keyline); box-shadow: 0 0 2px #0008; }
-      .kn.turn .cap { box-shadow: 0 calc(7 * var(--u)) calc(9 * var(--u)) #000b, 0 0 0 2px var(--lit); }
+      /* a knob, lit from above: the knurled rim (::before) and the mark (::after) turn, the light on it (i) stays where it is */
+      .kn .cap { width: var(--d); height: var(--d); border-radius: 50%; position: relative; pointer-events: none; background: var(--cap); box-shadow: 0 calc(10 * var(--u)) calc(10 * var(--u)) #000b, 0 calc(2 * var(--u)) calc(2 * var(--u)) #000c, 0 0 0 1px #000a; transition: box-shadow 0.15s; }
+      .kn .cap::before { content: ""; position: absolute; inset: 0; border-radius: 50%; background: repeating-conic-gradient(color-mix(in srgb, var(--cap), #000 35%) 0 5deg, color-mix(in srgb, var(--cap), #fff 22%) 5deg 10deg); transform: rotate(var(--a, 0deg)); }
+      .kn .cap i { position: absolute; inset: 0; border-radius: 50%; background: radial-gradient(circle closest-side at 50% 28%, #ffffff26, transparent), radial-gradient(closest-side, var(--cap) 70%, color-mix(in srgb, var(--cap), #000 45%) 76%, transparent 78%), conic-gradient(#ffffff3d, transparent 90deg, #00000066 180deg, transparent 270deg, #ffffff3d); box-shadow: inset 0 0 0 1px #ffffff14; }
+      .kn .cap::after { content: ""; position: absolute; left: 50%; top: 14%; width: 8%; height: 26%; margin-left: -4%; border-radius: 99px; background: var(--keyline); box-shadow: 0 0 2px #0008; transform-origin: 50% 138.5%; transform: rotate(var(--a, 0deg)); transition: background 0.15s; }
+      .kn.turn .cap { box-shadow: 0 calc(10 * var(--u)) calc(10 * var(--u)) #000b, 0 0 0 1px #000a, 0 0 calc(16 * var(--u)) color-mix(in srgb, var(--lit) 70%, transparent); }
+      .kn.turn .cap::after { background: var(--lit); box-shadow: 0 0 4px var(--lit); }
       .tray { background: var(--tray); border-radius: calc(20 * var(--u)); padding: calc(12 * var(--u)); display: grid; box-shadow: inset 0 0 0 1px var(--rim), inset 0 2px 5px #000a; }
       #oct { grid-template-columns: repeat(2, calc(112 * var(--u))); grid-auto-rows: calc(44 * var(--u)); gap: calc(12 * var(--u)); }
       #btns { grid-template-columns: repeat(6, calc(60 * var(--u))); grid-auto-rows: calc(68 * var(--u)); gap: calc(12 * var(--u)) calc(8 * var(--u)); }
-      .pb { --led: 0; min-width: 0; padding: 0; border: 0; border-radius: calc(12 * var(--u)); cursor: pointer; font: 800 max(7px, calc(13 * var(--u))) system-ui, sans-serif; letter-spacing: 0; color: color-mix(in srgb, var(--ink), #2a1a03 calc(var(--led) * 100%)); background: linear-gradient(color-mix(in srgb, var(--btn1), var(--tint, var(--lit)) calc(var(--led) * 85%)), color-mix(in srgb, var(--btn2), var(--tint, var(--lit)) calc(var(--led) * 70%))); box-shadow: inset 0 0 0 1px var(--rim), inset 0 1px 0 #ffffff26, 0 calc(3 * var(--u)) calc(4 * var(--u)) #000c; }
-      .pb.down { transform: translateY(1px) scale(0.97); box-shadow: inset 0 0 0 1px var(--rim), inset 0 2px 4px #000a; }
+      .pb { --led: 0; --glow: 0 0 calc(var(--led) * 20 * var(--u)) color-mix(in srgb, var(--tint, var(--lit)) calc(var(--led) * 75%), transparent); --skirt: color-mix(in srgb, var(--btn2), #000 45%); position: relative; transition: transform 0.05s; min-width: 0; padding: 0; border: 0; border-radius: calc(12 * var(--u)); cursor: pointer; font: 800 max(7px, calc(13 * var(--u))) system-ui, sans-serif; letter-spacing: 0; color: color-mix(in srgb, var(--ink), #2a1a03 calc(var(--led) * 100%)); background: linear-gradient(color-mix(in srgb, var(--btn1), var(--tint, var(--lit)) calc(var(--led) * 85%)), color-mix(in srgb, var(--btn2), var(--tint, var(--lit)) calc(var(--led) * 70%))); box-shadow: inset 0 0 0 1px var(--rim), inset 0 1px 0 #ffffff33, inset 0 calc(-4 * var(--u)) calc(5 * var(--u)) #0004, 0 calc(4 * var(--u)) 0 var(--skirt), 0 calc(7 * var(--u)) calc(6 * var(--u)) #000c, var(--glow); }
+      .pb.down { transform: translateY(calc(3 * var(--u))); box-shadow: inset 0 0 0 1px var(--rim), inset 0 calc(3 * var(--u)) calc(6 * var(--u)) #000a, 0 calc(1 * var(--u)) 0 var(--skirt), var(--glow); }
       .pb.go { --tint: var(--go); }
       /* the unit prints HOME in white, and PLAY over STOP (one button) */
       .pb.home { color: color-mix(in srgb, var(--home, #fff), #2a1a03 calc(var(--led) * 100%)); }
@@ -152,7 +157,11 @@
       [data-keys="fm"] .k.down { --led: 0.92; transform: translateY(2px); box-shadow: inset 0 0 0 1.5px var(--rim), inset 0 3px 5px #000a; }
       [data-keys="piano"] .k.w { top: 0; height: 100%; border-radius: 0 0 7px 7px; background: linear-gradient(color-mix(in srgb, var(--wk), #000 12%), color-mix(in srgb, var(--wk), var(--lit) calc(var(--led) * 70%)) 12%); box-shadow: inset 0 -6px 0 #0002, 0 2px 3px #0008; }
       [data-keys="piano"] .k.b { top: 0; height: 60%; border-radius: 0 0 5px 5px; background: linear-gradient(90deg, #ffffff14, transparent 20% 80%, #0006), color-mix(in srgb, var(--bk), var(--lit) calc(var(--led) * 70%)); box-shadow: 0 4px 4px #000a, inset 0 -5px 0 #ffffff14; z-index: 1; }
+      [data-keys="fm"] .k { transition: transform 0.05s; }
+      [data-keys="fm"] .k::after { box-shadow: 0 0 calc(var(--led) * 9px) color-mix(in srgb, var(--lit) calc(var(--led) * 100%), transparent); }
       [data-keys="piano"] .k.down { --led: 1; }
+      [data-keys="piano"] .k.w.down { box-shadow: inset 0 -2px 0 #0002, inset 0 5px 7px #0003, 0 1px 1px #0008; }
+      [data-keys="piano"] .k.b.down { box-shadow: 0 1px 2px #000a, inset 0 -2px 0 #ffffff14; }
       /* ---- the views */
       /* a phone is always played sideways: held upright, the page is drawn turned, so the phone is turned to read it.
          The upright layout is left for a narrow window on a computer. */
@@ -625,6 +634,7 @@
             <button data-sub="midi" title="MIDI: connect a controller and map its knobs, pads and keys"><i>OPTIONS</i>MIDI CONTROLLER</button>
             <button data-sub="real" title="A real FM-1 on USB: play together, back up, install firmwares"><i>OPTIONS</i>REAL FM-1</button>
             <button data-sub="inst" title="Install the app on this device"><i>OPTIONS</i>INSTALL THE APP</button>
+            <button id="appExit" hidden title="Close the app (it runs full screen, with no window buttons)"><i>FULL SCREEN</i>EXIT</button>
           </div>
         </section>
         <section data-tab="man">
@@ -729,7 +739,7 @@ SOFTWARE.
         <h3 id="jobTitle"></h3>
         <div id="jobText"></div>
         <progress id="jobBar" max="100" value="0" hidden></progress>
-        <button id="jobOk" hidden>OK</button>
+        <button id="jobOk" hidden title="Close this message">OK</button>
       </div>
     </div>
     <div id="more" hidden>
@@ -5505,6 +5515,7 @@ registerProcessor("fm1", Fm1);
         k.dataset.kn = i; // 0 to 6 the encoders, 7 the MASTER pot
         k.title = title;
         k.append(el("label", "", label), el("div", "cap"));
+        k.lastChild.append(el("i")); // the light on the cap, which does not turn
         return k;
       }
       function buildPanel() {
@@ -5623,6 +5634,7 @@ registerProcessor("fm1", Fm1);
       const unpress = (id) => holds[id] && --holds[id] === 0 && setKey(id, false);
       const holdKey = press,
         dropKey = unpress;
+      const buzz = (ms) => navigator.vibrate && navigator.vibrate(ms); // a touch under the finger for a press and for each click of an encoder (Android: iOS has no vibrate)
       const pointers = new Map(); // pointerId -> { kn, held, lastY, acc }
       const upY = (e) => (matchMedia("(orientation: portrait) and (pointer: coarse)").matches ? -e.clientX : e.clientY); // on a turned page, up is the phone's right
       const idAt = (e) => {
@@ -5637,7 +5649,7 @@ registerProcessor("fm1", Fm1);
         e.preventDefault();
         pointers.set(e.pointerId, p);
         $("#fm").setPointerCapture(e.pointerId);
-        if (p.held >= 0) press(p.held);
+        if (p.held >= 0) (press(p.held), buzz(8));
         if (!node) toast("The FM-1 is off: tap ON");
       });
       $("#fm").addEventListener("pointermove", (e) => {
@@ -5645,12 +5657,12 @@ registerProcessor("fm1", Fm1);
         if (!p) return;
         if (p.held >= 14) {
           const h = idAt(e); // slide over the note keys
-          if (h >= 14 && h !== p.held) (unpress(p.held), press((p.held = h)));
+          if (h >= 14 && h !== p.held) (unpress(p.held), press((p.held = h)), buzz(8));
         } else if (p.kn === 7) setPot(pot + (p.lastY - upY(e)) * 6);
         else if (p.kn >= 0) {
           p.acc += p.lastY - upY(e);
-          for (; p.acc >= 9; p.acc -= 9) turn(p.kn, 1);
-          for (; p.acc <= -9; p.acc += 9) turn(p.kn, -1);
+          for (; p.acc >= 9; p.acc -= 9) (turn(p.kn, 1), buzz(4));
+          for (; p.acc <= -9; p.acc += 9) (turn(p.kn, -1), buzz(4));
         }
         p.lastY = upY(e);
       });
@@ -6672,8 +6684,10 @@ registerProcessor("fm1", Fm1);
       const optFace = () => {
         $("#optScreen i").textContent = tetherOpt.screen ? "ON" : "OFF";
         $("#optSound i").textContent = tetherOpt.sound ? "ON" : "OFF";
-        $("#railScreen").textContent = "SCREEN " + (tetherOpt.screen ? "ON" : "OFF");
-        $("#railSound").textContent = "SOUND " + (sink ? "FM-1" : "HERE");
+        $("#railScreen").textContent = "SCREEN";
+        $("#railSound").textContent = "SOUND";
+        $("#railScreen").setAttribute("aria-pressed", tetherOpt.screen); // lit: the screen is on the FM-1 / the sound plays on it; dim: it stays here
+        $("#railSound").setAttribute("aria-pressed", !!sink);
       };
       $("#optScreen").onclick = () => {
         store("fm1-test.tscreen", (tetherOpt.screen = !tetherOpt.screen) ? "1" : "0");
@@ -7014,6 +7028,17 @@ registerProcessor("fm1", Fm1);
       // INSTALL: the browser's own install dialog where there is one, the steps elsewhere (as in the Pocket apps)
       // ======================================================================
       const PWA = { ev: window.pocketInstall || null, done: false };
+      // EXIT: an app that runs full screen has no window buttons. window.close() ends an installed app where the browser allows it; else leave full screen and say how
+      const exitShow = () => ($("#appExit").hidden = !(matchMedia("(display-mode: standalone), (display-mode: fullscreen), (display-mode: minimal-ui)").matches || navigator.standalone === true || document.fullscreenElement));
+      document.addEventListener("fullscreenchange", exitShow);
+      exitShow();
+      $("#appExit").onclick = () => {
+        window.close();
+        setTimeout(() => {
+          document.fullscreenElement && document.exitFullscreen().catch(() => {});
+          toast("This browser would not close the app: use the back gesture or the recent apps", 5000);
+        }, 400);
+      };
       const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
       const pwaState = () => (PWA.done || matchMedia("(display-mode: standalone), (display-mode: minimal-ui)").matches || navigator.standalone === true ? "done" : PWA.ev ? "prompt" : isIOS ? "ios" : "menu");
       const PWA_T = {
@@ -7354,5 +7379,5 @@ registerProcessor("fm1", Fm1);
       refreshCatalog();
       navigator.storage?.persist?.(); // ask the browser not to clear the kept firmwares and saves
     </script>
-  <div style="position:fixed;left:4px;bottom:2px;z-index:99;font:700 9px monospace;opacity:.7;pointer-events:none;color:#ff5e7a">TEST BUILD · pocket · 4f664e2</div></body>
+  <div style="position:fixed;left:4px;bottom:2px;z-index:99;font:700 9px monospace;opacity:.7;pointer-events:none;color:#ff5e7a">TEST BUILD · pocket · 5186d92</div></body>
 </html>
