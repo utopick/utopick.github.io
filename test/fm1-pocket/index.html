@@ -219,7 +219,7 @@
       /* icons from Open Game Icons (CC BY 3.0, credited in ABOUT) */
       #menu .tabs svg { height: 44%; max-height: 110px; aspect-ratio: 1; fill: currentColor; }
       /* ABOUT: a small square at the top right, like the power button of the device */
-      #menu .tabs button[data-tab="info"] { position: absolute; top: 10px; right: 10px; width: 46px; height: 40px; padding: 4px; font-size: 0; gap: 0; }
+      #menu .tabs button[data-tab="info"] { position: absolute; top: 10px; right: 10px; width: auto; height: 40px; padding: 4px 12px; flex-direction: row; font-size: 13px; gap: 8px; }
       #menu .tabs button[data-tab="info"] svg { height: 24px; }
       #menu[data-tab="home"] #menuBack, #menu:not([data-tab="home"]) #menuClose { display: none; }
       /* the bottom bar grows with the window too: title, storage text, BACK */
@@ -328,6 +328,12 @@
       #menu #pvMidi .grid { flex: 0 0 auto; }
       #menu #pvMidi:has(#midiLive:not([hidden])) .grid { flex: 0 0 auto; }
       #menu #pvMidi:has(#midiLive:not([hidden])) .grid button { min-height: 0; padding: 0.5em 0.2em; font-size: 0.8em; }
+      /* a window taller than a phone held sideways, no drawing of the controller showing: the five buttons are squares, their text grows with the window */
+      @media (min-height: 461px) {
+        #menu #pvMidi:not(:has(#midiLive:not([hidden]))) .grid { flex: 0 0 auto; margin-top: auto; }
+        #menu #pvMidi:not(:has(#midiLive:not([hidden]))) .grid button { aspect-ratio: 1; max-height: 46vh; font-size: clamp(13px, 1.9vw, 34px); }
+        #menu #pvMidi:not(:has(#midiLive:not([hidden]))) .grid button i { font-size: 0.55em; }
+      }
       #midiLive .mdDevice { flex: 1; min-height: 0; display: flex; margin: 0; }
       #midiLive svg { width: 100%; max-height: 100%; margin: auto; }
       #pvReal { grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: auto minmax(0, 1fr) auto; gap: 1.1em 1.3em; color: var(--silk); width: 100%; height: 100%; margin: 0 auto; }
@@ -358,7 +364,7 @@
       #realSteps .next::before { background: var(--lit); color: #14091f; }
       #pvReal button:disabled { opacity: 0.38; cursor: default; }
       #realRow { display: grid; grid-template-columns: minmax(0, 1fr) 7em; gap: 0.6em; flex: none; height: 4.8em; }
-      #realRow button { min-height: 0; font-size: 1.25em; }
+      #menu #realRow button { min-height: 0; height: 100%; margin: 0; font-size: 1.25em; }
       #realRow .play i { font-size: 0.68em; letter-spacing: 0.5px; }
       #realRight { min-width: 0; display: flex; flex-direction: column; }
       #realMap { min-width: 0; font-size: 1em; line-height: 1.25; color: var(--silk); }
@@ -6320,7 +6326,7 @@ registerProcessor("fm1", Fm1);
         // the buttons of the top rail, which the real FM-1 has as its own: the keys view (KEYS), the power (ON) and the menu (FM-1)
         { id: "flip", name: "KEYS VIEW", group: "App buttons", kind: "tap", run: () => $("#flip").click() },
         { id: "power", name: "POWER (ON)", group: "App buttons", kind: "tap", run: () => $("#power").click() },
-        { id: "logo", name: "FM-1 MENU", group: "App buttons", kind: "tap", run: () => $("#logo").click() },
+        { id: "logo", name: "FM-1 MENU", group: "App buttons", kind: "tap", run: () => ($("#menu").hidden ? $("#logo").click() : menuShow(false)) },
       ];
       const act = (id) => [id, ACTIONS.find((a) => a.id === id).name];
       // a controller with 8 knobs in two rows and 8 pads (Akai MPK mini, Launchkey): knobs 1 to 4 (the top row) are the FM-1's left
@@ -7379,5 +7385,5 @@ registerProcessor("fm1", Fm1);
       refreshCatalog();
       navigator.storage?.persist?.(); // ask the browser not to clear the kept firmwares and saves
     </script>
-  <div style="position:fixed;left:4px;bottom:2px;z-index:99;font:700 9px monospace;opacity:.7;pointer-events:none;color:#ff5e7a">TEST BUILD · pocket · 5186d92</div></body>
+  <div style="position:fixed;left:4px;bottom:2px;z-index:99;font:700 9px monospace;opacity:.7;pointer-events:none;color:#ff5e7a">TEST BUILD · pocket · 3088632</div></body>
 </html>
